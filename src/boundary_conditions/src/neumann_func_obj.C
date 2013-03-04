@@ -3,21 +3,21 @@
 // 
 // GRINS - General Reacting Incompressible Navier-Stokes 
 //
-// Copyright (C) 2010-2012 The PECOS Development Team
+// Copyright (C) 2010-2013 The PECOS Development Team
 //
-// This program is free software; you can redistribute it and/or
-// modify it under the terms of the Version 2 GNU General
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the Version 2.1 GNU Lesser General
 // Public License as published by the Free Software Foundation.
 //
-// This program is distributed in the hope that it will be useful,
+// This library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-// General Public License for more details.
+// Lesser General Public License for more details.
 //
-// You should have received a copy of the GNU General Public License
-// along with this library; if not, write to the Free Software
-// Foundation, Inc. 51 Franklin Street, Fifth Floor, Boston, MA
-// 02110-1301 USA
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc. 51 Franklin Street, Fifth Floor,
+// Boston, MA  02110-1301  USA
 //
 //-----------------------------------------------------------------------el-
 //
@@ -26,27 +26,89 @@
 //--------------------------------------------------------------------------
 //--------------------------------------------------------------------------
 
-#include "neumann_func_obj.h"
+// This class
+#include "grins/neumann_func_obj.h"
 
-GRINS::NeumannFuncObj::NeumannFuncObj( )
-{
-  return;
-}
+// GRINS
+#include "grins/cached_values.h"
 
-GRINS::NeumannFuncObj::~NeumannFuncObj( )
-{
-  return;
-}
+// libMesh
+#include "libmesh/fem_context.h"
 
-libMesh::Point GRINS::NeumannFuncObj::derivative( const libMesh::FEMContext& context, 
-						  const unsigned int qp,
-						  const GRINS::VariableIndex jac_var )
+namespace GRINS
 {
-  // By default, does nothing.
-  return libMesh::Point(0.0,0.0,0.0);
-}
 
-std::vector<GRINS::VariableIndex> GRINS::NeumannFuncObj:: get_other_jac_vars()
-{
-  return _jac_vars;
-}
+  NeumannFuncObj::NeumannFuncObj( )
+  {
+    return;
+  }
+
+  NeumannFuncObj::~NeumannFuncObj( )
+  {
+    return;
+  }
+
+  libMesh::Point NeumannFuncObj::value( const libMesh::FEMContext&,
+					const CachedValues&,
+					const unsigned int )
+  {
+    // By default, does nothing.
+    /* \todo Should we libmesh_error() instead?*/
+    return libMesh::Point();
+  }
+
+  libMesh::Real NeumannFuncObj::normal_value( const libMesh::FEMContext&,
+					      const CachedValues&,
+					      const unsigned int )
+  {
+    // By default, does nothing.
+    /* \todo Should we libmesh_error() instead?*/
+    return 0.0;
+  }
+
+  libMesh::Point NeumannFuncObj::derivative( const libMesh::FEMContext&,
+					     const CachedValues&,
+					     const unsigned int )
+  {
+    // By default, does nothing.
+    /* \todo Should we libmesh_error() instead?*/
+    return libMesh::Point(0.0,0.0,0.0);
+  }
+
+  libMesh::Point NeumannFuncObj::derivative( const libMesh::FEMContext&,
+					     const CachedValues&,
+					     const unsigned int,
+					     const VariableIndex )
+  {
+    // By default, does nothing.
+    /* \todo Should we libmesh_error() instead?*/
+    return libMesh::Point(0.0,0.0,0.0);
+  }
+  
+
+  libMesh::Real NeumannFuncObj::normal_derivative( const libMesh::FEMContext&,
+						   const CachedValues&,
+						   const unsigned )
+  {
+    // By default, does nothing.
+    /* \todo Should we libmesh_error() instead?*/
+    return 0.0;
+  }
+
+  libMesh::Real NeumannFuncObj::normal_derivative( const libMesh::FEMContext&,
+						   const CachedValues&,
+						   const unsigned int, 
+						   const VariableIndex )
+  {
+    // By default, does nothing.
+    /* \todo Should we libmesh_error() instead?*/
+    return 0.0;
+  }
+
+  const std::vector<VariableIndex>& NeumannFuncObj::get_other_jac_vars()
+  {
+    return _jac_vars;
+  }
+
+} // namespace GRINS
+

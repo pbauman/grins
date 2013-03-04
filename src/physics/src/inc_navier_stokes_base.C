@@ -3,21 +3,21 @@
 // 
 // GRINS - General Reacting Incompressible Navier-Stokes 
 //
-// Copyright (C) 2010-2012 The PECOS Development Team
+// Copyright (C) 2010-2013 The PECOS Development Team
 //
-// This program is free software; you can redistribute it and/or
-// modify it under the terms of the Version 2 GNU General
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the Version 2.1 GNU Lesser General
 // Public License as published by the Free Software Foundation.
 //
-// This program is distributed in the hope that it will be useful,
+// This library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-// General Public License for more details.
+// Lesser General Public License for more details.
 //
-// You should have received a copy of the GNU General Public License
-// along with this library; if not, write to the Free Software
-// Foundation, Inc. 51 Franklin Street, Fifth Floor, Boston, MA
-// 02110-1301 USA
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc. 51 Franklin Street, Fifth Floor,
+// Boston, MA  02110-1301  USA
 //
 //-----------------------------------------------------------------------el-
 //
@@ -26,96 +26,107 @@
 //--------------------------------------------------------------------------
 //--------------------------------------------------------------------------
 
-#include "inc_navier_stokes.h"
+// This class
+#include "grins/inc_navier_stokes.h"
 
-GRINS::IncompressibleNavierStokesBase::IncompressibleNavierStokesBase(const std::string& physics_name, const GetPot& input )
-  : GRINS::Physics(physics_name, input)
+// libMesh
+#include "libmesh/utility.h"
+#include "libmesh/string_to_enum.h"
+#include "libmesh/getpot.h"
+#include "libmesh/fem_context.h"
+#include "libmesh/fem_system.h"
+
+namespace GRINS
 {
-  this->read_input_options(input);
 
-  return;
-}
+  IncompressibleNavierStokesBase::IncompressibleNavierStokesBase(const std::string& physics_name, const GetPot& input )
+    : Physics(physics_name, input)
+  {
+    this->read_input_options(input);
 
-GRINS::IncompressibleNavierStokesBase::~IncompressibleNavierStokesBase()
-{
-  return;
-}
+    return;
+  }
 
-void GRINS::IncompressibleNavierStokesBase::read_input_options( const GetPot& input )
-{
-  // Read FE info
-  this->_FE_family =
-    libMesh::Utility::string_to_enum<libMeshEnums::FEFamily>( input("Physics/"+incompressible_navier_stokes+"/FE_family", "LAGRANGE") );
+  IncompressibleNavierStokesBase::~IncompressibleNavierStokesBase()
+  {
+    return;
+  }
 
-  this->_V_order =
-    libMesh::Utility::string_to_enum<libMeshEnums::Order>( input("Physics/"+incompressible_navier_stokes+"/V_order", "SECOND") );
+  void IncompressibleNavierStokesBase::read_input_options( const GetPot& input )
+  {
+    // Read FE info
+    this->_FE_family =
+      libMesh::Utility::string_to_enum<libMeshEnums::FEFamily>( input("Physics/"+incompressible_navier_stokes+"/FE_family", "LAGRANGE") );
 
-  this->_P_order =
-    libMesh::Utility::string_to_enum<libMeshEnums::Order>( input("Physics/"+incompressible_navier_stokes+"/P_order", "FIRST") );
+    this->_V_order =
+      libMesh::Utility::string_to_enum<libMeshEnums::Order>( input("Physics/"+incompressible_navier_stokes+"/V_order", "SECOND") );
 
-  // Read material parameters
-  this->_rho = input("Physics/"+incompressible_navier_stokes+"/rho", 1.0);
-  this->_mu  = input("Physics/"+incompressible_navier_stokes+"/mu", 1.0);
+    this->_P_order =
+      libMesh::Utility::string_to_enum<libMeshEnums::Order>( input("Physics/"+incompressible_navier_stokes+"/P_order", "FIRST") );
 
-  // Read variable naming info
-  this->_u_var_name = input("Physics/VariableNames/u_velocity", GRINS::u_var_name_default );
-  this->_v_var_name = input("Physics/VariableNames/v_velocity", GRINS::v_var_name_default );
-  this->_w_var_name = input("Physics/VariableNames/w_velocity", GRINS::w_var_name_default );
-  this->_p_var_name = input("Physics/VariableNames/pressure", GRINS::p_var_name_default );
+    // Read material parameters
+    this->_rho = input("Physics/"+incompressible_navier_stokes+"/rho", 1.0);
+    this->_mu  = input("Physics/"+incompressible_navier_stokes+"/mu", 1.0);
 
-  return;
-}
+    // Read variable naming info
+    this->_u_var_name = input("Physics/VariableNames/u_velocity", u_var_name_default );
+    this->_v_var_name = input("Physics/VariableNames/v_velocity", v_var_name_default );
+    this->_w_var_name = input("Physics/VariableNames/w_velocity", w_var_name_default );
+    this->_p_var_name = input("Physics/VariableNames/pressure", p_var_name_default );
 
-void GRINS::IncompressibleNavierStokesBase::init_variables( libMesh::FEMSystem* system )
-{
-  // Get libMesh to assign an index for each variable
-  this->_dim = system->get_mesh().mesh_dimension();
+    return;
+  }
 
-  _u_var = system->add_variable( _u_var_name, this->_V_order, _FE_family);
-  _v_var = system->add_variable( _v_var_name, this->_V_order, _FE_family);
+  void IncompressibleNavierStokesBase::init_variables( libMesh::FEMSystem* system )
+  {
+    // Get libMesh to assign an index for each variable
+    this->_dim = system->get_mesh().mesh_dimension();
 
-  if (_dim == 3)
-    _w_var = system->add_variable( _w_var_name, this->_V_order, _FE_family);
+    _u_var = system->add_variable( _u_var_name, this->_V_order, _FE_family);
+    _v_var = system->add_variable( _v_var_name, this->_V_order, _FE_family);
 
-  _p_var = system->add_variable( _p_var_name, this->_P_order, _FE_family);
+    if (_dim == 3)
+      _w_var = system->add_variable( _w_var_name, this->_V_order, _FE_family);
 
-  return;
-}
+    _p_var = system->add_variable( _p_var_name, this->_P_order, _FE_family);
 
-void GRINS::IncompressibleNavierStokesBase::set_time_evolving_vars( libMesh::FEMSystem* system )
-{
-  const unsigned int dim = system->get_mesh().mesh_dimension();
+    return;
+  }
 
-  // Tell the system to march velocity forward in time, but
-  // leave p as a constraint only
-  system->time_evolving(_u_var);
-  system->time_evolving(_v_var);
+  void IncompressibleNavierStokesBase::set_time_evolving_vars( libMesh::FEMSystem* system )
+  {
+    const unsigned int dim = system->get_mesh().mesh_dimension();
 
-  if (dim == 3)
-    system->time_evolving(_w_var);
+    // Tell the system to march velocity forward in time, but
+    // leave p as a constraint only
+    system->time_evolving(_u_var);
+    system->time_evolving(_v_var);
 
-  return;
-}
+    if (dim == 3)
+      system->time_evolving(_w_var);
 
-void GRINS::IncompressibleNavierStokesBase::init_context( libMesh::DiffContext &context )
-{
-  libMesh::FEMContext &c = libmesh_cast_ref<libMesh::FEMContext&>(context);
+    return;
+  }
 
-  // We should prerequest all the data
-  // we will need to build the linear system
-  // or evaluate a quantity of interest.
-  c.element_fe_var[_u_var]->get_JxW();
-  c.element_fe_var[_u_var]->get_phi();
-  c.element_fe_var[_u_var]->get_dphi();
-  c.element_fe_var[_u_var]->get_xyz();
+  void IncompressibleNavierStokesBase::init_context( libMesh::FEMContext &context )
+  {
+    // We should prerequest all the data
+    // we will need to build the linear system
+    // or evaluate a quantity of interest.
+    context.element_fe_var[_u_var]->get_JxW();
+    context.element_fe_var[_u_var]->get_phi();
+    context.element_fe_var[_u_var]->get_dphi();
+    context.element_fe_var[_u_var]->get_xyz();
 
-  c.element_fe_var[_p_var]->get_phi();
-  c.element_fe_var[_p_var]->get_xyz();
+    context.element_fe_var[_p_var]->get_phi();
+    context.element_fe_var[_p_var]->get_xyz();
 
-  c.side_fe_var[_u_var]->get_JxW();
-  c.side_fe_var[_u_var]->get_phi();
-  c.side_fe_var[_u_var]->get_dphi();
-  c.side_fe_var[_u_var]->get_xyz();
+    context.side_fe_var[_u_var]->get_JxW();
+    context.side_fe_var[_u_var]->get_phi();
+    context.side_fe_var[_u_var]->get_dphi();
+    context.side_fe_var[_u_var]->get_xyz();
 
-  return;
-}
+    return;
+  }
+
+} // namespace GRINS

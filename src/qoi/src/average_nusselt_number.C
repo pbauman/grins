@@ -3,21 +3,21 @@
 // 
 // GRINS - General Reacting Incompressible Navier-Stokes 
 //
-// Copyright (C) 2010-2012 The PECOS Development Team
+// Copyright (C) 2010-2013 The PECOS Development Team
 //
-// This program is free software; you can redistribute it and/or
-// modify it under the terms of the Version 2 GNU General
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the Version 2.1 GNU Lesser General
 // Public License as published by the Free Software Foundation.
 //
-// This program is distributed in the hope that it will be useful,
+// This library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-// General Public License for more details.
+// Lesser General Public License for more details.
 //
-// You should have received a copy of the GNU General Public License
-// along with this library; if not, write to the Free Software
-// Foundation, Inc. 51 Franklin Street, Fifth Floor, Boston, MA
-// 02110-1301 USA
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc. 51 Franklin Street, Fifth Floor,
+// Boston, MA  02110-1301  USA
 //
 //-----------------------------------------------------------------------el-
 //
@@ -26,7 +26,17 @@
 //--------------------------------------------------------------------------
 //--------------------------------------------------------------------------
 
-#include "average_nusselt_number.h"
+// This class
+#include "grins/average_nusselt_number.h"
+
+// GRINS
+#include "grins/multiphysics_sys.h"
+
+// libMesh
+#include "libmesh/getpot.h"
+#include "libmesh/fem_context.h"
+#include "libmesh/fem_system.h"
+#include "libmesh/quadrature.h"
 
 namespace GRINS
 {
@@ -83,7 +93,7 @@ namespace GRINS
     return;
   }
 
-  void AverageNusseltNumber::init( const GetPot& input, const libMesh::FEMSystem& system )
+  void AverageNusseltNumber::init( const GetPot& input, const MultiphysicsSystem& system )
   {
     // Grab temperature variable index
     std::string T_var_name = input("Physics/VariableNames/Temperature",
@@ -93,36 +103,37 @@ namespace GRINS
     return;
   }
 
-  void AverageNusseltNumber::side_qoi( DiffContext& context, const QoISet& )
+  void AverageNusseltNumber::side_qoi( libMesh::DiffContext& context, const libMesh::QoISet& )
   {
-    FEMContext &c = libmesh_cast_ref<FEMContext&>(context);
+    libMesh::FEMContext &c = libmesh_cast_ref<libMesh::FEMContext&>(context);
 
     for( std::set<libMesh::boundary_id_type>::const_iterator id = _bc_ids.begin();
 	 id != _bc_ids.end(); id++ )
       {
 	if( c.has_side_boundary_id( (*id) ) )
 	  {
-	    FEBase* side_fe;
-	    c.get_side_fe<Real>(this->_T_var, side_fe);
+	    libMesh::FEBase* side_fe;
+	    c.get_side_fe<libMesh::Real>(this->_T_var, side_fe);
 
-	    const std::vector<Real> &JxW = side_fe->get_JxW();
+	    const std::vector<libMesh::Real> &JxW = side_fe->get_JxW();
 	    
-	    const std::vector<Point>& normals = side_fe->get_normals();
+	    const std::vector<libMesh::Point>& normals = side_fe->get_normals();
 
 	    unsigned int n_qpoints = (c.get_side_qrule())->n_points();
 	    
-	    Number& qoi = c.elem_qoi[0];
+	    libMesh::Number& qoi = c.elem_qoi[0];
 	    
 	    // Loop over quadrature points  
 	    
 	    for (unsigned int qp = 0; qp != n_qpoints; qp++)
 	      {
 		// Get the solution value at the quadrature point
-		Gradient grad_T = 0.0; 
-		c.side_gradient<Real>(this->_T_var, qp, grad_T);
+		libMesh::Gradient grad_T = 0.0; 
+		c.side_gradient(this->_T_var, qp, grad_T);
 		
 		// Update the elemental increment dR for each qp
 		qoi += (this->_scaling)*(this->_k)*(grad_T*normals[qp])*JxW[qp];
+
 	      } // quadrature loop
 
 	  } // end check on boundary id

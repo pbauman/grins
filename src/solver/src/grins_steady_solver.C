@@ -3,21 +3,21 @@
 // 
 // GRINS - General Reacting Incompressible Navier-Stokes 
 //
-// Copyright (C) 2010-2012 The PECOS Development Team
+// Copyright (C) 2010-2013 The PECOS Development Team
 //
-// This program is free software; you can redistribute it and/or
-// modify it under the terms of the Version 2 GNU General
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the Version 2.1 GNU Lesser General
 // Public License as published by the Free Software Foundation.
 //
-// This program is distributed in the hope that it will be useful,
+// This library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-// General Public License for more details.
+// Lesser General Public License for more details.
 //
-// You should have received a copy of the GNU General Public License
-// along with this library; if not, write to the Free Software
-// Foundation, Inc. 51 Franklin Street, Fifth Floor, Boston, MA
-// 02110-1301 USA
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc. 51 Franklin Street, Fifth Floor,
+// Boston, MA  02110-1301  USA
 //
 //-----------------------------------------------------------------------el-
 //
@@ -26,39 +26,63 @@
 //--------------------------------------------------------------------------
 //--------------------------------------------------------------------------
 
-#include "grins_steady_solver.h"
+// This class
+#include "grins/grins_steady_solver.h"
 
-GRINS::SteadySolver::SteadySolver( const GetPot& input )
-  : Solver( input )
+// GRINS
+#include "grins/multiphysics_sys.h"
+#include "grins/solver_context.h"
+
+// libMesh
+#include "libmesh/auto_ptr.h"
+#include "libmesh/getpot.h"
+#include "libmesh/steady_solver.h"
+
+
+namespace GRINS
 {
-  return;
-}
 
-GRINS::SteadySolver::~SteadySolver()
-{
-  return;
-}
+  SteadySolver::SteadySolver( const GetPot& input )
+    : Solver( input )
+  {
+    return;
+  }
 
-void GRINS::SteadySolver::init_time_solver(GRINS::MultiphysicsSystem* system)
-{
-  libMesh::SteadySolver* time_solver = new libMesh::SteadySolver( *(system) );
+  SteadySolver::~SteadySolver()
+  {
+    return;
+  }
 
-  system->time_solver = AutoPtr<TimeSolver>(time_solver);
-  return;
-}
+  void SteadySolver::init_time_solver(MultiphysicsSystem* system)
+  {
+    libMesh::SteadySolver* time_solver = new libMesh::SteadySolver( *(system) );
 
-void GRINS::SteadySolver::solve( GRINS::MultiphysicsSystem* system,
-				 std::tr1::shared_ptr<libMesh::EquationSystems> equation_system,
-				 std::tr1::shared_ptr<GRINS::Visualization> vis,
-				 bool output_vis, 
-				 bool output_residual )
-{
-  // GRVY timers contained in here (if enabled)
-  system->solve();
+    system->time_solver = AutoPtr<TimeSolver>(time_solver);
+    return;
+  }
 
-  if( output_vis ) vis->output( equation_system );
+  void SteadySolver::solve( SolverContext& context )
+  {
+    libmesh_assert( context.system );
 
-  if( output_residual ) vis->output_residual( equation_system, system );
+    if( context.output_vis ) 
+      {
+	context.postprocessing->update_quantities( *(context.equation_system) );
+	context.vis->output( context.equation_system );
+      }
 
-  return;
-}
+    // GRVY timers contained in here (if enabled)
+    context.system->solve();
+
+    if( context.output_vis ) 
+      {
+	context.postprocessing->update_quantities( *(context.equation_system) );
+	context.vis->output( context.equation_system );
+      }
+
+    if( context.output_residual ) context.vis->output_residual( context.equation_system, context.system );
+
+    return;
+  }
+
+} // namespace GRINS

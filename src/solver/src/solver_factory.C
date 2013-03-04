@@ -3,21 +3,21 @@
 // 
 // GRINS - General Reacting Incompressible Navier-Stokes 
 //
-// Copyright (C) 2010-2012 The PECOS Development Team
+// Copyright (C) 2010-2013 The PECOS Development Team
 //
-// This program is free software; you can redistribute it and/or
-// modify it under the terms of the Version 2 GNU General
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the Version 2.1 GNU Lesser General
 // Public License as published by the Free Software Foundation.
 //
-// This program is distributed in the hope that it will be useful,
+// This library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-// General Public License for more details.
+// Lesser General Public License for more details.
 //
-// You should have received a copy of the GNU General Public License
-// along with this library; if not, write to the Free Software
-// Foundation, Inc. 51 Franklin Street, Fifth Floor, Boston, MA
-// 02110-1301 USA
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc. 51 Franklin Street, Fifth Floor,
+// Boston, MA  02110-1301  USA
 //
 //-----------------------------------------------------------------------el-
 //
@@ -26,32 +26,45 @@
 //--------------------------------------------------------------------------
 //--------------------------------------------------------------------------
 
-#include "solver_factory.h"
+// This class
+#include "grins/solver_factory.h"
 
-GRINS::SolverFactory::SolverFactory()
+// GRINS
+#include "grins/grins_steady_solver.h"
+#include "grins/grins_unsteady_solver.h"
+
+// libMesh
+#include "libmesh/getpot.h"
+
+namespace GRINS
 {
-  return;
-}
 
-GRINS::SolverFactory::~SolverFactory()
-{
-  return;
-}
+  SolverFactory::SolverFactory()
+  {
+    return;
+  }
 
-std::tr1::shared_ptr<GRINS::Solver> GRINS::SolverFactory::build(const GetPot& input)
-{
-  bool transient = input("unsteady-solver/transient", false );
+  SolverFactory::~SolverFactory()
+  {
+    return;
+  }
 
-  GRINS::Solver* solver;
+  std::tr1::shared_ptr<Solver> SolverFactory::build(const GetPot& input)
+  {
+    bool transient = input("unsteady-solver/transient", false );
 
-  if(transient)
-    {
-      solver = new GRINS::UnsteadySolver( input );
-    }
-  else
-    {
-      solver = new GRINS::SteadySolver( input );
-    }
+    Solver* solver;
 
-  return std::tr1::shared_ptr<GRINS::Solver>(solver);
-}
+    if(transient)
+      {
+	solver = new UnsteadySolver( input );
+      }
+    else
+      {
+	solver = new SteadySolver( input );
+      }
+
+    return std::tr1::shared_ptr<Solver>(solver);
+  }
+
+} // namespace GRINS

@@ -30,13 +30,13 @@ output_format = 'ExodusII xdr'
 
 # Options for print info to the screen
 [screen-options]
-print_equation_system_info = false
-print_mesh_info = false
-print_log_info = false
-solver_verbose = false
-solver_quiet = true
+print_equation_system_info = 'true'
+print_mesh_info = 'true'
+print_log_info = 'true'
+solver_verbose = 'true'
+solver_quiet = 'false'
 
-echo_physics = 'false'
+echo_physics = 'true'
 
 # Options related to all Physics
 [Physics]
@@ -71,7 +71,7 @@ Cp = 1.0
 
 bc_ids = '3 0 2 1'
 
-bc_types = 'isothermal_wall adiabatic_wall adiabatic_wall isothermal_wall'
+bc_types = 'isothermal_wall general_heat_flux adiabatic_wall isothermal_wall'
 
 T_wall_1 = 1
 T_wall_3 = 10

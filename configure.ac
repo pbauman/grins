@@ -1,14 +1,18 @@
-dnl                                               -*- Autoconf -*-
+ dnl                                               -*- Autoconf -*-
 dnl Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT(grins, 0.3.0, pbauman@ices.utexas.edu)
+AC_INIT(grins, 0.4.0, pbauman@ices.utexas.edu)
 AC_CONFIG_MACRO_DIR([m4])
-AC_CONFIG_HEADER(config.h)
+
+AC_CONFIG_HEADER(grins_config.h.tmp)
+dnl Prefixes everything in the temporary file with FINS_
+AX_PREFIX_CONFIG_H(grins_config.h,GRINS,grins_config.h.tmp)
+
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CANONICAL_TARGET()
-AM_INIT_AUTOMAKE([dist-bzip2 tar-ustar 1.10 no-define])
-m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES(yes)]) # use silent rules where available - automake 1.11
+AM_INIT_AUTOMAKE([dist-bzip2 tar-ustar 1.11 no-define color-tests parallel-tests])
+AM_SILENT_RULES(yes)  # use silent rules where available - automake 1.11
 
 LT_INIT
 
@@ -58,7 +62,7 @@ AC_PROG_FC
 dnl----------------
 dnl Libmesh Config
 dnl----------------
-AX_PATH_LIBMESH_NEW(0.8.0,yes)
+AX_PATH_LIBMESH_NEW(0.9.0,yes)
 
 AC_ARG_ENABLE([libmesh-flags],
                AC_HELP_STRING([--enable-libmesh-flags],[enable use of libmesh cxxflags for CXXFLAGS]),
@@ -67,7 +71,7 @@ AC_ARG_ENABLE([libmesh-flags],
 
 
 if test "$USE_LIBMESH_CXX_FLAGS" = "1"; then
-   CXXFLAGS=`$LIBMESH_CONFIG --cxxflags`
+   CXXFLAGS=`$LIBMESH_CONFIG --cppflags --cxxflags`
 else
  dnl TODO: WE NEED TO DISTINGUISH BETWEEN COMPILERS IN A BETTER WAY
    CXXFLAGS="-O0 -g -Wall -fno-unsafe-math-optimizations"
@@ -139,6 +143,93 @@ if test "x${grvy_timers}" = xyes; then
 fi
 
 
+dnl-----------------------
+dnl Check for Cantera 2.0+
+dnl-----------------------
+AC_ARG_VAR([CANTERA_DIR],[Location of Cantera installation])
+AC_ARG_ENABLE(cantera,
+  [  --enable-cantera        Compile with Cantera chemistry support],
+       enable_cantera=$enableval,
+       enable_cantera=yes)
+
+HAVE_CANTERA=0
+
+if test "$enable_cantera" != no; then
+  # User-specific include path
+  AC_ARG_WITH(cantera,
+               AC_HELP_STRING([--with-cantera=PATH],[Specify the path for Cantera]),
+               with_cantera=$withval,
+               with_cantera=$CANTERA_DIR)
+
+
+   ac_cantera_save_CPPFLAGS="$CPPFLAGS"
+   ac_cantera_save_LDFLAGS="$LDFLAGS"
+
+   CANTERA_PREFIX=$with_cantera
+
+   CPPFLAGS="-I$CANTERA_PREFIX/include"
+   # v2.0.x with scons
+   LDFLAGS="-L$CANTERA_PREFIX/lib -lcantera_shared"
+   
+   if (test -f $CANTERA_PREFIX/lib/libcvode_shared*); then
+      LDFLAGS="$LDFLAGS -lcvode_shared"
+   fi
+   if (test -f $CANTERA_PREFIX/lib/libctmath_shared*); then
+      LDFLAGS="$LDFLAGS -lctmath_shared"
+   fi
+   if (test -f $CANTERA_PREFIX/lib/libctf2c_shared*); then
+      LDFLAGS="$LDFLAGS -lctf2c_shared"
+   fi
+   if (test -f $CANTERA_PREFIX/lib/libexecstream_shared*); then
+      LDFLAGS="$LDFLAGS -lexecstream_shared"
+   fi
+
+   CANTERA_CPPFLAGS="${CPPFLAGS}"
+   CANTERA_LDFLAGS="${LDFLAGS}"
+
+   dnl We don't want these in the final link line since we'll already have BLAS
+   dnl from PETSC etc., but these are needed for the test to pass.
+   if (test -f $CANTERA_PREFIX/lib/libctblas_shared*); then
+      LDFLAGS="$LDFLAGS -lctblas_shared"
+   fi
+   if (test -f $CANTERA_PREFIX/lib/libctlapack_shared*); then
+      LDFLAGS="$LDFLAGS -lctlapack_shared"
+   fi
+
+   #--------------------------------------------------------------
+   # Check for Cantera library linking
+   #--------------------------------------------------------------
+   AC_MSG_CHECKING([for Cantera linkage])
+
+   AC_LANG_PUSH([C++])
+   AC_LINK_IFELSE( [AC_LANG_PROGRAM([#include "cantera/IdealGasMix.h"],
+                                    [Cantera::IdealGasMix()])],
+                                    [AC_MSG_RESULT(yes)
+                                     found_cantera_library=yes],
+                                    [AC_MSG_RESULT(no) 
+                                     found_cantera_library=no] )
+   AC_LANG_POP([C++])
+
+   CPPFLAGS="$ac_cantera_save_CPPFLAGS"
+   LDFLAGS="$ac_cantera_save_LDFLAGS"
+
+   if test "x${found_cantera_library}" = "xyes" ; then
+      HAVE_CANTERA=1
+      AC_DEFINE(HAVE_CANTERA, 1, [Flag indicating support for Cantera chemistry])
+      AC_SUBST(CANTERA_CPPFLAGS)
+      AC_SUBST(CANTERA_LDFLAGS)
+      AC_SUBST(CANTERA_PREFIX)
+   else
+      AC_MSG_NOTICE([Disabling optional Cantera chemistry support])
+      CANTERA_CPPFLAGS=""
+      CANTERA_LDFLAGS=""
+   fi
+fi
+
+AC_SUBST(HAVE_CANTERA)
+AM_CONDITIONAL(CANTERA_ENABLED,test x$HAVE_CANTERA = x1)
+
+ 
 dnl-------------------
 dnl Check for TRILINOS
 dnl-------------------
@@ -188,24 +279,62 @@ DX_XML_FEATURE(OFF)
 DX_PDF_FEATURE(ON)
 DX_PS_FEATURE(OFF)
 
-DX_INIT_DOXYGEN(GRINS, doxygen/grins.dox, docs/doxygen )
+DX_INIT_DOXYGEN(GRINS, doxygen/grins.dox, docs/doxygen)
 
+AC_CONFIG_FILES(doxygen/txt_common/about.page)
 
-dnl-------------------
-dnl Generate makefiles
-dnl-------------------
-AC_OUTPUT( Makefile \
-           src/Makefile src/utilities/include/grins_version.h \
-           test/Makefile \
-           doxygen/Makefile \
-           doxygen/txt_common/about.page \
-           examples/Makefile \
-           examples/cavity_benchmark/Makefile \
-	   examples/rayleigh_taylor/Makefile \
-           examples/mass_injection/Makefile \
-           examples/vortex/Makefile )
+dnl-----------------------------------------------
+dnl Generate files for unit and regression testing
+dnl-----------------------------------------------
+AC_CONFIG_FILES(test/test_axi_ns_poiseuille_flow.sh,	                  [chmod +x test/test_axi_ns_poiseuille_flow.sh])
+AC_CONFIG_FILES(test/test_ns_couette_flow_2d_x.sh,                        [chmod +x test/test_ns_couette_flow_2d_x.sh])
+AC_CONFIG_FILES(test/test_ns_couette_flow_2d_y.sh,                        [chmod +x test/test_ns_couette_flow_2d_y.sh])
+AC_CONFIG_FILES(test/test_ns_poiseuille_flow.sh,                          [chmod +x test/test_ns_poiseuille_flow.sh])
+AC_CONFIG_FILES(test/test_stokes_poiseuille_flow.sh,                      [chmod +x test/test_stokes_poiseuille_flow.sh])
+AC_CONFIG_FILES(test/test_thermally_driven_2d_flow.sh,                    [chmod +x test/test_thermally_driven_2d_flow.sh])
+AC_CONFIG_FILES(test/test_thermally_driven_3d_flow.sh,                    [chmod +x test/test_thermally_driven_3d_flow.sh])
+AC_CONFIG_FILES(test/test_axi_thermally_driven_flow.sh,                   [chmod +x test/test_axi_thermally_driven_flow.sh])
+AC_CONFIG_FILES(test/test_axi_ns_con_cyl_flow.sh,                         [chmod +x test/test_axi_ns_con_cyl_flow.sh])
+AC_CONFIG_FILES(test/test_vorticity_qoi.sh,                               [chmod +x test/test_vorticity_qoi.sh])
+AC_CONFIG_FILES(test/input_files/vorticity_qoi.in)
+AC_CONFIG_FILES(test/low_mach_cavity_benchmark_regression.sh,             [chmod +x test/low_mach_cavity_benchmark_regression.sh])
+AC_CONFIG_FILES(test/backward_facing_step_regression.sh,                  [chmod +x test/backward_facing_step_regression.sh])
+AC_CONFIG_FILES(test/input_files/backward_facing_step.in)
+AC_CONFIG_FILES(test/coupled_stokes_ns.sh,                                [chmod +x test/coupled_stokes_ns.sh])
+AC_CONFIG_FILES(test/input_files/coupled_stokes_ns.in)
+AC_CONFIG_FILES(test/cantera_chem_thermo_test.sh,	                  [chmod +x test/cantera_chem_thermo_test.sh])
+AC_CONFIG_FILES(test/input_files/cantera_chem_thermo.in)
+AC_CONFIG_FILES(test/reacting_low_mach_cantera_regression.sh,             [chmod +x test/reacting_low_mach_cantera_regression.sh])
+AC_CONFIG_FILES(test/input_files/reacting_low_mach_cantera_regression.in)
+AC_CONFIG_FILES(test/input_files/air_2sp.xml)
+AC_CONFIG_FILES(test/grins_kinetics_regression.sh,	                  [chmod +x test/grins_kinetics_regression.sh])
+AC_CONFIG_FILES(test/reacting_low_mach_grins_kinetics_regression.sh,      [chmod +x test/reacting_low_mach_grins_kinetics_regression.sh])
+AC_CONFIG_FILES(test/input_files/reacting_low_mach_grins_kinetics_regression.in)
+AC_CONFIG_FILES(test/reacting_low_mach_catalytic_wall_grins_kinetics_regression.sh, [chmod +x test/reacting_low_mach_catalytic_wall_grins_kinetics_regression.sh])
+AC_CONFIG_FILES(test/input_files/reacting_low_mach_catalytic_wall_grins_kinetics_regression.in)
 
+dnl-----------------------------------------------
+dnl Generate run scripts for examples
+dnl-----------------------------------------------
+AC_CONFIG_FILES(examples/cavity_benchmark/run.sh,	     [chmod +x examples/cavity_benchmark/run.sh])
+AC_CONFIG_FILES(examples/backward_facing_step/run.sh,	     [chmod +x examples/backward_facing_step/run.sh])
+AC_CONFIG_FILES(examples/lid_driven_cavity/run.sh,	     [chmod +x examples/lid_driven_cavity/run.sh])
+AC_CONFIG_FILES(examples/mass_injection/run.sh,	             [chmod +x examples/mass_injection/run.sh])
+AC_CONFIG_FILES(examples/rayleigh_taylor/run.sh,	     [chmod +x examples/rayleigh_taylor/run.sh])
+AC_CONFIG_FILES(examples/coupled_stokes_navierstokes/run.sh, [chmod +x examples/coupled_stokes_navierstokes/run.sh])
 
+dnl-----------------------------------------------
+dnl Generate header files
+dnl-----------------------------------------------
+AC_CONFIG_FILES(src/utilities/include/grins/grins_version.h)
+            
+dnl-----------------------------------------------
+dnl Generate Makefiles
+dnl-----------------------------------------------
+AC_CONFIG_FILES([Makefile src/Makefile test/Makefile doxygen/Makefile examples/Makefile])
+
+# Must still call AC_OUTPUT() after generating all the files
+AC_OUTPUT()
 
 dnl------------------------------
 dnl Final summary

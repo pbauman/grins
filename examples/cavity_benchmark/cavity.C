@@ -3,21 +3,21 @@
 // 
 // GRINS - General Reacting Incompressible Navier-Stokes 
 //
-// Copyright (C) 2010-2012 The PECOS Development Team
+// Copyright (C) 2010-2013 The PECOS Development Team
 //
-// This program is free software; you can redistribute it and/or
-// modify it under the terms of the Version 2 GNU General
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the Version 2.1 GNU Lesser General
 // Public License as published by the Free Software Foundation.
 //
-// This program is distributed in the hope that it will be useful,
+// This library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-// General Public License for more details.
+// Lesser General Public License for more details.
 //
-// You should have received a copy of the GNU General Public License
-// along with this library; if not, write to the Free Software
-// Foundation, Inc. 51 Franklin Street, Fifth Floor, Boston, MA
-// 02110-1301 USA
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc. 51 Franklin Street, Fifth Floor,
+// Boston, MA  02110-1301  USA
 //
 //-----------------------------------------------------------------------el-
 //
@@ -25,20 +25,21 @@
 //
 //--------------------------------------------------------------------------
 //--------------------------------------------------------------------------
-#include "config.h"
+#include "grins_config.h"
 
 #include <iostream>
 
 // GRINS
-#include "simulation.h"
+#include "grins/simulation.h"
+#include "grins/simulation_builder.h"
 
 // GRVY
-#ifdef HAVE_GRVY
+#ifdef GRINS_HAVE_GRVY
 #include "grvy.h"
 #endif
 
 // libMesh
-#include "parallel.h"
+#include "libmesh/parallel.h"
 
 // Function for getting initial temperature field
 Real initial_values( const Point& p, const Parameters &params, 
@@ -46,7 +47,7 @@ Real initial_values( const Point& p, const Parameters &params,
 
 int main(int argc, char* argv[])
 {
-#ifdef USE_GRVY_TIMERS
+#ifdef GRINS_USE_GRVY_TIMERS
   GRVY::GRVY_Timer_Class grvy_timer;
   grvy_timer.Init("GRINS Timer");
 #endif
@@ -65,7 +66,7 @@ int main(int argc, char* argv[])
   // Create our GetPot object.
   GetPot libMesh_inputfile( libMesh_input_filename );
 
-#ifdef USE_GRVY_TIMERS
+#ifdef GRINS_USE_GRVY_TIMERS
   grvy_timer.BeginTimer("Initialize Solver");
 #endif
 
@@ -100,7 +101,7 @@ int main(int argc, char* argv[])
       system.project_solution( initial_values, NULL, params );
     }
 
-#ifdef USE_GRVY_TIMERS
+#ifdef GRINS_USE_GRVY_TIMERS
   grvy_timer.EndTimer("Initialize Solver");
 
   // Attach GRVY timer to solver
@@ -109,7 +110,7 @@ int main(int argc, char* argv[])
 
   grins.run();
 
-#ifdef USE_GRVY_TIMERS
+#ifdef GRINS_USE_GRVY_TIMERS
   grvy_timer.Finalize();
  
   if( Parallel::Communicator_World.rank() == 0 ) grvy_timer.Summarize();

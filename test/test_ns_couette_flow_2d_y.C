@@ -3,21 +3,21 @@
 // 
 // GRINS - General Reacting Incompressible Navier-Stokes 
 //
-// Copyright (C) 2010-2012 The PECOS Development Team
+// Copyright (C) 2010-2013 The PECOS Development Team
 //
-// This program is free software; you can redistribute it and/or
-// modify it under the terms of the Version 2 GNU General
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the Version 2.1 GNU Lesser General
 // Public License as published by the Free Software Foundation.
 //
-// This program is distributed in the hope that it will be useful,
+// This library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-// General Public License for more details.
+// Lesser General Public License for more details.
 //
-// You should have received a copy of the GNU General Public License
-// along with this library; if not, write to the Free Software
-// Foundation, Inc. 51 Franklin Street, Fifth Floor, Boston, MA
-// 02110-1301 USA
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc. 51 Franklin Street, Fifth Floor,
+// Boston, MA  02110-1301  USA
 //
 //-----------------------------------------------------------------------el-
 //
@@ -26,20 +26,21 @@
 //--------------------------------------------------------------------------
 //--------------------------------------------------------------------------
 
-#include "config.h"
+#include "grins_config.h"
 
 #include <iostream>
 
 // GRINS
-#include "mesh_builder.h"
-#include "simulation.h"
-#include "multiphysics_sys.h"
+#include "grins/mesh_builder.h"
+#include "grins/simulation.h"
+#include "grins/simulation_builder.h"
+#include "grins/multiphysics_sys.h"
 
 //libMesh
-#include "exact_solution.h"
+#include "libmesh/exact_solution.h"
 
 // GRVY
-#ifdef HAVE_GRVY
+#ifdef GRINS_HAVE_GRVY
 #include "grvy.h"
 #endif
 
@@ -56,7 +57,7 @@ Gradient exact_derivative( const Point& p,
 int main(int argc, char* argv[]) 
 {
 
-#ifdef USE_GRVY_TIMERS
+#ifdef GRINS_USE_GRVY_TIMERS
   GRVY::GRVY_Timer_Class grvy_timer;
   grvy_timer.Init("GRINS Timer");
 #endif
@@ -75,7 +76,7 @@ int main(int argc, char* argv[])
   // Create our GetPot object.
   GetPot libMesh_inputfile( libMesh_input_filename );
 
-#ifdef USE_GRVY_TIMERS
+#ifdef GRINS_USE_GRVY_TIMERS
   grvy_timer.BeginTimer("Initialize Solver");
 #endif
 
@@ -87,7 +88,7 @@ int main(int argc, char* argv[])
   GRINS::Simulation grins( libMesh_inputfile,
 			   sim_builder );
 
-#ifdef USE_GRVY_TIMERS
+#ifdef GRINS_USE_GRVY_TIMERS
   grvy_timer.EndTimer("Initialize Solver");
 
   // Attach GRVY timer to solver
@@ -96,7 +97,7 @@ int main(int argc, char* argv[])
 
   grins.run();
   
-#ifdef USE_GRVY_TIMERS
+#ifdef GRINS_USE_GRVY_TIMERS
   grvy_timer.Finalize();
 #endif
 
@@ -129,13 +130,11 @@ int main(int argc, char* argv[])
 }
 
 Number exact_solution( const Point& p,
-		       const Parameters& params,   // parameters, not needed
+		       const Parameters& /*params*/,   // parameters, not needed
 		       const std::string& sys,  // sys_name, not needed
 		       const std::string& var )  // unk_name, not needed);
 {
   const double x = p(0);
-  const double y = p(1);
-  const double z = p(2);
   
   if( sys != "GRINS" || var != "v" )
     std::cout << "sys = " << sys << ", var = " << var << std::endl;
@@ -146,15 +145,11 @@ Number exact_solution( const Point& p,
   return f;
 }
 
-Gradient exact_derivative( const Point& p,
-			   const Parameters& params,   // parameters, not needed
+Gradient exact_derivative( const Point& /*p*/,
+			   const Parameters& /*params*/,   // parameters, not needed
 			   const std::string& sys,  // sys_name, not needed
 			   const std::string& var )  // unk_name, not needed);
 {
-  const double x = p(0);
-  const double y = p(1);
-  const double z = p(2);
-
   Gradient g;
 
   if( sys != "GRINS" || var != "v" )

@@ -3,21 +3,21 @@
 // 
 // GRINS - General Reacting Incompressible Navier-Stokes 
 //
-// Copyright (C) 2010-2012 The PECOS Development Team
+// Copyright (C) 2010-2013 The PECOS Development Team
 //
-// This program is free software; you can redistribute it and/or
-// modify it under the terms of the Version 2 GNU General
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the Version 2.1 GNU Lesser General
 // Public License as published by the Free Software Foundation.
 //
-// This program is distributed in the hope that it will be useful,
+// This library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-// General Public License for more details.
+// Lesser General Public License for more details.
 //
-// You should have received a copy of the GNU General Public License
-// along with this library; if not, write to the Free Software
-// Foundation, Inc. 51 Franklin Street, Fifth Floor, Boston, MA
-// 02110-1301 USA
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc. 51 Franklin Street, Fifth Floor,
+// Boston, MA  02110-1301  USA
 //
 //-----------------------------------------------------------------------el-
 //
@@ -26,173 +26,149 @@
 //--------------------------------------------------------------------------
 //--------------------------------------------------------------------------
 
-#include "axisym_boussinesq_buoyancy.h"
+// This class
+#include "grins/axisym_boussinesq_buoyancy.h"
 
-GRINS::AxisymmetricBoussinesqBuoyancy::AxisymmetricBoussinesqBuoyancy( const std::string& physics_name,
-								       const GetPot& input )
-  : Physics(physics_name, input)
+// libMesh
+#include "libmesh/utility.h"
+#include "libmesh/string_to_enum.h"
+#include "libmesh/getpot.h"
+#include "libmesh/fem_system.h"
+#include "libmesh/quadrature.h"
+
+namespace GRINS
 {
-  this->read_input_options(input);
-  return;
-}
 
-GRINS::AxisymmetricBoussinesqBuoyancy::~AxisymmetricBoussinesqBuoyancy()
-{
-  return;
-}
+  AxisymmetricBoussinesqBuoyancy::AxisymmetricBoussinesqBuoyancy( const std::string& physics_name,
+								  const GetPot& input )
+    : Physics(physics_name, input)
+  {
+    this->read_input_options(input);
+    return;
+  }
 
-void GRINS::AxisymmetricBoussinesqBuoyancy::read_input_options( const GetPot& input )
-{
-  this->_T_FE_family =
-    libMesh::Utility::string_to_enum<libMeshEnums::FEFamily>( input("Physics/"+axisymmetric_heat_transfer+"/FE_family", "LAGRANGE") );
+  AxisymmetricBoussinesqBuoyancy::~AxisymmetricBoussinesqBuoyancy()
+  {
+    return;
+  }
 
-  this->_T_order =
-    libMesh::Utility::string_to_enum<libMeshEnums::Order>( input("Physics/"+axisymmetric_heat_transfer+"/T_order", "SECOND") );
+  void AxisymmetricBoussinesqBuoyancy::read_input_options( const GetPot& input )
+  {
+    this->_T_FE_family =
+      libMesh::Utility::string_to_enum<libMeshEnums::FEFamily>( input("Physics/"+axisymmetric_heat_transfer+"/FE_family", "LAGRANGE") );
 
-  this->_V_FE_family =
-    libMesh::Utility::string_to_enum<libMeshEnums::FEFamily>( input("Physics/"+axisymmetric_incomp_navier_stokes+"/FE_family", "LAGRANGE") );
+    this->_T_order =
+      libMesh::Utility::string_to_enum<libMeshEnums::Order>( input("Physics/"+axisymmetric_heat_transfer+"/T_order", "SECOND") );
 
-  this->_V_order =
-    libMesh::Utility::string_to_enum<libMeshEnums::Order>( input("Physics/"+axisymmetric_incomp_navier_stokes+"/V_order", "SECOND") );
+    this->_V_FE_family =
+      libMesh::Utility::string_to_enum<libMeshEnums::FEFamily>( input("Physics/"+axisymmetric_incomp_navier_stokes+"/FE_family", "LAGRANGE") );
 
-  // Read variable naming info
-  this->_u_r_var_name = input("Physics/VariableNames/r_velocity", GRINS::u_r_var_name_default );
-  this->_u_z_var_name = input("Physics/VariableNames/z_velocity", GRINS::u_z_var_name_default );
-  this->_T_var_name = input("Physics/VariableNames/Temperature", GRINS::T_var_name_default );
+    this->_V_order =
+      libMesh::Utility::string_to_enum<libMeshEnums::Order>( input("Physics/"+axisymmetric_incomp_navier_stokes+"/V_order", "SECOND") );
 
-  _rho_ref = input("Physics/"+axisymmetric_boussinesq_buoyancy+"/rho_ref", 1.0);
-  _T_ref = input("Physics/"+axisymmetric_boussinesq_buoyancy+"/T_ref", 1.0);;
-  _beta_T = input("Physics/"+axisymmetric_boussinesq_buoyancy+"/beta_T", 1.0);;
+    // Read variable naming info
+    this->_u_r_var_name = input("Physics/VariableNames/r_velocity", u_r_var_name_default );
+    this->_u_z_var_name = input("Physics/VariableNames/z_velocity", u_z_var_name_default );
+    this->_T_var_name = input("Physics/VariableNames/Temperature", T_var_name_default );
 
-   unsigned int g_dim = input.vector_variable_size("Physics/"+axisymmetric_boussinesq_buoyancy+"/g");
+    _rho_ref = input("Physics/"+axisymmetric_boussinesq_buoyancy+"/rho_ref", 1.0);
+    _T_ref = input("Physics/"+axisymmetric_boussinesq_buoyancy+"/T_ref", 1.0);
+    _beta_T = input("Physics/"+axisymmetric_boussinesq_buoyancy+"/beta_T", 1.0);
 
-  _g(0) = input("Physics/"+axisymmetric_boussinesq_buoyancy+"/g", 0.0, 0 );
-  _g(1) = input("Physics/"+axisymmetric_boussinesq_buoyancy+"/g", 0.0, 1 );
+    _g(0) = input("Physics/"+axisymmetric_boussinesq_buoyancy+"/g", 0.0, 0 );
+    _g(1) = input("Physics/"+axisymmetric_boussinesq_buoyancy+"/g", 0.0, 1 );
 
-  return;
-}
+    return;
+  }
 
-void GRINS::AxisymmetricBoussinesqBuoyancy::init_variables( libMesh::FEMSystem* system )
-{
-  this->_dim = system->get_mesh().mesh_dimension();
+  void AxisymmetricBoussinesqBuoyancy::init_variables( libMesh::FEMSystem* system )
+  {
+    this->_dim = system->get_mesh().mesh_dimension();
 
-  _u_r_var = system->add_variable(_u_r_var_name, _V_order, _V_FE_family);
-  _u_z_var = system->add_variable(_u_z_var_name, _V_order, _V_FE_family);
-  _T_var   = system->add_variable(_T_var_name, _T_order, _T_FE_family);
-  return;
-}
+    _u_r_var = system->add_variable(_u_r_var_name, _V_order, _V_FE_family);
+    _u_z_var = system->add_variable(_u_z_var_name, _V_order, _V_FE_family);
+    _T_var   = system->add_variable(_T_var_name, _T_order, _T_FE_family);
+    return;
+  }
 
-bool GRINS::AxisymmetricBoussinesqBuoyancy::element_time_derivative( bool request_jacobian,
-								     libMesh::DiffContext& context,
-								     libMesh::FEMSystem* system )
-{
-#ifdef USE_GRVY_TIMERS
-  this->_timer->BeginTimer("AxisymmetricBoussinesqBuoyancy::element_time_derivative");
-#endif
-  
-  FEMContext &c = libmesh_cast_ref<FEMContext&>(context);
-
-  // The number of local degrees of freedom in each variable.
-  const unsigned int n_u_dofs = c.dof_indices_var[_u_r_var].size();
-  const unsigned int n_T_dofs = c.dof_indices_var[_T_var].size();
-
-  // Element Jacobian * quadrature weights for interior integration.
-  const std::vector<libMesh::Real> &JxW =
-    c.element_fe_var[_u_r_var]->get_JxW();
-
-  // The velocity shape functions at interior quadrature points.
-  const std::vector<std::vector<libMesh::Real> >& vel_phi =
-    c.element_fe_var[_u_r_var]->get_phi();
-
-  // The temperature shape functions at interior quadrature points.
-  const std::vector<std::vector<libMesh::Real> >& T_phi =
-    c.element_fe_var[_T_var]->get_phi();
-
-  // Physical location of the quadrature points
-  const std::vector<libMesh::Point>& u_qpoint =
-    c.element_fe_var[_u_r_var]->get_xyz();
-
-  // Get residuals
-  libMesh::DenseSubVector<Number> &Fr = *c.elem_subresiduals[_u_r_var]; // R_{r}
-  libMesh::DenseSubVector<Number> &Fz = *c.elem_subresiduals[_u_z_var]; // R_{z}
-
-  // Get Jacobians
-  libMesh::DenseSubMatrix<Number> &KrT = *c.elem_subjacobians[_u_r_var][_T_var]; // R_{r},{T}
-  libMesh::DenseSubMatrix<Number> &KzT = *c.elem_subjacobians[_u_z_var][_T_var]; // R_{z},{T}
-
-  // Now we will build the element Jacobian and residual.
-  // Constructing the residual requires the solution and its
-  // gradient from the previous timestep.  This must be
-  // calculated at each quadrature point by summing the
-  // solution degree-of-freedom values by the appropriate
-  // weight functions.
-  unsigned int n_qpoints = c.element_qrule->n_points();
-
-  for (unsigned int qp=0; qp != n_qpoints; qp++)
-    {
-      const libMesh::Number r = u_qpoint[qp](0);
-
-      // Compute the solution & its gradient at the old Newton iterate.
-      libMesh::Number T;
-      T = c.interior_value(_T_var, qp);
-
-      // First, an i-loop over the velocity degrees of freedom.
-      // We know that n_u_dofs == n_v_dofs so we can compute contributions
-      // for both at the same time.
-      for (unsigned int i=0; i != n_u_dofs; i++)
-        {
-	  Fr(i) += -_rho_ref*_beta_T*(T - _T_ref)*_g(0)*vel_phi[i][qp]*r*JxW[qp];
-	  Fz(i) += -_rho_ref*_beta_T*(T - _T_ref)*_g(1)*vel_phi[i][qp]*r*JxW[qp];
-
-	  if (request_jacobian && c.elem_solution_derivative)
-            {
-              libmesh_assert (c.elem_solution_derivative == 1.0);
-              for (unsigned int j=0; j != n_T_dofs; j++)
-		{
-		  KrT(i,j) += -_rho_ref*_beta_T*_g(0)*vel_phi[i][qp]*T_phi[j][qp]*r*JxW[qp];
-		  KzT(i,j) += -_rho_ref*_beta_T*_g(1)*vel_phi[i][qp]*T_phi[j][qp]*r*JxW[qp];
-		} // End j dof loop
-	    } // End request_jacobian check
-
-	} // End i dof loop
-    } // End quadrature loop
-
-#ifdef USE_GRVY_TIMERS
-  this->_timer->EndTimer("AxisymmetricBoussinesqBuoyancy::element_time_derivative");
+  void AxisymmetricBoussinesqBuoyancy::element_time_derivative( bool compute_jacobian,
+								libMesh::FEMContext& context,
+								CachedValues& /*cache*/ )
+  {
+#ifdef GRINS_USE_GRVY_TIMERS
+    this->_timer->BeginTimer("AxisymmetricBoussinesqBuoyancy::element_time_derivative");
 #endif
 
-  return request_jacobian;
-}
+    // The number of local degrees of freedom in each variable.
+    const unsigned int n_u_dofs = context.dof_indices_var[_u_r_var].size();
+    const unsigned int n_T_dofs = context.dof_indices_var[_T_var].size();
 
-void GRINS::AxisymmetricBoussinesqBuoyancy::init_context( libMesh::DiffContext &context )
-{
-  return;
-}
+    // Element Jacobian * quadrature weights for interior integration.
+    const std::vector<libMesh::Real> &JxW =
+      context.element_fe_var[_u_r_var]->get_JxW();
 
-bool GRINS::AxisymmetricBoussinesqBuoyancy::side_time_derivative( bool request_jacobian,
-						      libMesh::DiffContext& context,
-						      libMesh::FEMSystem* system )
-{
-  return request_jacobian;
-}
+    // The velocity shape functions at interior quadrature points.
+    const std::vector<std::vector<libMesh::Real> >& vel_phi =
+      context.element_fe_var[_u_r_var]->get_phi();
 
-bool GRINS::AxisymmetricBoussinesqBuoyancy::element_constraint( bool request_jacobian,
-						    libMesh::DiffContext& context,
-						    libMesh::FEMSystem* system )
-{
-  return request_jacobian;
-}
+    // The temperature shape functions at interior quadrature points.
+    const std::vector<std::vector<libMesh::Real> >& T_phi =
+      context.element_fe_var[_T_var]->get_phi();
 
-bool GRINS::AxisymmetricBoussinesqBuoyancy::side_constraint( bool request_jacobian,
-						 libMesh::DiffContext& context,
-						 libMesh::FEMSystem* system )
-{
-  return request_jacobian;
-}
+    // Physical location of the quadrature points
+    const std::vector<libMesh::Point>& u_qpoint =
+      context.element_fe_var[_u_r_var]->get_xyz();
 
-bool GRINS::AxisymmetricBoussinesqBuoyancy::mass_residual( bool request_jacobian,
-					       libMesh::DiffContext& context,
-					       libMesh::FEMSystem* system )
-{
-  return request_jacobian;
-}
+    // Get residuals
+    libMesh::DenseSubVector<Number> &Fr = *context.elem_subresiduals[_u_r_var]; // R_{r}
+    libMesh::DenseSubVector<Number> &Fz = *context.elem_subresiduals[_u_z_var]; // R_{z}
+
+    // Get Jacobians
+    libMesh::DenseSubMatrix<Number> &KrT = *context.elem_subjacobians[_u_r_var][_T_var]; // R_{r},{T}
+    libMesh::DenseSubMatrix<Number> &KzT = *context.elem_subjacobians[_u_z_var][_T_var]; // R_{z},{T}
+
+    // Now we will build the element Jacobian and residual.
+    // Constructing the residual requires the solution and its
+    // gradient from the previous timestep.  This must be
+    // calculated at each quadrature point by summing the
+    // solution degree-of-freedom values by the appropriate
+    // weight functions.
+    unsigned int n_qpoints = context.element_qrule->n_points();
+
+    for (unsigned int qp=0; qp != n_qpoints; qp++)
+      {
+	const libMesh::Number r = u_qpoint[qp](0);
+
+	// Compute the solution & its gradient at the old Newton iterate.
+	libMesh::Number T;
+	T = context.interior_value(_T_var, qp);
+
+	// First, an i-loop over the velocity degrees of freedom.
+	// We know that n_u_dofs == n_v_dofs so we can compute contributions
+	// for both at the same time.
+	for (unsigned int i=0; i != n_u_dofs; i++)
+	  {
+	    Fr(i) += -_rho_ref*_beta_T*(T - _T_ref)*_g(0)*vel_phi[i][qp]*r*JxW[qp];
+	    Fz(i) += -_rho_ref*_beta_T*(T - _T_ref)*_g(1)*vel_phi[i][qp]*r*JxW[qp];
+
+	    if (compute_jacobian && context.elem_solution_derivative)
+	      {
+		libmesh_assert (context.elem_solution_derivative == 1.0);
+		for (unsigned int j=0; j != n_T_dofs; j++)
+		  {
+		    KrT(i,j) += -_rho_ref*_beta_T*_g(0)*vel_phi[i][qp]*T_phi[j][qp]*r*JxW[qp];
+		    KzT(i,j) += -_rho_ref*_beta_T*_g(1)*vel_phi[i][qp]*T_phi[j][qp]*r*JxW[qp];
+		  } // End j dof loop
+	      } // End compute_jacobian check
+
+	  } // End i dof loop
+      } // End quadrature loop
+
+#ifdef GRINS_USE_GRVY_TIMERS
+    this->_timer->EndTimer("AxisymmetricBoussinesqBuoyancy::element_time_derivative");
+#endif
+
+    return;
+  }
+
+} // namespace GRINS
