@@ -71,6 +71,8 @@ namespace GRINS
     int mesh_nx3 = input("mesh-options/mesh_nx3", -1);
 
     int uniformly_refine = input("mesh-options/uniformly_refine", 0);
+
+    bool make_mesh_second_order = input("mesh-options/make_mesh_second_order", false);
     
     std::string element_type = input("mesh-options/element_type", "NULL");
 
@@ -166,6 +168,11 @@ namespace GRINS
 		  << " mesh-options/mesh_option [" << mesh_option
 		  << "] NOT supported " << std::endl;
 	libmesh_error();
+      }
+
+    if( make_mesh_second_order )
+      {
+	mesh->all_second_order();
       }
 
     if( uniformly_refine > 0 )

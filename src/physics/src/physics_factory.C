@@ -57,7 +57,9 @@
 #include "grins/constant_viscosity.h"
 #include "grins/reacting_low_mach_navier_stokes.h"
 #include "grins/heat_conduction.h"
+#include "grins/reduced_electroosmosis.h"
 #include "grins/constant_source_func.h"
+
 
 // libMesh
 #include "libmesh/getpot.h"
@@ -334,6 +336,12 @@ namespace GRINS
 	    libmesh_error();
 	  }
       }
+    else if( physics_to_add == reduced_electroosmosis )
+      {
+	physics_list[physics_to_add] = 
+	  PhysicsPtr(new ReducedElectroosmosis(physics_to_add,input));
+      }
+    
 
     else
       {

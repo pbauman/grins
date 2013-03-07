@@ -84,7 +84,8 @@ physics_SRC  = $(physics_srcdir)/multiphysics_sys.C \
                $(physics_srcdir)/low_mach_navier_stokes_stab_helper.C \
                $(physics_srcdir)/reacting_low_mach_navier_stokes_base.C \
                $(physics_srcdir)/reacting_low_mach_navier_stokes.C \
-               $(physics_srcdir)/heat_conduction.C
+               $(physics_srcdir)/heat_conduction.C \
+               $(physics_srcdir)/reduced_electroosmosis.C 	
 
 boundary_conditions_SRC = $(boundary_conditions_srcdir)/boundary_conditions.C \
                           $(boundary_conditions_srcdir)/bc_factory.C \
@@ -194,7 +195,8 @@ physics_INC  = $(physics_incdir)/grins/multiphysics_sys.h \
                $(physics_incdir)/grins/low_mach_navier_stokes_stab_helper.h \
                $(physics_incdir)/grins/reacting_low_mach_navier_stokes_base.h \
                $(physics_incdir)/grins/reacting_low_mach_navier_stokes.h \
-               $(physics_incdir)/grins/heat_conduction.h
+               $(physics_incdir)/grins/heat_conduction.h \
+	       $(physics_incdir)/grins/reduced_electroosmosis.h
 
 boundary_conditions_INC = $(boundary_conditions_incdir)/grins/bc_types.h \
                           $(boundary_conditions_incdir)/grins/boundary_conditions.h \
