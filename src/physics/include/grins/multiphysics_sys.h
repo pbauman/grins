@@ -140,7 +140,16 @@ namespace GRINS
 #ifdef GRINS_USE_GRVY_TIMERS
     //! Add GRVY Timer object to system for timing physics.
     void attach_grvy_timer( GRVY::GRVY_Timer_Class* grvy_timer );
-#endif    
+#endif
+
+    virtual void my_forward_qoi_parameter_sensitivity( const libMesh::QoISet& qoi_indices,
+                                                       const libMesh::ParameterVector& params,
+                                                       libMesh::SensitivityData& sensitivities );
+
+    virtual void assemble_residual_derivatives( const libMesh::ParameterVector& params );
+
+    virtual void element_residual_parameter_derivatives( NumericVector<Number>& dR_dp,
+                                                         libMesh::FEMContext& context );
 
   private:
 

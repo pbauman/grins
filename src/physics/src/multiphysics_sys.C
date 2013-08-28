@@ -357,4 +357,120 @@ namespace GRINS
 #endif
 
 
+  void MultiphysicsSystem::my_forward_qoi_parameter_sensitivity( const libMesh::QoISet& qoi_indices,
+                                                                 const libMesh::ParameterVector& params,
+                                                                 libMesh::SensitivityData& sensitivities )
+  {
+    const unsigned int Np = libmesh_cast_int<unsigned int>(parameters.size());
+
+    const unsigned int Nq = libmesh_cast_int<unsigned int>(qoi.size());
+
+    // An introduction to the problem:
+    //
+    // Residual R(u(p),p) = 0
+    // partial R / partial u = J = system matrix
+    //
+    // This implies that:
+    // d/dp(R) = 0
+    // (partial R / partial p) +
+    // (partial R / partial u) * (partial u / partial p) = 0
+
+    // We first solve for (partial u / partial p) for each parameter:
+    // J * (partial u / partial p) = - (partial R / partial p)
+
+    this->my_sensitivity_solve();
+
+    // Get ready to fill in senstivities:
+    sensitivities.allocate_data(qoi_indices, *this, parameters);
+
+    // We use the identity:
+    // dq/dp = (partial q / partial p) + (partial q / partial u) *
+    //         (partial u / partial p)
+
+    // We get (partial q / partial u) from the user
+    this->assemble_qoi_derivative(qoi_indices);
+
+    // We don't need these to be closed() in this function, but libMesh
+    // standard practice is to have them closed() by the time the
+    // function exits
+    for (unsigned int i=0; i != this->qoi.size(); ++i)
+      {
+        if (qoi_indices.has_index(i))
+          {
+            this->get_adjoint_rhs(i).close();
+          }
+      }
+
+    std::vector<Number> partialq_partialp(Nq, 0);
+
+    for (unsigned int p=0; p != Np; ++p)
+    {
+      partialq_partialp = this->assemble_qoi_parameter_derivatives(p);
+
+      for (unsigned int q=0; q != Nq; ++q)
+        {
+          if (qoi_indices.has_index(q))
+            {
+              sensitivities[q][p] = partialq_partialp +
+                this->get_adjoint_rhs(q).dot(this->get_sensitivity_solution(p));
+            }
+        }
+    }
+
+    return;
+  }
+
+  void MultiphysicsSystem::assemble_residual_derivatives(const libMesh::ParameterVector& params)
+  {
+    const unsigned int Np = libmesh_cast_int<unsigned int>(parameters.size());
+
+    const MeshBase& mesh = this->get_mesh();
+
+    this->update();
+
+    for (unsigned int p=0; p != Np; ++p)
+    {
+      NumericVector<Number>& sensitivity_rhs = this->add_sensitivity_rhs(p);
+      
+      AutoPtr<DiffContext> con = this->build_context();
+      FEMContext& femcontext = libmesh_cast_ref<FEMContext&>(*con);
+      this->init_context(femcontext);
+
+      for( ConstElemRange::const_iterator elem_it = mesh.active_local_elements_begin();
+           elem_it != mesh.active_local_elements_end();
+           ++elem_it )
+        {
+          Elem* el = const_cast<Elem*>(*elem_it);
+
+          // Do we need to call pre_fe_reinit?
+          femcontext.pre_fe_reinit(*this, el);
+          femcontext.elem_fe_reinit();
+
+          this->element_residual_parameter_derivatives(sensitivity_rhs, femcontext);
+        }
+
+      sensitivity_rhs.close();
+    }
+
+    return;
+  }
+
+  void MultiphysicsSystem::element_residual_parameter_derivatives( NumericVector<Number>& dR_dp,
+                                                                   libMesh::FEMContext& context )
+  {
+    // Loop over each physics and compute their contributions
+    for( PhysicsListIter physics_iter = _physics_list.begin();
+	 physics_iter != _physics_list.end();
+	 physics_iter++ )
+      {
+	// Only compute if physics is active on current subdomain or globally
+	if( (physics_iter->second)->enabled_on_elem( c.elem ) )
+	  {
+	    (physics_iter->second)->element_residual_parameter_derivatives( dR_dp, context );
+	  }
+      }
+
+    return;
+  }
+
 } // namespace GRINS
