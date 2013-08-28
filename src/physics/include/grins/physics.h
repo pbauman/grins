@@ -158,6 +158,9 @@ namespace GRINS
 				libMesh::FEMContext& context,
 				CachedValues& cache );
 
+    virtual void element_residual_parameter_derivatives( libMesh::NumericVector<libMesh::Real>& dR_dp,
+                                                         libMesh::FEMContext& femcontext );
+
     void init_bcs( libMesh::FEMSystem* system );
 
     void attach_neumann_bound_func( GRINS::NBCContainer& neumann_bcs );
