@@ -89,4 +89,18 @@ namespace GRINS
     return _qoi_cache[qoi_index];
   }
   
+  void QoIBase::element_qoi_parameter_derivative( libMesh::FEMContext& /*context*/,
+                                                  unsigned int /*p*/,
+                                                  libMesh::Real& /*dQ_dp*/ )
+  {
+    return;
+  }
+
+  void QoIBase::side_qoi_parameter_derivative( libMesh::FEMContext& /*context*/,
+                                               unsigned int /*p*/,
+                                               libMesh::Real& /*dQ_dp*/ )
+  {
+    return;
+  }
+
 } // namespace GRINS

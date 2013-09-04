@@ -44,6 +44,7 @@ class GetPot;
 namespace libMesh
 {
   class QoISet;
+  class FEMContext;
 }
 
 namespace GRINS
@@ -92,6 +93,14 @@ namespace GRINS
      * \todo Maybe take a libMesh::QoISet instead?
      */
     libMesh::Number get_qoi( unsigned int qoi_index ) const;
+
+    virtual void element_qoi_parameter_derivative( libMesh::FEMContext& context,
+                                                   unsigned int p,
+                                                   libMesh::Real& dQ_dp );
+
+    virtual void side_qoi_parameter_derivative( libMesh::FEMContext& context,
+                                                unsigned int p,
+                                                libMesh::Real& dQ_dp );
 
   protected:
 
