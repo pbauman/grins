@@ -378,7 +378,7 @@ namespace GRINS
     // We first solve for (partial u / partial p) for each parameter:
     // J * (partial u / partial p) = - (partial R / partial p)
 
-    this->my_sensitivity_solve();
+    this->sensitivity_solve();
 
     // Get ready to fill in senstivities:
     sensitivities.allocate_data(qoi_indices, *this, parameters);
@@ -471,6 +471,52 @@ namespace GRINS
       }
 
     return;
+  }
+
+  libMesh::Real MultiphysicsSystem::assemble_qoi_parameter_derivatives( unsigned int p )
+  {
+    libMesh::Real dQ_dp = 0.0;
+    
+    AutoPtr<DiffContext> con = this->build_context();
+    FEMContext& femcontext = libmesh_cast_ref<FEMContext&>(*con);
+    this->init_context(femcontext);
+
+    QoIBase& qoi = libmesh_cast_ref<QoIBase&>( *(this->_qoi) );
+
+    for( ConstElemRange::const_iterator elem_it = mesh.active_local_elements_begin();
+         elem_it != mesh.active_local_elements_end();
+         ++elem_it )
+      {
+        Elem* el = const_cast<Elem*>(*elem_it);
+
+        // Do we need to call pre_fe_reinit?
+        femcontext.pre_fe_reinit(*this, el);
+
+        if(_qoi.assemble_qoi_elements)
+          {
+            _femcontext.elem_fe_reinit();
+
+            qoi.element_qoi_parameter_derivative(_femcontext, p, dQ_dp);
+          }
+
+          for (_femcontext.side = 0;
+               _femcontext.side != _femcontext.get_elem().n_sides();
+               ++_femcontext.side)
+            {
+              // Don't compute on non-boundary sides unless requested
+              if (!_qoi.assemble_qoi_sides ||
+                  (!_qoi.assemble_qoi_internal_sides &&
+                   _femcontext.get_elem().neighbor(_femcontext.side) != NULL))
+                continue;
+
+              _femcontext.side_fe_reinit();
+
+              qoi.side_qoi_parameter_derivative(_femcontext, p, dQ_dp);
+            }
+
+      }
+
+    return dQ_dp;
   }
 
 } // namespace GRINS

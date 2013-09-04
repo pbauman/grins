@@ -151,6 +151,8 @@ namespace GRINS
     virtual void element_residual_parameter_derivatives( NumericVector<Number>& dR_dp,
                                                          libMesh::FEMContext& context );
 
+    virtual libMesh::Real assemble_qoi_parameter_derivatives( unsigned int p );
+
   private:
 
     //! Container of pointers to GRINS::Physics classes requested at runtime.
