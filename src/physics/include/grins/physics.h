@@ -158,7 +158,8 @@ namespace GRINS
 				libMesh::FEMContext& context,
 				CachedValues& cache );
 
-    virtual void element_residual_parameter_derivatives( libMesh::NumericVector<libMesh::Real>& dR_dp,
+    virtual void element_residual_parameter_derivatives( const unsigned int p,
+                                                         libMesh::NumericVector<libMesh::Real>& dR_dp,
                                                          libMesh::FEMContext& femcontext );
 
     void init_bcs( libMesh::FEMSystem* system );

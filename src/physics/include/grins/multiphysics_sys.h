@@ -148,7 +148,8 @@ namespace GRINS
 
     virtual void assemble_residual_derivatives( const libMesh::ParameterVector& params );
 
-    virtual void element_residual_parameter_derivatives( NumericVector<Number>& dR_dp,
+    virtual void element_residual_parameter_derivatives( const unsigned int p,
+                                                         NumericVector<Number>& dR_dp,
                                                          libMesh::FEMContext& context );
 
     virtual libMesh::Real assemble_qoi_parameter_derivatives( unsigned int p );

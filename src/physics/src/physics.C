@@ -209,7 +209,8 @@ namespace GRINS
     return;
   }
 
-  void Physics::element_residual_parameter_derivatives( libMesh::NumericVector<libMesh::Real>& /*sensitivity_rhs*/,
+  void Physics::element_residual_parameter_derivatives( const unsigned int /*p*/,
+                                                        libMesh::NumericVector<libMesh::Real>& /*sensitivity_rhs*/,
                                                         libMesh::FEMContext& /*femcontext*/ )
   {
     return;

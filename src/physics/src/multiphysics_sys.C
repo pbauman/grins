@@ -410,13 +410,18 @@ namespace GRINS
     {
        libMesh::Real partialq_partialp = this->assemble_qoi_parameter_derivatives(p);
 
+       //std::cout << "p = " << p << ", dQ_dp = " << partialq_partialp << std::endl;
+
       for (unsigned int q=0; q != Nq; ++q)
          {
           if (qoi_indices.has_index(q))
             {
+              //std::cout << "q = " << q << ", dQ_dp = " << partialq_partialp << ", du_dp = " << this->get_sensitivity_solution(p) << std::endl;
               sensitivities[q][p] = partialq_partialp +
                 this->get_adjoint_rhs(q).dot(this->get_sensitivity_solution(p));
             }
+
+          //std::cout << "q = " << q << ", DQ_Dp = " << sensitivities[q][p] << std::endl;
         }
     }
 
@@ -449,7 +454,7 @@ namespace GRINS
           femcontext.pre_fe_reinit(*this, el);
           femcontext.elem_fe_reinit();
 
-          this->element_residual_parameter_derivatives(sensitivity_rhs, femcontext);
+          this->element_residual_parameter_derivatives(p, sensitivity_rhs, femcontext);
         }
 
       sensitivity_rhs.close();
@@ -458,7 +463,8 @@ namespace GRINS
     return;
   }
 
-  void MultiphysicsSystem::element_residual_parameter_derivatives( NumericVector<Number>& dR_dp,
+  void MultiphysicsSystem::element_residual_parameter_derivatives( const unsigned int p,
+                                                                   NumericVector<Number>& dR_dp,
                                                                    libMesh::FEMContext& context )
   {
     // Loop over each physics and compute their contributions
@@ -469,7 +475,7 @@ namespace GRINS
 	// Only compute if physics is active on current subdomain or globally
 	if( (physics_iter->second)->enabled_on_elem( context.elem ) )
 	  {
-	    (physics_iter->second)->element_residual_parameter_derivatives( dR_dp, context );
+	    (physics_iter->second)->element_residual_parameter_derivatives( p, dR_dp, context );
 	  }
       }
 
