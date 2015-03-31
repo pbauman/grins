@@ -128,6 +128,10 @@ namespace GRINS
         element size is known. */
     libMesh::Real _int_constant;
 
+    //! Mesh dimension
+    /*! We need to cache this since a few things depend on the dimension */
+    unsigned int _dim;
+
   };
 
   inline

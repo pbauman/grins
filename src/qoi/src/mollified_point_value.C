@@ -65,13 +65,13 @@ namespace GRINS
     _var = system.variable_number(var_name);
 
     // What point are we computing the value of _var?
-    unsigned int dim = system.get_mesh().mesh_dimension();
-    if( input.vector_variable_size("QoI/MollifiedPointValue/point") < dim )
+    _dim = system.get_mesh().mesh_dimension();
+    if( input.vector_variable_size("QoI/MollifiedPointValue/point") < _dim )
       {
         libmesh_error_msg("ERROR: Must specify as many components as mesh_dimension() for QoI/MollifiedPointValue/point");
       }
 
-    for( unsigned int i = 0; i < dim; i++ )
+    for( unsigned int i = 0; i < _dim; i++ )
       {
         (_point)(i) = input("QoI/MollifiedPointValue/point", 0.0, i );
       }
@@ -83,7 +83,7 @@ namespace GRINS
        \int_{\Omega} k_{\epsilon}(x-x_0)\;dx = 1.
        We just use a higher order Gauss rule to do the integral since,
        using a similar argument to Prudhomme/Oden */
-    _int_constant = this->compute_integration(dim);
+    _int_constant = this->compute_integration(_dim);
 
     return;
   }
