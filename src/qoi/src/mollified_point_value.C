@@ -184,4 +184,28 @@ namespace GRINS
     return value;
   }
 
+  libMesh::Real MollifiedPointValue::get_constant(libMesh::Real eps) const
+  {
+    libMesh::Real value = 0.0;
+    switch(_dim)
+      {
+      case(1):
+        value = this->_int_constant/eps;
+        break;
+      case(2):
+        value = this->_int_constant/(eps*eps);
+        break;
+      case(3):
+        value = this->_int_constant/(eps*eps*eps);
+        break;
+      default:
+        // Wat
+        libmesh_error();
+      }
+
+    // We'd better have a positive constant
+    libmesh_assert_greater(value,0.0);
+    return value;
+  }
+
 } // end namespace GRINS

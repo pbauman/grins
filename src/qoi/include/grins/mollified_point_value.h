@@ -85,9 +85,10 @@ namespace GRINS
 
     virtual void init_context( AssemblyContext& context );
 
-    //! Retrieve precomputed integration constant
-    /*! Mainly for testing, unlikely this is needed by the user. */
-    libMesh::Real get_int_constant() const;
+    //! Retrieve scaling constant \f$ C \f$ for mollifying function
+    /*! \f$ C = (int_constant)/\epsilon^{d} \f$ where \f$ d \f$ is the dimension.
+      Mainly for testing, unlikely this is needed by the user. */
+    libMesh::Real get_constant(libMesh::Real eps) const;
 
     //! Mollifying function. User supplies \f$ C \f$ and \f$ \|\mathbf{x}\|^2.
     /*! \f[ k_{\epsilon}(\mathbf{x}) =
@@ -144,12 +145,6 @@ namespace GRINS
   bool MollifiedPointValue::assemble_on_sides() const
   {
     return false;
-  }
-
-  inline
-  libMesh::Real MollifiedPointValue::get_int_constant() const
-  {
-    return _int_constant;
   }
 
 } // end namespace GRINS
