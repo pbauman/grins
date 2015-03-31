@@ -89,6 +89,15 @@ namespace GRINS
     /*! Mainly for testing, unlikely this is needed by the user. */
     libMesh::Real get_int_constant() const;
 
+    //! Mollifying function. User supplies \f$ C \f$ and \f$ \|\mathbf{x}\|^2.
+    /*! \f[ k_{\epsilon}(\mathbf{x}) =
+            \begin{cases}
+            C \exp{\frac{-\epsilon^2}{\epsilon^2 - \|\mathbf{x}\|^2}} & \|\mathbf{x}\| < \epsilon \\
+            0 & \|\mathbf{x}\| \ge \epsilon
+            \end{cases}  \f]
+    Mainly for testing, unlikely this is needed by the user. */
+    libMesh::Real mollification_function( libMesh::Real C, libMesh::Real eps, libMesh::Real norm_x_sq ) const;
+
   protected:
 
     //! Compute value of integration constant
@@ -98,14 +107,7 @@ namespace GRINS
         the analogs for 2D and 3D. */
     libMesh::Real compute_integration( unsigned int dim ) const;
 
-    //! Mollifying function. User supplies \f$ C \f$ and \f$ \|\mathbf{x}\|^2.
-    /*! \f[ k_{\epsilon}(\mathbf{x}) =
-            \begin{cases}
-            C \exp{\frac{-\epsilon^2}{\epsilon^2 - \|\mathbf{x}\|^2}} & \|\mathbf{x}\| < \epsilon \\
-            0 & \|\mathbf{x}\| \ge \epsilon
-            \end{cases}  \f]
-    */
-    libMesh::Real mollification_function( libMesh::Real C, libMesh::Real eps, libMesh::Real norm_x_sq ) const;
+
 
     //! Point at which we want to compute value of variable.
     libMesh::Point _point;
