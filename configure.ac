@@ -430,6 +430,7 @@ AC_CONFIG_FILES(test/warn_only_ufo_unit.sh, [chmod +x test/warn_only_ufo_unit.sh
 AC_CONFIG_FILES(test/error_ufo_unit.sh, [chmod +x test/error_ufo_unit.sh])
 
 AC_CONFIG_FILES(test/laplace_parsed_source_regression.sh, [chmod +x test/laplace_parsed_source_regression.sh])
+AC_CONFIG_FILES(test/mollified_point_value_unit.sh, [chmod +x test/mollified_point_value_unit.sh])
 
 dnl-----------------------------------------------
 dnl Generate run scripts for examples

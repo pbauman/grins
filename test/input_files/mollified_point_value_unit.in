@@ -1,0 +1,7 @@
+
+# QoI options
+[QoI]
+   [./MollifiedPointValue]
+      variable_name = 'u'
+      point = '0.0 0.0 0.0'
+[]
