@@ -109,14 +109,6 @@ namespace GRINS
   {
     libMesh::Real value = 0.0;
 
-    // All the integrals are 1D. We use a 15th order Gauss rule `cause why not.
-    libMesh::QGauss qrule(1,libMesh::Order::FIFTEENTH);
-
-    const std::vector<libMesh::Real>& weights = qrule.get_weights();
-    const std::vector<libMesh::Point>& points = qrule.get_points();
-    const unsigned int n_qpoints = weights.size();
-    libmesh_assert_equal_to( weights.size(), points.size() );
-
     switch(dim)
       {
         /* 1D:
@@ -126,14 +118,10 @@ namespace GRINS
         */
       case(1):
         {
-          for( unsigned int q = 0; q < n_qpoints; q++ )
-            {
-              // This integral is from -1 to 1, so we don't need to map the quadrature points.
-              libMesh::Real w_qp = weights[q];
-              libMesh::Real x_qp = points[q](0);
-
-              value += w_qp*std::exp( (-1.0)/(1 - x_qp*x_qp) );
-            }
+          // Generated from MATLAB using the following commands:
+          // f = @(x) exp( (-1.0)./(1.0-x.^2) )
+          // q1d = quad(f, -1.0, 1.0, 1.0e-13, 1)
+          value = 0.443993816168134;
         }
         break;
 
@@ -145,18 +133,10 @@ namespace GRINS
         */
       case(2):
         {
-          for( unsigned int q = 0; q < n_qpoints; q++ )
-            {
-              /* This integral is from 0 to 1 so we need to map the quadrature points.
-                 \int_a^b f(x) dx = (b-a)/2 \int_{-1}^1 f( (b-a)/2*z + (a+b)/2 ) dz
-                 Here: a = 0, b = 1.
-                 So scale weights by 0.5 and map points accordingly. */
-              libMesh::Real w_qp = 0.5*weights[q];
-              libMesh::Real x_qp = 0.5 + 0.5*points[q](0);
-
-              value += w_qp*x_qp*std::exp( (-1.0)/(1 - x_qp*x_qp) );
-            }
-          value *= Constants::two_pi;
+          // Generated from MATLAB using the following commands:
+          // f = @(x) x.*exp( (-1.0)./(1.0-x.^2) )
+          // q2d = 2*pi*quad(f, 0.0, 1.0, 1.0e-13, 1)
+          value = 0.466512393178512;
         }
         break;
 
@@ -168,19 +148,10 @@ namespace GRINS
         */
       case(3):
         {
-          for( unsigned int q = 0; q < n_qpoints; q++ )
-            {
-              /* This integral is from 0 to 1 so we need to map the quadrature points.
-                 \int_a^b f(x) dx = (b-a)/2 \int_{-1}^1 f( (b-a)/2*z + (a+b)/2 ) dz
-                 Here: a = 0, b = 1.
-                 So scale weights by 0.5 and map points accordingly. */
-              libMesh::Real w_qp = 0.5*weights[q];
-              libMesh::Real x_qp = 0.5 + 0.5*points[q](0);
-              libMesh::Real r2 = x_qp*x_qp;
-
-              value += w_qp*r2*std::exp( (-1.0)/(1.0-r2) );
-            }
-          value *= 2.0*Constants::two_pi;
+          // Generated from MATLAB using the following commands:
+          // f = @(x) x.^2.*exp( (-1.0)./(1.0-x.^2) )
+          // q3d = 4*pi*quad(f, 0.0, 1.0, 1.0e-13, 1)
+          value = 0.441088887276947;
         }
         break;
 
