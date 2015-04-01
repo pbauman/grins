@@ -146,6 +146,48 @@ namespace GRINS
   void MollifiedPointValue::interior_qoi_derivative( AssemblyContext& context,
                                                      const unsigned int qoi_index )
   {
+    if( context.get_elem().contains_point( _point ) )
+      {
+        /* We use hmin to ensure we keep the mollifying function
+           within the element */
+        libMesh::Real h = context.get_elem().hmin();
+
+        // Back out eps based on the mesh size (and input kappa)
+        libMesh::Real eps = this->compute_eps( h );
+
+        // Now compute constant C for mollifying function
+        libMesh::Real C = this->get_constant(eps);
+
+        libMesh::FEBase* element_fe;
+        context.get_element_fe<libMesh::Real>(_var, element_fe);
+
+        const std::vector<libMesh::Real> &JxW = element_fe->get_JxW();
+        const std::vector<libMesh::Point>& x_qp = element_fe->get_xyz();
+
+        unsigned int n_qpoints = context.get_element_qrule().n_points();
+
+        const unsigned int n_dofs = context.get_dof_indices(_var).size();
+
+        const std::vector<std::vector<libMesh::Real> >& u_phi = element_fe->get_phi();
+
+        libMesh::DenseSubVector<libMesh::Number>& dQ_du =
+              context.get_qoi_derivatives(qoi_index, _var);
+
+        for (unsigned int qp = 0; qp != n_qpoints; qp++)
+          {
+            libMesh::Point xmx0 = x_qp[qp] - _point;
+            libMesh::Real norm_x_sq = xmx0*xmx0;
+
+            libMesh::Real k_eps = this->mollification_function(C,eps,norm_x_sq);
+
+            for( unsigned int i = 0; i != n_dofs; i++ )
+              {
+                dQ_du(i) += u_phi[i][qp]*k_eps*JxW[qp];
+              }
+          }
+
+      } // contains point
+
     return;
   }
 
