@@ -90,6 +90,12 @@ namespace GRINS
 
   void MollifiedPointValue::init_context( AssemblyContext& context )
   {
+    libMesh::FEBase* element_fe;
+    context.get_element_fe<libMesh::Real>(_var, element_fe);
+    element_fe->get_JxW();
+    element_fe->get_xyz();
+    element_fe->get_phi();
+
     return;
   }
 
