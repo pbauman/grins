@@ -108,7 +108,10 @@ namespace GRINS
         the analogs for 2D and 3D. */
     libMesh::Real compute_integration( unsigned int dim ) const;
 
-
+    //! Compute \f$ \epsilon \f$
+    /*! Use rule \f$ \kappa \le \frac{2\epsilon}{h} \f$ based on input
+      \f$ \kappa \f$. Thus, \f$ \epsilon = \frac{\kappa h}{2} \f$ */
+    libMesh::Real compute_eps( libMesh::Real h ) const;
 
     //! Point at which we want to compute value of variable.
     libMesh::Point _point;
@@ -145,6 +148,12 @@ namespace GRINS
   bool MollifiedPointValue::assemble_on_sides() const
   {
     return false;
+  }
+
+  inline
+  libMesh::Real MollifiedPointValue::compute_eps( libMesh::Real h ) const
+  {
+    return _kappa*h/2.0;
   }
 
 } // end namespace GRINS
