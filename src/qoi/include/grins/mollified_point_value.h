@@ -75,11 +75,11 @@ namespace GRINS
 
     virtual bool assemble_on_sides() const;
 
-    virtual void interior_qoi( AssemblyContext& context,
-                               const unsigned int qoi_index );
+    virtual void element_qoi( AssemblyContext& context,
+                              const unsigned int qoi_index );
 
-    virtual void interior_qoi_derivative( AssemblyContext& context,
-                                          const unsigned int qoi_index );
+    virtual void element_qoi_derivative( AssemblyContext& context,
+                                         const unsigned int qoi_index );
 
     virtual void init( const GetPot& input, const MultiphysicsSystem& system );
 

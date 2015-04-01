@@ -99,8 +99,8 @@ namespace GRINS
     return;
   }
 
-  void MollifiedPointValue::interior_qoi( AssemblyContext& context,
-                                          const unsigned int qoi_index )
+  void MollifiedPointValue::element_qoi( AssemblyContext& context,
+                                         const unsigned int qoi_index )
   {
     if( context.get_elem().contains_point( _point ) )
       {
@@ -143,8 +143,8 @@ namespace GRINS
     return;
   }
 
-  void MollifiedPointValue::interior_qoi_derivative( AssemblyContext& context,
-                                                     const unsigned int qoi_index )
+  void MollifiedPointValue::element_qoi_derivative( AssemblyContext& context,
+                                                    const unsigned int qoi_index )
   {
     if( context.get_elem().contains_point( _point ) )
       {
