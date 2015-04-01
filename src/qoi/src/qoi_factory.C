@@ -32,6 +32,7 @@
 #include "grins/average_nusselt_number.h"
 #include "grins/vorticity.h"
 #include "grins/parsed_interior_qoi.h"
+#include "grins/mollified_point_value.h"
 
 namespace GRINS
 {
@@ -94,6 +95,11 @@ namespace GRINS
     else if( qoi_name == vorticity )
       {
         qoi =  new Vorticity( vorticity );
+      }
+
+    else if( qoi_name == mollified_point_value )
+      {
+        qoi =  new MollifiedPointValue( mollified_point_value );
       }
 
     else
