@@ -34,12 +34,18 @@
 // libMesh
 #include "libmesh/getpot.h"
 #include "libmesh/fem_system.h"
+#include "libmesh/quadrature.h"
 #include "libmesh/quadrature_gauss.h"
+#include "libmesh/elem.h"
+#include "libmesh/fe_type.h"
+#include "libmesh/string_to_enum.h"
+#include "libmesh/fe_base.h"
 
 namespace GRINS
 {
   MollifiedPointValue::MollifiedPointValue( const std::string& qoi_name )
-    : QoIBase(qoi_name)
+    : QoIBase(qoi_name),
+      _q_order(GRINSEnums::INVALID_ORDER)
   {
     return;
   }
@@ -74,6 +80,12 @@ namespace GRINS
     for( unsigned int i = 0; i < _dim; i++ )
       {
         (_point)(i) = input("QoI/MollifiedPointValue/point", 0.0, i );
+      }
+
+    // Does the user want a higher order integration rule?
+    if( input.have_variable("QoI/MollifiedPointValue/quadrature_order") )
+      {
+        _q_order = libMesh::Utility::string_to_enum<GRINSEnums::Order>(input("QoI/MollifiedPointValue/quadrature_order","TENTH"));
       }
 
     // Grab \kappa. Default to \kappa = 0.25
@@ -112,21 +124,25 @@ namespace GRINS
         // Now compute constant C for mollifying function
         libMesh::Real C = this->get_constant(eps);
 
-        libMesh::FEBase* element_fe;
-        context.get_element_fe<libMesh::Real>(_var, element_fe);
+        libMesh::FEGenericBase<libMesh::Real>* element_fe = NULL;
+
+        libMesh::AutoPtr<libMesh::QBase> qrule;
+
+        element_fe = this->get_element_fe(context,qrule,_q_order);
 
         const std::vector<libMesh::Real> &JxW = element_fe->get_JxW();
         const std::vector<libMesh::Point>& x_qp = element_fe->get_xyz();
 
-        unsigned int n_qpoints = context.get_element_qrule().n_points();
+        unsigned int n_qpoints = JxW.size();
+
+        std::cout << "eps = " << eps << std::endl;
 
         libMesh::Number& qoi = context.get_qois()[qoi_index];
 
         for (unsigned int qp = 0; qp != n_qpoints; qp++)
           {
             // Get the solution value at the quadrature point
-            libMesh::Real u;
-            context.interior_value(_var,qp,u);
+            libMesh::Real u = this->compute_value(context, _var, element_fe, qp, _q_order);
 
             libMesh::Point xmx0 = x_qp[qp] - _point;
             libMesh::Real norm_x_sq = xmx0*xmx0;
@@ -135,6 +151,8 @@ namespace GRINS
 
             qoi += u*k_eps*JxW[qp];
           }
+
+        this->clear_element_fe(element_fe,_q_order);
 
       } // contains point
 
@@ -156,13 +174,18 @@ namespace GRINS
         // Now compute constant C for mollifying function
         libMesh::Real C = this->get_constant(eps);
 
-        libMesh::FEBase* element_fe;
-        context.get_element_fe<libMesh::Real>(_var, element_fe);
+        libMesh::FEGenericBase<libMesh::Real>* element_fe = NULL;
+
+        libMesh::AutoPtr<libMesh::QBase> qrule;
+
+        element_fe = this->get_element_fe(context,qrule,_q_order);
 
         const std::vector<libMesh::Real> &JxW = element_fe->get_JxW();
         const std::vector<libMesh::Point>& x_qp = element_fe->get_xyz();
 
-        unsigned int n_qpoints = context.get_element_qrule().n_points();
+        // Get number of qpoints from JxW since element_fe may or may not
+        // have come from the FEMContext
+        unsigned int n_qpoints = JxW.size();
 
         const unsigned int n_dofs = context.get_dof_indices(_var).size();
 
@@ -183,6 +206,8 @@ namespace GRINS
                 dQ_du(i) += u_phi[i][qp]*k_eps*JxW[qp];
               }
           }
+
+        this->clear_element_fe(element_fe,_q_order);
 
       } // contains point
 
@@ -289,6 +314,81 @@ namespace GRINS
 
     // We'd better have a positive constant
     libmesh_assert_greater(value,0.0);
+    return value;
+  }
+
+  libMesh::FEGenericBase<libMesh::Real>*
+  MollifiedPointValue::build_new_fe( const libMesh::Elem& elem,
+                                     const libMesh::FEType& fe_type,
+                                     libMesh::QBase* qrule ) const
+  {
+    libMesh::AutoPtr<libMesh::FEGenericBase<libMesh::Real> >
+      fe_new(libMesh::FEGenericBase<libMesh::Real>::build(elem.dim(), fe_type));
+
+    fe_new->attach_quadrature_rule(qrule);
+
+    fe_new->reinit(&elem);
+
+    return fe_new.release();
+  }
+
+  libMesh::FEGenericBase<libMesh::Real>*
+  MollifiedPointValue::get_element_fe( AssemblyContext& context,
+                                       libMesh::AutoPtr<libMesh::QBase> qrule,
+                                       GRINSEnums::Order q_order ) const
+  {
+    libMesh::FEGenericBase<libMesh::Real>* element_fe = NULL;
+
+    /* If _q_order is not invalid, then we use the users quadrature order.
+       And, therefore, we need to build an FE object for that rule. */
+    if(_q_order != GRINSEnums::INVALID_ORDER)
+      {
+        qrule = libMesh::QBase::build(libMesh::QuadratureType::QGAUSS,
+                                      context.get_elem().dim(),
+                                      q_order);
+        qrule->init();
+
+        /* We're getting back the raw pointer, so we'll have to delete it later.
+           We can't use an AutoPtr here, otherwise we'd take ownership in the case
+           where we get the FE from FEMContext and would erroneously delete that
+           object. */
+        element_fe = this->build_new_fe( context.get_elem(),
+                                         context.get_element_fe(_var)->get_fe_type(),
+                                         qrule.get() );
+      }
+    //Otherwise, FEMContext already did the work for us.
+    else
+      context.get_element_fe<libMesh::Real>(_var, element_fe );
+
+    return element_fe;
+  }
+
+  void MollifiedPointValue::clear_element_fe( libMesh::FEGenericBase<libMesh::Real>* element_fe,
+                                              GRINSEnums::Order q_order )
+  {
+    // We need to delete the element we created
+    if(q_order != GRINSEnums::INVALID_ORDER)
+        delete element_fe;
+  }
+
+  libMesh::Real MollifiedPointValue::compute_value( AssemblyContext& context, VariableIndex var,
+                                                    libMesh::FEGenericBase<libMesh::Real>* element_fe,
+                                                    unsigned int qp, GRINSEnums::Order q_order ) const
+  {
+    libMesh::Real value = 0.0;
+
+    if(q_order != GRINSEnums::INVALID_ORDER)
+      {
+        const unsigned int n_dofs = context.get_dof_indices(var).size();
+        const libMesh::DenseSubVector<libMesh::Number>& var_coeffs = context.get_elem_solution( var );
+        const std::vector<std::vector<libMesh::Real> >& phi = element_fe->get_phi();
+
+        for( unsigned int d = 0; d < n_dofs; d++ )
+            value += var_coeffs(d)*phi[d][qp];
+      }
+    else
+      context.interior_value(var,qp,value);
+
     return value;
   }
 

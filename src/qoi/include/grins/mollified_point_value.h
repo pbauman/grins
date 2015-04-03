@@ -28,9 +28,20 @@
 
 // GRINS
 #include "grins/qoi_base.h"
+#include "grins/grins_enums.h"
 
 // libMesh
 #include "libmesh/point.h"
+#include "libmesh/enum_order.h"
+
+namespace libMesh
+{
+  template <typename NumericType>
+  class FEGenericBase;
+  class Elem;
+  class FEType;
+  class QBase;
+}
 
 namespace GRINS
 {
@@ -113,6 +124,27 @@ namespace GRINS
       \f$ \kappa \f$. Thus, \f$ \epsilon = \frac{\kappa h}{2} \f$ */
     libMesh::Real compute_eps( libMesh::Real h ) const;
 
+    //! Helper function to get FE object in element_* functions
+    libMesh::FEGenericBase<libMesh::Real>* get_element_fe( AssemblyContext& context,
+                                                           libMesh::AutoPtr<libMesh::QBase> qrule,
+                                                           GRINSEnums::Order q_order ) const;
+
+    //! Helper function to decide which way to compute point value
+    libMesh::Real compute_value( AssemblyContext& context, VariableIndex var,
+                                 libMesh::FEGenericBase<libMesh::Real>* element_fe,
+                                 unsigned int qp, GRINSEnums::Order q_order ) const;
+
+    //! Helper function to construct FE with given qrule
+    /*! Used if the user wants higher order quadrature than the default
+        used in the FEMContext. */
+    libMesh::FEGenericBase<libMesh::Real>* build_new_fe( const libMesh::Elem& elem,
+                                                         const libMesh::FEType& fe_type,
+                                                         libMesh::QBase* qrule ) const;
+
+    //! Helper function to decide if we need to delete element_fe or not
+    void clear_element_fe( libMesh::FEGenericBase<libMesh::Real>* element_fe,
+                           GRINSEnums::Order q_order );
+
     //! Point at which we want to compute value of variable.
     libMesh::Point _point;
 
@@ -136,6 +168,10 @@ namespace GRINS
     /*! We need to cache this since a few things depend on the dimension */
     unsigned int _dim;
 
+    //! Order of the requested higher order quadrature rule
+    /*! This order quadrature rule will be used to compute the integral
+        \f$ Q(u) = \int_{\Omega} u(x_0) k_{\epsilon}(x-x_0)\;dx \f$ */
+    GRINSEnums::Order _q_order;
   };
 
   inline
