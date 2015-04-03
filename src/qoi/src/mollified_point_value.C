@@ -80,9 +80,7 @@ namespace GRINS
     _kappa = input("QoI/MollifiedPointValue/kappa", 0.25);
 
     /* Now compute coefficient needed for constant C such that
-       \int_{\Omega} k_{\epsilon}(x-x_0)\;dx = 1.
-       We just use a higher order Gauss rule to do the integral since,
-       using a similar argument to Prudhomme/Oden */
+       \int_{\Omega} k_{\epsilon}(x-x_0)\;dx = 1. */
     _int_constant = this->compute_integration(_dim);
 
     return;
