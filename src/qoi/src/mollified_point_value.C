@@ -392,4 +392,32 @@ namespace GRINS
     return value;
   }
 
+  libMesh::Real MollifiedPointValue::compute_eps( libMesh::Real h ) const
+  {
+    libMesh::Real eps = 0.0;
+    switch(_dim)
+      {
+        // width = 2*\eps; kappa \le width/h
+      case(1):
+        eps = _kappa*h/2.0;
+        break;
+        // area = pi*\eps^2; kappa \le area/h^2
+      case(2):
+        eps = std::sqrt(_kappa*h*h/Constants::pi);
+        break;
+        // volume = 4/3*pi*\eps^3; kappa \le volume/h^3
+      case(3):
+        eps = std::pow(_kappa*h*h*h*3/(4.0*Constants::pi), 1.0/3.0);
+        break;
+      default:
+        // Wat
+        libmesh_error();
+      }
+
+    // We'd better have a positive eps
+    libmesh_assert_greater(eps,0.0);
+
+    return eps;
+  }
+
 } // end namespace GRINS

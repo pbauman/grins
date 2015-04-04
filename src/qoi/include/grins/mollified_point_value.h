@@ -121,7 +121,8 @@ namespace GRINS
 
     //! Compute \f$ \epsilon \f$
     /*! Use rule \f$ \kappa \le \frac{2\epsilon}{h} \f$ based on input
-      \f$ \kappa \f$. Thus, \f$ \epsilon = \frac{\kappa h}{2} \f$ */
+      \f$ \kappa \f$. Thus, \f$ \epsilon = \frac{\kappa h}{2} \f$. We
+      extend the idea to higher dimensional cases as well. */
     libMesh::Real compute_eps( libMesh::Real h ) const;
 
     //! Helper function to get FE object in element_* functions
@@ -184,12 +185,6 @@ namespace GRINS
   bool MollifiedPointValue::assemble_on_sides() const
   {
     return false;
-  }
-
-  inline
-  libMesh::Real MollifiedPointValue::compute_eps( libMesh::Real h ) const
-  {
-    return _kappa*h/2.0;
   }
 
 } // end namespace GRINS
