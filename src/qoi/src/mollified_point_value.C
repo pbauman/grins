@@ -141,8 +141,6 @@ namespace GRINS
 
         unsigned int n_qpoints = JxW.size();
 
-        std::cout << "eps = " << eps << std::endl;
-
         libMesh::Number& qoi = context.get_qois()[qoi_index];
 
         for (unsigned int qp = 0; qp != n_qpoints; qp++)
