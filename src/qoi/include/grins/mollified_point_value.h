@@ -154,8 +154,8 @@ namespace GRINS
 
     //! Used to determine \f$ \epsilon \f$.
     /*! \f$ \kappa \le \frac{2\epsilon}{h} \f$, \f$ h \f$ is the element size.
-        \f$ \kappa \f$ should be at most 1. The recommended, and default, value
-        is 0.25. This balances accuracy (\f$ \epsilon \rightarrow 0 \f$) while
+        \f$ \kappa \f$ should be at most 1. We default to 0.5.
+        This balances accuracy (\f$ \epsilon \rightarrow 0 \f$) while
         keeping number of quadrature points limited. */
     libMesh::Real _kappa;
 

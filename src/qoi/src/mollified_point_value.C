@@ -88,8 +88,8 @@ namespace GRINS
         _q_order = libMesh::Utility::string_to_enum<GRINSEnums::Order>(input("QoI/MollifiedPointValue/quadrature_order","TENTH"));
       }
 
-    // Grab \kappa. Default to \kappa = 0.25
-    _kappa = input("QoI/MollifiedPointValue/kappa", 0.25);
+    // Grab \kappa. Default to \kappa = 0.5
+    _kappa = input("QoI/MollifiedPointValue/kappa", 0.5);
 
     /* Now compute coefficient needed for constant C such that
        \int_{\Omega} k_{\epsilon}(x-x_0)\;dx = 1. */
