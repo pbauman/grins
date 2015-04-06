@@ -325,6 +325,10 @@ namespace GRINS
     libMesh::AutoPtr<libMesh::FEGenericBase<libMesh::Real> >
       fe_new(libMesh::FEGenericBase<libMesh::Real>::build(elem.dim(), fe_type));
 
+    fe_new->get_JxW();
+    fe_new->get_xyz();
+    fe_new->get_phi();
+
     fe_new->attach_quadrature_rule(qrule);
 
     fe_new->reinit(&elem);
