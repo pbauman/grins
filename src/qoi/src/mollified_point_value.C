@@ -45,7 +45,8 @@ namespace GRINS
 {
   MollifiedPointValue::MollifiedPointValue( const std::string& qoi_name )
     : QoIBase(qoi_name),
-      _q_order(GRINSEnums::INVALID_ORDER)
+      _q_order(GRINSEnums::INVALID_ORDER),
+      _use_patch(false)
   {
     return;
   }
@@ -88,6 +89,12 @@ namespace GRINS
         _q_order = libMesh::Utility::string_to_enum<GRINSEnums::Order>(input("QoI/MollifiedPointValue/quadrature_order","TENTH"));
       }
 
+    // Does the user want to only do assembly on a patch
+    if( input("QoI/MollifiedPointValue/use_patch",false) )
+      {
+        libmesh_error_msg("Error: use_patch functionality not yet implemented.");
+      }
+
     // Grab \kappa. Default to \kappa = 0.5
     _kappa = input("QoI/MollifiedPointValue/kappa", 0.5);
 
@@ -112,7 +119,6 @@ namespace GRINS
   void MollifiedPointValue::element_qoi( AssemblyContext& context,
                                          const unsigned int qoi_index )
   {
-    if( context.get_elem().contains_point( _point ) )
       {
         /* We use hmin to ensure we keep the mollifying function
            within the element */
@@ -154,7 +160,7 @@ namespace GRINS
 
         this->clear_element_fe(element_fe,_q_order);
 
-      } // contains point
+      }
 
     return;
   }
@@ -162,7 +168,6 @@ namespace GRINS
   void MollifiedPointValue::element_qoi_derivative( AssemblyContext& context,
                                                     const unsigned int qoi_index )
   {
-    if( context.get_elem().contains_point( _point ) )
       {
         /* We use hmin to ensure we keep the mollifying function
            within the element */
@@ -209,7 +214,7 @@ namespace GRINS
 
         this->clear_element_fe(element_fe,_q_order);
 
-      } // contains point
+      }
 
     return;
   }

@@ -173,6 +173,12 @@ namespace GRINS
     /*! This order quadrature rule will be used to compute the integral
         \f$ Q(u) = \int_{\Omega} u(x_0) k_{\epsilon}(x-x_0)\;dx \f$ */
     GRINSEnums::Order _q_order;
+
+    //! Limit the QoI assembly to patch around point
+    /*! Because this QoI is very local, we can limit the assembly
+        to a local patch of elements as an optimization.
+        CURRENTLY NOT IMPLEMENTED. */
+    bool _use_patch;
   };
 
   inline
