@@ -160,9 +160,9 @@ libMesh::Real compute_1d_quad( GRINS::MollifiedPointValue& qoi )
       libMesh::Real b = eps;
       libMesh::Real w_qp = (b-a)/2.0*weights[q];
       libMesh::Real x_qp = (a+b)/2.0 + (b-a)/2.0*points[q](0);
-      libMesh::Real r2 = x_qp*x_qp;
+      libMesh::Real r = std::sqrt(x_qp*x_qp);
 
-      value += w_qp*qoi.mollification_function(C,eps,r2);
+      value += w_qp*qoi.mollification_function(C,eps,r);
     }
 
   return value;
@@ -190,9 +190,9 @@ libMesh::Real compute_2d_quad( GRINS::MollifiedPointValue& qoi )
       libMesh::Real w_qp = (b-a)/2.0*(b-a)/2.0*weights[q];
       libMesh::Real x_qp = (a+b)/2.0 + (b-a)/2.0*points[q](0);
       libMesh::Real y_qp = (a+b)/2.0 + (b-a)/2.0*points[q](1);
-      libMesh::Real r2 = x_qp*x_qp + y_qp*y_qp;
+      libMesh::Real r = std::sqrt(x_qp*x_qp + y_qp*y_qp);
 
-      value += w_qp*qoi.mollification_function(C,eps,r2);
+      value += w_qp*qoi.mollification_function(C,eps,r);
     }
 
   return value;
@@ -221,9 +221,9 @@ libMesh::Real compute_3d_quad( GRINS::MollifiedPointValue& qoi )
       libMesh::Real x_qp = (a+b)/2.0 + (b-a)/2.0*points[q](0);
       libMesh::Real y_qp = (a+b)/2.0 + (b-a)/2.0*points[q](1);
       libMesh::Real z_qp = (a+b)/2.0 + (b-a)/2.0*points[q](2);
-      libMesh::Real r2 = x_qp*x_qp + y_qp*y_qp + z_qp*z_qp;
+      libMesh::Real r = std::sqrt(x_qp*x_qp + y_qp*y_qp + z_qp*z_qp);
 
-      value += w_qp*qoi.mollification_function(C,eps,r2);
+      value += w_qp*qoi.mollification_function(C,eps,r);
     }
 
   return value;

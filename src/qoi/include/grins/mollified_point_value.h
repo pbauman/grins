@@ -108,7 +108,7 @@ namespace GRINS
             0 & \|\mathbf{x}\| \ge \epsilon
             \end{cases}  \f]
     Mainly for testing, unlikely this is needed by the user. */
-    libMesh::Real mollification_function( libMesh::Real C, libMesh::Real eps, libMesh::Real norm_x_sq ) const;
+    libMesh::Real mollification_function( libMesh::Real C, libMesh::Real eps, libMesh::Real norm_x ) const;
 
   protected:
 

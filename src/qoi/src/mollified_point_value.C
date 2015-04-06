@@ -145,9 +145,9 @@ namespace GRINS
             libMesh::Real u = this->compute_value(context, _var, element_fe, qp, _q_order);
 
             libMesh::Point xmx0 = x_qp[qp] - _point;
-            libMesh::Real norm_x_sq = xmx0*xmx0;
+            libMesh::Real norm_x = std::sqrt(xmx0*xmx0);
 
-            libMesh::Real k_eps = this->mollification_function(C,eps,norm_x_sq);
+            libMesh::Real k_eps = this->mollification_function(C,eps,norm_x);
 
             qoi += u*k_eps*JxW[qp];
           }
@@ -280,14 +280,13 @@ namespace GRINS
   }
 
   libMesh::Real MollifiedPointValue::mollification_function( libMesh::Real C, libMesh::Real eps,
-                                                             libMesh::Real norm_x_sq ) const
+                                                             libMesh::Real norm_x ) const
   {
     libMesh::Real value = 0.0;
 
-    if( std::sqrt(norm_x_sq) < eps )
+    if( norm_x < eps )
       {
-        libMesh::Real eps2 = eps*eps;
-        value = C*std::exp( (-eps2)/(eps2 - norm_x_sq) );
+        value = C*std::exp( -eps*(eps/((eps+norm_x)*(eps-norm_x))) );
       }
 
     return value;
