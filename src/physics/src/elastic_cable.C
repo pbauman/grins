@@ -184,7 +184,6 @@ namespace GRINS
 
     const unsigned int dim = 1; // The cable dimension is always 1 for this physics
 
-
     for (unsigned int qp=0; qp != n_qpoints; qp++)
       {
         // Gradients are w.r.t. master element coordinates
@@ -308,12 +307,58 @@ namespace GRINS
   }
 
   template<typename StressStrainLaw>
-  void ElasticCable<StressStrainLaw>::mass_residual( bool /*compute_jacobian*/,
-                                                     AssemblyContext& /*context*/,
+  void ElasticCable<StressStrainLaw>::mass_residual( bool compute_jacobian,
+                                                     AssemblyContext& context,
                                                      CachedValues& /*cache*/ )
   {
-    libmesh_not_implemented();
-    return;
+    const unsigned int n_u_dofs = context.get_dof_indices(_disp_vars.u_var()).size();
+
+    const std::vector<libMesh::Real> &JxW =
+      this->get_fe(context)->get_JxW();
+
+    const std::vector<std::vector<libMesh::Real> >& u_phi =
+      this->get_fe(context)->get_phi();
+
+    // Residuals that we're populating
+    libMesh::DenseSubVector<libMesh::Number> &Fu = context.get_elem_residual(_disp_vars.u_var());
+    libMesh::DenseSubVector<libMesh::Number> &Fv = context.get_elem_residual(_disp_vars.v_var());
+    libMesh::DenseSubVector<libMesh::Number> &Fw = context.get_elem_residual(_disp_vars.w_var());
+
+    libMesh::DenseSubMatrix<libMesh::Number>& Kuu = context.get_elem_jacobian(_disp_vars.u_var(),_disp_vars.u_var());
+    libMesh::DenseSubMatrix<libMesh::Number>& Kvv = context.get_elem_jacobian(_disp_vars.v_var(),_disp_vars.v_var());
+    libMesh::DenseSubMatrix<libMesh::Number>& Kww = context.get_elem_jacobian(_disp_vars.w_var(),_disp_vars.w_var());
+
+    unsigned int n_qpoints = context.get_element_qrule().n_points();
+
+    for (unsigned int qp=0; qp != n_qpoints; qp++)
+      {
+        libMesh::Real jac = JxW[qp];
+
+        libMesh::Real u_ddot, v_ddot, w_ddot;
+        context.interior_accel( _disp_vars.u_var(), qp, u_ddot );
+        context.interior_accel( _disp_vars.v_var(), qp, v_ddot );
+        context.interior_accel( _disp_vars.w_var(), qp, w_ddot );
+
+        for (unsigned int i=0; i != n_u_dofs; i++)
+	  {
+            Fu(i) -= this->_rho*u_ddot*u_phi[i][qp]*jac;
+            Fv(i) -= this->_rho*v_ddot*u_phi[i][qp]*jac;
+            Fw(i) -= this->_rho*w_ddot*u_phi[i][qp]*jac;
+
+            if( compute_jacobian )
+              {
+                for (unsigned int j=0; j != n_u_dofs; j++)
+                  {
+                    libMesh::Real jac_term = this->_rho*u_phi[i][qp]*u_phi[j][qp]*jac;
+                    jac_term *= context.get_elem_solution_accel_derivative();
+
+                    Kuu(i,j) -= jac_term;
+                    Kvv(i,j) -= jac_term;
+                    Kww(i,j) -= jac_term;
+                  }
+              }
+          }
+      }
   }
 
   template<typename StressStrainLaw>
