@@ -30,6 +30,7 @@
 #include "grins/grins_unsteady_solver.h"
 #include "grins/steady_mesh_adaptive_solver.h"
 #include "grins/displacement_continuation_solver.h"
+#include "grins/newmark_solver.h"
 
 // libMesh
 #include "libmesh/getpot.h"
@@ -59,6 +60,10 @@ namespace GRINS
     if( solver_type == std::string("displacement_continuation") )
       {
         solver.reset( new DisplacementContinuationSolver(input) );
+      }
+    else if( solver_type == std::string("libmesh_newmark") )
+      {
+        solver.reset( new NewmarkSolver(input) );
       }
     else if(transient && !mesh_adaptive)
       {
