@@ -34,6 +34,8 @@ bc_types = 'pinned yz_symmetry xz_symmetry'
 
 h0 = '0.05'
 
+rho = '1.0'
+
 [../MooneyRivlin]
 
 C1 = '24'
@@ -51,6 +53,8 @@ pressure = '1.0'
 enabled_subdomains = '2'
 
 A = '0.1'
+
+rho = '1.0'
 
 FE_family = 'LAGRANGE'
 order = 'FIRST'

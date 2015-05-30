@@ -95,6 +95,8 @@ namespace GRINS
 
     libMesh::Real _h0;
 
+    libMesh::Real _rho;
+
     bool _is_compressible;
 
     //! Variable index for lambda_sq variable
