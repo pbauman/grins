@@ -341,15 +341,15 @@ namespace GRINS
 
         for (unsigned int i=0; i != n_u_dofs; i++)
 	  {
-            Fu(i) += this->_rho*u_ddot*u_phi[i][qp]*jac;
-            Fv(i) += this->_rho*v_ddot*u_phi[i][qp]*jac;
-            Fw(i) += this->_rho*w_ddot*u_phi[i][qp]*jac;
+            Fu(i) += this->_rho*_A*u_ddot*u_phi[i][qp]*jac;
+            Fv(i) += this->_rho*_A*v_ddot*u_phi[i][qp]*jac;
+            Fw(i) += this->_rho*_A*w_ddot*u_phi[i][qp]*jac;
 
             if( compute_jacobian )
               {
                 for (unsigned int j=0; j != n_u_dofs; j++)
                   {
-                    libMesh::Real jac_term = this->_rho*u_phi[i][qp]*u_phi[j][qp]*jac;
+                    libMesh::Real jac_term = this->_rho*_A*u_phi[i][qp]*u_phi[j][qp]*jac;
                     jac_term *= context.get_elem_solution_accel_derivative();
 
                     Kuu(i,j) += jac_term;
