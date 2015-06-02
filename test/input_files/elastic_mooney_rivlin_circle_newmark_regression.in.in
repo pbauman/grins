@@ -1,0 +1,101 @@
+
+# Options related to all Physics
+[Physics]
+
+enabled_physics = 'ElasticMembrane
+                   ElasticMembraneConstantPressure
+                   ConstantDamping'
+
+# Options for Incompressible Navier-Stokes physics
+[./ElasticMembrane]
+
+h0 = '0.05'
+rho = '1.0'
+
+FE_family = 'LAGRANGE'
+order = 'FIRST'
+
+elasticity_model = 'MooneyRivlin'
+
+bc_ids = '1'
+bc_types = 'pinned'
+
+ic_ids = '1'
+ic_types = 'parsed'
+ic_variables = 'w'
+ic_values = '-1.0*cos(pi/8*sqrt(x^2+y^2))'
+
+[../ElasticMembraneConstantPressure]
+
+pressure = '1.0'
+
+[../MooneyRivlin]
+
+C1 = '24'
+C2 = '3.0'
+
+[../ConstantDamping]
+
+   [./Variables]
+      names = 'w'
+      FE_types = 'LAGRANGE'
+      FE_orders = 'FIRST'
+
+   [../Function]
+
+      value = '1.0'
+
+[]
+
+[unsteady-solver]
+   n_timesteps = '10'
+   deltat = '0.75'
+[]
+
+[SolverOptions]
+
+   solver_type = 'libmesh_newmark'
+
+[]
+
+# Mesh related options
+[Mesh]
+   [./Read]
+      filename = '@abs_top_srcdir@/test/input_files/circular_sheet.e'
+[]
+
+#Linear and nonlinear solver options
+[linear-nonlinear-solver]
+relative_residual_tolerance = '1.0e-10'
+
+max_nonlinear_iterations =  '50' 
+max_linear_iterations = '2500'
+
+verify_analytic_jacobians = '0.0'
+
+initial_linear_tolerance = '1.0e-10'
+
+# Visualization options
+[vis-options]
+output_vis = 'true'
+
+vis_output_file_prefix = 'sheet' 
+
+output_residual = 'false' 
+
+output_format = 'ExodusII xdr'
+
+# Options for print info to the screen
+[screen-options]
+
+system_name = 'InflatingElasticSheet'
+
+print_equation_system_info = 'true'
+print_mesh_info = 'true'
+print_log_info = 'true'
+solver_verbose = 'true'
+solver_quiet = 'false'
+
+print_element_jacobians = 'false'
+print_element_residuals = 'false'
+[]
