@@ -65,6 +65,10 @@ namespace GRINS
 
     context.system->deltat = this->_deltat;
 
+    libMesh::NewmarkSolver * newmark = libMesh::cast_ptr<libMesh::NewmarkSolver *>(context.system->time_solver.get());
+
+    newmark->compute_initial_accel();
+
     libMesh::Real sim_time;
 
     if( context.output_vis )
