@@ -10,6 +10,7 @@ bin_PROGRAMS    = grins grins_version
 
 if CANTERA_ENABLED
    bin_PROGRAMS += cantera_kinetic_rates
+   bin_PROGRAMS += cantera_transport
 endif
 
 if ANTIOCH_ENABLED
@@ -457,6 +458,9 @@ endif
 if CANTERA_ENABLED
    cantera_kinetic_rates_SOURCES = apps/cantera_kinetic_rates.C
    cantera_kinetic_rates_LDADD = libgrins.la
+
+   cantera_transport_SOURCES = apps/cantera_transport.C
+   cantera_transport_LDADD = libgrins.la
 endif
 
 if ANTIOCH_ENABLED
