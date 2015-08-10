@@ -147,8 +147,88 @@ namespace GRINS
 	}
 
     }
+  }
 
-    return;
+  libMesh::Real CanteraTransport::mu( const libMesh::Real T,
+                                      const libMesh::Real p,
+                                      const std::vector<libMesh::Real>& Y ) const
+  {
+    libmesh_assert_equal_to( Y.size(), _cantera_gas.nSpecies() );
+
+    libMesh::Real mu = 0.0;
+
+    {
+      libMesh::Threads::spin_mutex::scoped_lock lock(cantera_mutex);
+
+      /*! \todo Need to make sure this will work in a threaded environment.
+        Not sure if we will get thread lock here or not. */
+      try
+        {
+          _cantera_gas.setState_TPY(T, p, &Y[0]);
+          mu =  _cantera_transport.viscosity();
+        }
+      catch(Cantera::CanteraError)
+        {
+          Cantera::showErrors(std::cerr);
+          libmesh_error();
+        }
+    }
+
+    return mu;
+  }
+
+  libMesh::Real CanteraTransport::k( const libMesh::Real T,
+                                     const libMesh::Real p,
+                                     const std::vector<libMesh::Real>& Y ) const
+  {
+    libmesh_assert_equal_to( Y.size(), _cantera_gas.nSpecies() );
+
+    libMesh::Real k = 0.0;
+
+    {
+      libMesh::Threads::spin_mutex::scoped_lock lock(cantera_mutex);
+
+      /*! \todo Need to make sure this will work in a threaded environment.
+        Not sure if we will get thread lock here or not. */
+      try
+        {
+          _cantera_gas.setState_TPY(T, p, &Y[0]);
+          k =  _cantera_transport.thermalConductivity();
+        }
+      catch(Cantera::CanteraError)
+        {
+          Cantera::showErrors(std::cerr);
+          libmesh_error();
+        }
+    }
+
+    return k;
+  }
+
+  void CanteraTransport::D( const libMesh::Real T,
+                            const libMesh::Real p,
+                            const std::vector<libMesh::Real>& Y,
+                            std::vector<libMesh::Real>& D ) const
+  {
+    libmesh_assert_equal_to( Y.size(), D.size() );
+    libmesh_assert_equal_to( Y.size(), _cantera_gas.nSpecies() );
+
+    {
+      libMesh::Threads::spin_mutex::scoped_lock lock(cantera_mutex);
+
+      /*! \todo Need to make sure this will work in a threaded environment.
+        Not sure if we will get thread lock here or not. */
+      try
+        {
+          _cantera_gas.setState_TPY(T, p, &Y[0]);
+          _cantera_transport.getMixDiffCoeffs(&D[0]);
+        }
+      catch(Cantera::CanteraError)
+        {
+          Cantera::showErrors(std::cerr);
+          libmesh_error();
+        }
+    }
   }
 
 } // namespace GRINS

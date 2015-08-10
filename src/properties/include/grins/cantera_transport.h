@@ -74,6 +74,13 @@ namespace GRINS
     void D( const CachedValues& cache, unsigned int qp,
 	    std::vector<libMesh::Real>& D ) const;
 
+    libMesh::Real mu( const libMesh::Real T, const libMesh::Real p, const std::vector<libMesh::Real>& Y ) const;
+
+    libMesh::Real k( const libMesh::Real T, const libMesh::Real p, const std::vector<libMesh::Real>& Y ) const;
+
+    void D( const libMesh::Real T, const libMesh::Real p, const std::vector<libMesh::Real>& Y,
+	    std::vector<libMesh::Real>& D ) const;
+
   protected:
 
     Cantera::IdealGasMix& _cantera_gas;
