@@ -63,7 +63,7 @@ namespace GRINS
   class CanteraTransport
   {
   public:
-    
+
     CanteraTransport( CanteraMixture& mixture );
     ~CanteraTransport();
 
@@ -80,6 +80,9 @@ namespace GRINS
 
     void D( const libMesh::Real T, const libMesh::Real p, const std::vector<libMesh::Real>& Y,
 	    std::vector<libMesh::Real>& D ) const;
+
+    Cantera::Transport& get_transport()
+    { return _cantera_transport; }
 
   protected:
 
