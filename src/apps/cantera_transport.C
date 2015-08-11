@@ -70,7 +70,9 @@ int main(int argc, char* argv[])
       Y[s] = input( "Conditions/mass_fractions", 0.0, s );
     }
 
-  std::vector<double> D(n_species,0.0);
+  std::vector<double> D_mass_mole(n_species,0.0);
+  std::vector<double> D_mass_mass(n_species,0.0);
+  std::vector<double> D_mole_mole(n_species,0.0);
 
   libMesh::Real T = T0;
 
@@ -98,9 +100,14 @@ int main(int argc, char* argv[])
 
   while( T < T1 )
     {
+      Cantera::Transport& ctrans = transport.get_transport();
+
       libMesh::Real mu = transport.mu( T, p, Y);
       libMesh::Real k = transport.k( T, p, Y);
-      transport.D( T, p, Y, D );
+
+      ctrans.getMixDiffCoeffs(&D_mass_mole[0]);
+      ctrans.getMixDiffCoeffsMass(&D_mass_mass[0]);
+      ctrans.getMixDiffCoeffsMole(&D_mole_mole[0]);
 
       output << std::scientific << std::setprecision(16);
 
@@ -109,7 +116,17 @@ int main(int argc, char* argv[])
 
       for( unsigned int i = 0; i < n_species; i++ )
         {
-          output << D[i] << " ";
+          output << D_mass_mole[i] << " ";
+        }
+
+      for( unsigned int i = 0; i < n_species; i++ )
+        {
+          output << D_mass_mass[i] << " ";
+        }
+
+      for( unsigned int i = 0; i < n_species; i++ )
+        {
+          output << D_mole_mole[i] << " ";
         }
 
       output << std::endl;
