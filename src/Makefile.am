@@ -157,6 +157,7 @@ libgrins_la_SOURCES += physics/src/physics_factory_plane_stress_solids.C
 libgrins_la_SOURCES += physics/src/physics_factory_one_d_stress_solids.C
 libgrins_la_SOURCES += physics/src/physics_factory_reacting_flows.C
 libgrins_la_SOURCES += physics/src/physics_builder.C
+libgrins_la_SOURCES += physics/src/immersed_boundary.C
 
 # src/properties files
 libgrins_la_SOURCES += properties/src/parsed_property_base.C
@@ -424,6 +425,7 @@ include_HEADERS += physics/include/grins/physics_factory_plane_stress_solids.h
 include_HEADERS += physics/include/grins/physics_factory_one_d_stress_solids.h
 include_HEADERS += physics/include/grins/physics_factory_reacting_flows.h
 include_HEADERS += physics/include/grins/physics_builder.h
+include_HEADERS += physics/include/grins/immersed_boundary.h
 
 # src/properties headers
 include_HEADERS += properties/include/grins/property_types.h

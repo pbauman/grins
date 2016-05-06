@@ -191,6 +191,10 @@ namespace GRINS
     static PhysicsName convection_diffusion()
     { return "ConvectionDiffusion"+suffix(); }
 
+    static PhysicsName immersed_boundary()
+    { return "ImmersedBoundary"+suffix(); }
+
+    
   private:
 
     static std::string physics_name_delimiter()
