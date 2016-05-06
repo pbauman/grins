@@ -423,21 +423,23 @@ dnl Generate run scripts for examples
 dnl-----------------------------------------------
 AC_CONFIG_FILES(examples/cavity_benchmark/run.sh,	     [chmod +x examples/cavity_benchmark/run.sh])
 AC_CONFIG_FILES(examples/backward_facing_step/run.sh,	     [chmod +x examples/backward_facing_step/run.sh])
-AC_CONFIG_FILES(examples/lid_driven_cavity/run.sh,	         [chmod +x examples/lid_driven_cavity/run.sh])
-AC_CONFIG_FILES(examples/velocity_penalty/run.sh,	         [chmod +x examples/velocity_penalty/run.sh])
-AC_CONFIG_FILES(examples/convection_cell/run.sh,	         [chmod +x examples/convection_cell/run.sh])
-AC_CONFIG_FILES(examples/rayleigh_taylor/run.sh,	         [chmod +x examples/rayleigh_taylor/run.sh])
-AC_CONFIG_FILES(examples/simple_fan/run.sh,	                 [chmod +x examples/simple_fan/run.sh])
+AC_CONFIG_FILES(examples/lid_driven_cavity/run.sh,	     [chmod +x examples/lid_driven_cavity/run.sh])
+AC_CONFIG_FILES(examples/velocity_penalty/run.sh,	     [chmod +x examples/velocity_penalty/run.sh])
+AC_CONFIG_FILES(examples/convection_cell/run.sh,	     [chmod +x examples/convection_cell/run.sh])
+AC_CONFIG_FILES(examples/rayleigh_taylor/run.sh,	     [chmod +x examples/rayleigh_taylor/run.sh])
+AC_CONFIG_FILES(examples/simple_fan/run.sh,	             [chmod +x examples/simple_fan/run.sh])
 AC_CONFIG_FILES(examples/simple_prop/run.sh,	             [chmod +x examples/simple_prop/run.sh])
 AC_CONFIG_FILES(examples/coupled_stokes_navierstokes/run.sh, [chmod +x examples/coupled_stokes_navierstokes/run.sh])
 AC_CONFIG_FILES(examples/elastic_sheet/run.sh,               [chmod +x examples/elastic_sheet/run.sh])
 AC_CONFIG_FILES(examples/cable_displacement/run.sh,          [chmod +x examples/cable_displacement/run.sh])
 AC_CONFIG_FILES(examples/inflating_sheet/run.sh,             [chmod +x examples/inflating_sheet/run.sh])
-AC_CONFIG_FILES(examples/sa_airfoil/run.sh,         [chmod +x examples/sa_airfoil/run.sh])
+AC_CONFIG_FILES(examples/sa_airfoil/run.sh,                  [chmod +x examples/sa_airfoil/run.sh])
 AC_CONFIG_FILES(examples/suspended_cable/run.sh,             [chmod +x examples/suspended_cable/run.sh])
 AC_CONFIG_FILES(examples/mixed_dim_inflating_sheet/run.sh,   [chmod +x examples/mixed_dim_inflating_sheet/run.sh])
-AC_CONFIG_FILES(examples/transient_amr/run.sh,   [chmod +x examples/transient_amr/run.sh])
+AC_CONFIG_FILES(examples/transient_amr/run.sh,               [chmod +x examples/transient_amr/run.sh])
 AC_CONFIG_FILES(examples/ozone_flame/run.sh,                 [chmod +x examples/ozone_flame/run.sh])
+AC_CONFIG_FILES(examples/immersed_boundary/run.sh,           [chmod +x examples/immersed_bounary/run.sh])
+
 
 dnl-----------------------------------------------
 dnl Generate header files
