@@ -231,7 +231,7 @@ namespace GRINS
     for (unsigned int qp=0; qp != n_qpoints; qp++)
       {
 
-        // Compute & store gradients are w.r.t. master element coordinates
+        // Compute & store gradients  w.r.t. master element coordinates
         libMesh::Gradient grad_u, grad_v, grad_w;
         for( unsigned int d = 0; d < n_u_dofs; d++ )
           {
@@ -244,7 +244,7 @@ namespace GRINS
         _grad_v_data.push_back(grad_v);
         _grad_w_data.push_back(grad_w);
 
-        // Compute & store gradients are w.r.t. actual element coordinates
+        // Compute & store gradients  w.r.t. actual element coordinates
         libMesh::RealGradient grad_x( dxdxi[qp](0) );
         libMesh::RealGradient grad_y( dxdxi[qp](1) );
         libMesh::RealGradient grad_z( dxdxi[qp](2) );
@@ -332,8 +332,7 @@ namespace GRINS
           {
             
             libMesh::Real residual_components[3];
-            get_residual(residual_components,qp,i);
-            
+            get_residual(residual_components,qp,i);            
             Fu(i) += residual_components[1];
             Fv(i) += residual_components[2];
             Fw(i) += residual_components[3];
