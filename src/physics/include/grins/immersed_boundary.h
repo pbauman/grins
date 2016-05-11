@@ -28,6 +28,8 @@
 #include "grins/velocity_fe_variables.h"
 #include "grins/pressure_fe_variable.h"
 
+#include "libmesh/fem_context.h"
+
 namespace GRINS
 {
 
@@ -40,7 +42,7 @@ namespace GRINS
     to specify a constant or spatially varying viscosity in the input file
    */
 
-  template<typename SolidMechanics, typename Viscosity>
+  template<typename SolidMechanicsAbstract, typename Viscosity>
   class ImmersedBoundary : public Physics
   {
   public:
@@ -52,6 +54,7 @@ namespace GRINS
 
     ~ImmersedBoundary(){};
 
+   
     //! Initialization of Navier-Stokes variables
     /*!
       Add velocity and pressure variables to system.
@@ -66,6 +69,8 @@ namespace GRINS
 
     // A getter function for the Viscosity object
     libMesh::Real get_viscosity_value(AssemblyContext& context, unsigned int qp) const;
+
+    inline void get_residual( libMesh::DenseSubVector<libMesh::Number> & res, unsigned int qp, unsigned int dof );
 
   protected:
 
@@ -82,6 +87,7 @@ namespace GRINS
     //! Viscosity object
     Viscosity _mu;
 
+   
   private:
     ImmersedBoundary();
 

@@ -40,12 +40,13 @@
 #include "libmesh/string_to_enum.h"
 #include "libmesh/getpot.h"
 #include "libmesh/fem_system.h"
+#include "libmesh/fem_context.h"
 
 namespace GRINS
 {
 
-  template<typename SolidMechanics, typename Mu>
-  void ImmersedBoundary<SolidMechanics, Mu>::init_variables( libMesh::FEMSystem* system )
+  template<typename SolidMechanicsAbstract, typename Mu>
+  void ImmersedBoundary<SolidMechanicsAbstract, Mu>::init_variables( libMesh::FEMSystem* system )
   {
     this->_dim = system->get_mesh().mesh_dimension();
 
@@ -57,8 +58,8 @@ namespace GRINS
     return;
   }
 
-  template<typename SolidMechanics, typename Mu>
-  void ImmersedBoundary<SolidMechanics, Mu>::set_time_evolving_vars( libMesh::FEMSystem* system )
+  template<typename SolidMechanicsAbstract, typename Mu>
+  void ImmersedBoundary<SolidMechanicsAbstract, Mu>::set_time_evolving_vars( libMesh::FEMSystem* system )
   {
     const unsigned int dim = system->get_mesh().mesh_dimension();
 
@@ -73,8 +74,8 @@ namespace GRINS
     return;
   }
 
-  template<typename SolidMechanics, typename Mu>
-  void ImmersedBoundary<SolidMechanics, Mu>::init_context( AssemblyContext& context )
+  template<typename SolidMechanicsAbstract, typename Mu>
+  void ImmersedBoundary<SolidMechanicsAbstract, Mu>::init_context( AssemblyContext& context )
   {
     // We should prerequest all the data
     // we will need to build the linear system
@@ -95,11 +96,17 @@ namespace GRINS
     return;
   }
 
-  template<typename SolidMechanics, typename Mu>
-  libMesh::Real ImmersedBoundary<SolidMechanics, Mu>::get_viscosity_value(AssemblyContext& context, unsigned int qp) const
+  template<typename SolidMechanicsAbstract, typename Mu>
+  libMesh::Real ImmersedBoundary<SolidMechanicsAbstract, Mu>::get_viscosity_value(AssemblyContext& context, unsigned int qp) const
   {
     return this->_mu(context, qp);
   }
 
+  inline void get_residual( libMesh::DenseSubVector<libMesh::Number> & res, unsigned int qp, unsigned int dof )
+  {
+    //this is prolly empty and will be implemented in the template specilization of the solid mech
+  }
+
+  
 
 } // namespace GRINS

@@ -64,6 +64,13 @@ namespace GRINS
                                                  const libMesh::Point& point,
                                                  libMesh::Real& value );
 
+    //! Precompute data needed for residual inline function
+    void precompute_residual_data(const AssemblyContext& context);
+
+    //! Compute the residual for all components using precomputed data
+    inline void get_residual(libMesh::Real (&res)[3], unsigned int qp, unsigned int dof);
+
+    
   private:
 
     ElasticCable();
@@ -77,6 +84,21 @@ namespace GRINS
     //! Index from registering this quantity. Each component will have it's own index.
     std::vector<unsigned int> _force_indices;
 
+
+    //no context avail to preallocate the precompute data structurs so we use vec<vec>
+    //unsigned int n_qpoints = context.get_element_qrule().n_points();
+    //FIRST INDEX QP, SECOND (if exists) DOF
+    
+    std::vector<libMesh::Gradient>  _grad_u_data;
+    std::vector<libMesh::Gradient>  _grad_v_data;
+    std::vector<libMesh::Gradient>  _grad_w_data;
+    
+    std::vector<libMesh::RealGradient>  _grad_x_data;
+    std::vector<libMesh::RealGradient>  _grad_y_data;
+    std::vector<libMesh::RealGradient>  _grad_z_data;
+   
+    std::vector<std::vector<libMesh::Real>> _res_term_data;
+    
   };
 
 } // end namespace GRINS
