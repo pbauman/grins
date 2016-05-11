@@ -25,9 +25,6 @@
 
 #include "grins/immersed_boundary.h"
 
-// This class
-#include "grins/inc_navier_stokes_base.h"
-
 
 // GRINS
 #include "grins/common.h"
@@ -46,31 +43,9 @@
 
 namespace GRINS
 {
-  template<class Mu>
-  IncompressibleNavierStokesBase<Mu>::IncompressibleNavierStokesBase(const std::string& my_physics_name,
-                                                                     const std::string& core_physics_name,
-                                                                     const GetPot& input )
-    : Physics(my_physics_name, input),
-      _flow_vars(input, core_physics_name),
-      _press_var(input, core_physics_name, true /*is_constraint_var*/),
-      _rho(0.0),
-      _mu(input,MaterialsParsing::material_name(input,core_physics_name))
-  {
-    MaterialsParsing::read_density( core_physics_name, input, (*this), this->_rho );
-    this->register_variables();
-  }
 
-  template<class Mu>
-  void IncompressibleNavierStokesBase<Mu>::register_variables()
-  {
-    GRINSPrivate::VariableWarehouse::check_and_register_variable(VariablesParsing::pressure_section(),
-                                                                 this->_press_var);
-    GRINSPrivate::VariableWarehouse::check_and_register_variable(VariablesParsing::velocity_section(),
-                                                                 this->_flow_vars);
-  }
-
-  template<class Mu>
-  void IncompressibleNavierStokesBase<Mu>::init_variables( libMesh::FEMSystem* system )
+  template<typename SolidMechanics, typename Mu>
+  void ImmersedBoundary<SolidMechanics, Mu>::init_variables( libMesh::FEMSystem* system )
   {
     this->_dim = system->get_mesh().mesh_dimension();
 
@@ -82,14 +57,8 @@ namespace GRINS
     return;
   }
 
-  template<class Mu>
-  libMesh::Real IncompressibleNavierStokesBase<Mu>::get_viscosity_value(AssemblyContext& context, unsigned int qp) const
-  {
-    return this->_mu(context, qp);
-  }
-
-  template<class Mu>
-  void IncompressibleNavierStokesBase<Mu>::set_time_evolving_vars( libMesh::FEMSystem* system )
+  template<typename SolidMechanics, typename Mu>
+  void ImmersedBoundary<SolidMechanics, Mu>::set_time_evolving_vars( libMesh::FEMSystem* system )
   {
     const unsigned int dim = system->get_mesh().mesh_dimension();
 
@@ -104,8 +73,8 @@ namespace GRINS
     return;
   }
 
-  template<class Mu>
-  void IncompressibleNavierStokesBase<Mu>::init_context( AssemblyContext& context )
+  template<typename SolidMechanics, typename Mu>
+  void ImmersedBoundary<SolidMechanics, Mu>::init_context( AssemblyContext& context )
   {
     // We should prerequest all the data
     // we will need to build the linear system
@@ -126,17 +95,11 @@ namespace GRINS
     return;
   }
 
-  template<class Mu>
-  void IncompressibleNavierStokesBase<Mu>::register_parameter
-    ( const std::string & param_name,
-      libMesh::ParameterMultiAccessor<libMesh::Number> & param_pointer )
-    const
+  template<typename SolidMechanics, typename Mu>
+  libMesh::Real ImmersedBoundary<SolidMechanics, Mu>::get_viscosity_value(AssemblyContext& context, unsigned int qp) const
   {
-    ParameterUser::register_parameter(param_name, param_pointer);
-    _mu.register_parameter(param_name, param_pointer);
+    return this->_mu(context, qp);
   }
 
-} // namespace GRINS
 
-// Instantiate
-INSTANTIATE_INC_NS_SUBCLASS(IncompressibleNavierStokesBase);
+} // namespace GRINS

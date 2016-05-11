@@ -23,9 +23,6 @@
 //-----------------------------------------------------------------------el-
 
 
-#ifndef GRINS_INC_NAVIER_STOKES_BASE_H
-#define GRINS_INC_NAVIER_STOKES_BASE_H
-
 //GRINS
 #include "grins/physics.h"
 #include "grins/velocity_fe_variables.h"
@@ -34,23 +31,26 @@
 namespace GRINS
 {
 
-  //! Physics class for Incompressible Navier-Stokes
+  //! Physics class for Immersed Boundary Method
   /*!
-    This physics class implements the classical Incompressible Navier-Stokes equations.
+    This physics class implements the classical Incompressible Navier-Stokes equations with an Immersed
+    Boundary.
     This is a templated class, the class Viscosity can be instantiated as a specific type
     (right now:ConstantViscosity or SpatiallyVaryingViscosity) to allow the user
     to specify a constant or spatially varying viscosity in the input file
    */
-  template<class Viscosity>
-  class IncompressibleNavierStokesBase : public Physics
+
+  template<typename SolidMechanics, typename Viscosity>
+  class ImmersedBoundary : public Physics
   {
   public:
 
-    IncompressibleNavierStokesBase(const std::string& my_physics_name,
+
+    ImmersedBoundary(const std::string& my_physics_name,
                                    const std::string& core_physics_name,
                                    const GetPot& input);
 
-    ~IncompressibleNavierStokesBase(){};
+    ~ImmersedBoundary(){};
 
     //! Initialization of Navier-Stokes variables
     /*!
@@ -63,13 +63,6 @@ namespace GRINS
 
     // Context initialization
     virtual void init_context( AssemblyContext& context );
-
-    // Registers all parameters in this physics and in its property
-    // classes
-    virtual void register_parameter
-      ( const std::string & param_name,
-        libMesh::ParameterMultiAccessor<libMesh::Number> & param_pointer )
-    const;
 
     // A getter function for the Viscosity object
     libMesh::Real get_viscosity_value(AssemblyContext& context, unsigned int qp) const;
@@ -90,12 +83,10 @@ namespace GRINS
     Viscosity _mu;
 
   private:
-    IncompressibleNavierStokesBase();
+    ImmersedBoundary();
 
     void register_variables();
 
   };
 
 } //End namespace block
-
-#endif // GRINS_INC_NAVIER_STOKES_BASE_H
