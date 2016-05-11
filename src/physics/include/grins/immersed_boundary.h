@@ -70,7 +70,8 @@ namespace GRINS
     // A getter function for the Viscosity object
     libMesh::Real get_viscosity_value(AssemblyContext& context, unsigned int qp) const;
 
-    inline void get_residual( libMesh::DenseSubVector<libMesh::Number> & res, unsigned int qp, unsigned int dof );
+    //! Compute residual from the SolidMechanics Physics to be used in forcing term calculation
+    inline void get_residual( libMesh::Real (&res)[3], unsigned int qp, unsigned int dof );
 
   protected:
 
@@ -80,13 +81,13 @@ namespace GRINS
 
     VelocityFEVariables _flow_vars;
     PressureFEVariable _press_var;
+    
     //! Material parameters, read from input
     /** \todo Create objects to allow for function specification */
     libMesh::Number _rho;
 
     //! Viscosity object
     Viscosity _mu;
-
    
   private:
     ImmersedBoundary();

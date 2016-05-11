@@ -102,9 +102,10 @@ namespace GRINS
     return this->_mu(context, qp);
   }
 
-  inline void get_residual( libMesh::DenseSubVector<libMesh::Number> & res, unsigned int qp, unsigned int dof )
+  template<typename SolidMechanicsAbstract, typename Mu>
+  void get_residual( libMesh::Real (&res)[3], unsigned int qp, unsigned int dof )
   {
-    //this is prolly empty and will be implemented in the template specilization of the solid mech
+    std::cout << qp<<' '<<dof<<' '<<' '<< res[1]<<'\n';
   }
 
   
