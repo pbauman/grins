@@ -114,82 +114,68 @@ namespace GRINS
 
 
   template<typename StressStrainLaw>
-  void ElasticMembrane<StressStrainLaw>::precompute_residual_data(const AssemblyContext& context)
-  { //in here we precompute datum needed to get residuals at (qp,dofs)
-
+  void ElasticMembrane<StressStrainLaw>::precompute_graduvw(const AssemblyContext& context, unsigned int qp,
+                                                            libMesh::Gradient &gradu,
+                                                            libMesh::Gradient &gradv,
+                                                            libMesh::Gradient &gradw)
+  { 
     const unsigned int n_u_dofs = context.get_dof_indices(this->_disp_vars.u()).size();
-    const unsigned int dim = 2; // The manifold dimension is always 2 for this physics
-    unsigned int n_qpoints = context.get_element_qrule().n_points();
-    const std::vector<libMesh::Real> &JxW = this->get_fe(context)->get_JxW();
-
+    
     // All shape function gradients are w.r.t. master element coordinates
-    const std::vector<std::vector<libMesh::Real> >& dphi_dxi  = this->get_fe(context)->get_dphidxi();
+    const std::vector<std::vector<libMesh::Real> >& dphi_dxi = this->get_fe(context)->get_dphidxi();
     const std::vector<std::vector<libMesh::Real> >& dphi_deta = this->get_fe(context)->get_dphideta();
-
+    
     const libMesh::DenseSubVector<libMesh::Number>& u_coeffs = context.get_elem_solution( this->_disp_vars.u() );
     const libMesh::DenseSubVector<libMesh::Number>& v_coeffs = context.get_elem_solution( this->_disp_vars.v() );
     const libMesh::DenseSubVector<libMesh::Number>& w_coeffs = context.get_elem_solution( this->_disp_vars.w() );
 
+    // Compute gradients  w.r.t. master element coordinates
+    libMesh::Gradient grad_u, grad_v, grad_w;
+    for( unsigned int d = 0; d < n_u_dofs; d++ )
+      {
+        libMesh::RealGradient u_gradphi( dphi_dxi[d][qp], dphi_deta[d][qp] );
+        grad_u += u_coeffs(d)*u_gradphi;
+        grad_v += v_coeffs(d)*u_gradphi;
+        grad_w += w_coeffs(d)*u_gradphi;
+      }
+    gradu = grad_u;
+    gradv = grad_v;
+    gradw = grad_w;
+  }
+
+  template<typename StressStrainLaw>
+  void ElasticMembrane<StressStrainLaw>::precompute_tau(const AssemblyContext& context, unsigned int qp,
+                                                        const libMesh::Gradient &gradu,
+                                                        const libMesh::Gradient &gradv,
+                                                        const libMesh::Gradient &gradw,
+                                                        libMesh::TensorValue<libMesh::Real> & t, /*tau*/
+                                                        ElasticityTensor & C)
+  {
     // Need these to build up the covariant and contravariant metric tensors
     const std::vector<libMesh::RealGradient>& dxdxi  = this->get_fe(context)->get_dxyzdxi();
-    const std::vector<libMesh::RealGradient>& dxdeta = this->get_fe(context)->get_dxyzdeta();
 
+    const unsigned int dim = 2; // The cable dimension is always 1 for this physics
 
-    for (unsigned int qp=0; qp != n_qpoints; qp++)
-      {
-        // Compute and store gradients  w.r.t. master element coordinates
-        libMesh::Gradient grad_u, grad_v, grad_w;
-        for( unsigned int d = 0; d < n_u_dofs; d++ )
-          {
-            libMesh::RealGradient u_gradphi( dphi_dxi[d][qp], dphi_deta[d][qp] );
-            grad_u += u_coeffs(d)*u_gradphi;
-            grad_v += v_coeffs(d)*u_gradphi;
-            grad_w += w_coeffs(d)*u_gradphi;
-          }
-        _grad_u_data.push_back(grad_u);
-        _grad_v_data.push_back(grad_v);
-        _grad_w_data.push_back(grad_w);
+    // Compute & store gradients  w.r.t. actual element coordinates
+    libMesh::RealGradient grad_x( dxdxi[qp](0) );
+    libMesh::RealGradient grad_y( dxdxi[qp](1) );
+    libMesh::RealGradient grad_z( dxdxi[qp](2) );
+    
+    libMesh::TensorValue<libMesh::Real> a_cov, a_contra, A_cov, A_contra;
+    libMesh::Real lambda_sq = 0;
+    
+    this->compute_metric_tensors( qp, *(this->get_fe(context)), context,
+                                  gradu, gradv, gradw,
+                                  a_cov, a_contra, A_cov, A_contra,
+                                  lambda_sq );
 
-        // Compute & store gradients  w.r.t. actual element coordinates
-        libMesh::RealGradient grad_x( dxdxi[qp](0), dxdeta[qp](0) );
-        libMesh::RealGradient grad_y( dxdxi[qp](1), dxdeta[qp](1) );
-        libMesh::RealGradient grad_z( dxdxi[qp](2), dxdeta[qp](2) );
-        _grad_x_data.push_back(grad_x);
-        _grad_y_data.push_back(grad_y);
-        _grad_z_data.push_back(grad_z);
-
-
-        libMesh::TensorValue<libMesh::Real> a_cov, a_contra, A_cov, A_contra;
-        libMesh::Real lambda_sq = 0;
-
-        this->compute_metric_tensors( qp, *(this->get_fe(context)), context,
-                                      grad_u, grad_v, grad_w,
-                                      a_cov, a_contra, A_cov, A_contra,
-                                      lambda_sq );
-
-        // Compute stress and elasticity tensors
-        libMesh::TensorValue<libMesh::Real> tau;
-        ElasticityTensor C;
-        this->_stress_strain_law.compute_stress_and_elasticity(dim,a_contra,a_cov,A_contra,A_cov,tau,C);
-
-        libMesh::Real jac = JxW[qp];
-
-        for (unsigned int i=0; i != n_u_dofs; i++)
-	  {
-            libMesh::RealGradient u_gradphi( dphi_dxi[i][qp], dphi_deta[i][qp] );
-            _u_gradphi_data[qp].push_back(u_gradphi);
-            
-            for( unsigned int alpha = 0; alpha < dim; alpha++ )
-              {
-                for( unsigned int beta = 0; beta < dim; beta++ )
-                  {
-                    libMesh::Real factor = 0.5*tau(alpha,beta)*this->_h0*jac;
-                    _residual_factor_data[qp].push_back(factor);
-                  }
-              }
-          }
-      } //qp loop
-  }// end of precompute_residual_data
+    // Compute stress tensor
+    libMesh::TensorValue<libMesh::Real> tau;
+    ElasticityTensor Ctemp;
+    this->_stress_strain_law.compute_stress_and_elasticity(dim,a_contra,a_cov,A_contra,A_cov,tau,Ctemp);
+    t = tau;
+    C = Ctemp;
+  }
 
   
   template<typename StressStrainLaw>
@@ -230,34 +216,48 @@ namespace GRINS
 
     const unsigned int dim = 2; // The manifold dimension is always 2 for this physics
 
+    // Need these to build up the covariant and contravariant metric tensors
+    const std::vector<libMesh::RealGradient>& dxdxi  = this->get_fe(context)->get_dxyzdxi();
+    const std::vector<libMesh::RealGradient>& dxdeta = this->get_fe(context)->get_dxyzdeta();
+    
+    
     for (unsigned int qp=0; qp != n_qpoints; qp++)
       {
-
-
-        libMesh::TensorValue<libMesh::Real> a_cov, a_contra, A_cov, A_contra;
-        libMesh::Real lambda_sq = 0;
-                
-        this->compute_metric_tensors( qp, *(this->get_fe(context)), context,
-                                      _grad_u_data[qp], _grad_v_data[qp], _grad_w_data[qp],
-                                      a_cov, a_contra, A_cov, A_contra,
-                                      lambda_sq );
+        libMesh::Gradient grad_u, grad_v,grad_w;
+        this->precompute_graduvw(context, qp, grad_u,grad_v,grad_w);
 
         // Compute stress and elasticity tensors
         libMesh::TensorValue<libMesh::Real> tau;
         ElasticityTensor C;
-        this->_stress_strain_law.compute_stress_and_elasticity(dim,a_contra,a_cov,A_contra,A_cov,tau,C);
+        this->precompute_tau(context,qp,grad_u,grad_v,grad_w,tau,C);
 
+        libMesh::RealGradient grad_x( dxdxi[qp](0), dxdeta[qp](0) );
+        libMesh::RealGradient grad_y( dxdxi[qp](1), dxdeta[qp](1) );
+        libMesh::RealGradient grad_z( dxdxi[qp](2), dxdeta[qp](2) );
+        
         libMesh::Real jac = JxW[qp];
 
         for (unsigned int i=0; i != n_u_dofs; i++)
-	  {
-            libMesh::Real residual_components[3]={0};
-            get_residual(residual_components,qp,i);            
-            Fu(i) += residual_components[1];
-            Fv(i) += residual_components[2];
-            Fw(i) += residual_components[3];
-          }
+          {
+            libMesh::RealGradient u_gradphi( dphi_dxi[i][qp], dphi_deta[i][qp] );
 
+            for( unsigned int alpha = 0; alpha < dim; alpha++ )
+              {
+                for( unsigned int beta = 0; beta < dim; beta++ )
+                  {
+                    libMesh::Real factor = 0.5*tau(alpha,beta)*this->_h0*jac;
+
+                    Fu(i) += factor*( (grad_x(beta) + grad_u(beta))*u_gradphi(alpha) +
+                                      (grad_x(alpha) + grad_u(alpha))*u_gradphi(beta) );
+
+                    Fv(i) += factor*( (grad_y(beta) + grad_v(beta))*u_gradphi(alpha) +
+                                      (grad_y(alpha) + grad_v(alpha))*u_gradphi(beta) );
+
+                    Fw(i) += factor*( (grad_z(beta) + grad_w(beta))*u_gradphi(alpha) +
+                                      (grad_z(alpha) + grad_w(alpha))*u_gradphi(beta) );
+                  }
+              }
+          }
         if( compute_jacobian )
           {
             for (unsigned int i=0; i != n_u_dofs; i++)
@@ -285,25 +285,25 @@ namespace GRINS
                               {
                                 for( unsigned int mu = 0; mu < dim; mu++ )
                                   {
-                                    const libMesh::Real dgamma_du = 0.5*( u_gradphi_j(lambda)*(_grad_x_data[qp](mu)+_grad_u_data[qp](mu)) +
-                                                                          (_grad_x_data[qp](lambda)+_grad_u_data[qp](lambda))*u_gradphi_j(mu) );
+                                    const libMesh::Real dgamma_du = 0.5*( u_gradphi_j(lambda)*(grad_x(mu)+grad_u(mu)) +
+                                                                          (grad_x(lambda)+grad_u(lambda))*u_gradphi_j(mu) );
 
-                                    const libMesh::Real dgamma_dv = 0.5*( u_gradphi_j(lambda)*(_grad_y_data[qp](mu)+_grad_v_data[qp](mu)) +
-                                                                          (_grad_y_data[qp](lambda)+_grad_v_data[qp](lambda))*u_gradphi_j(mu) );
+                                    const libMesh::Real dgamma_dv = 0.5*( u_gradphi_j(lambda)*(grad_y(mu)+grad_v(mu)) +
+                                                                          (grad_y(lambda)+grad_v(lambda))*u_gradphi_j(mu) );
 
-                                    const libMesh::Real dgamma_dw = 0.5*( u_gradphi_j(lambda)*(_grad_z_data[qp](mu)+_grad_w_data[qp](mu)) +
-                                                                          (_grad_z_data[qp](lambda)+_grad_w_data[qp](lambda))*u_gradphi_j(mu) );
+                                    const libMesh::Real dgamma_dw = 0.5*( u_gradphi_j(lambda)*(grad_z(mu)+grad_w(mu)) +
+                                                                          (grad_z(lambda)+grad_w(lambda))*u_gradphi_j(mu) );
 
                                     const libMesh::Real C1 = 0.5*this->_h0*jac*C(alpha,beta,lambda,mu)*context.get_elem_solution_derivative();
 
-                                    const libMesh::Real x_term = C1*( (_grad_x_data[qp](beta)+_grad_u_data[qp](beta))*u_gradphi_i(alpha) +
-                                                                      (_grad_x_data[qp](alpha)+_grad_u_data[qp](alpha))*u_gradphi_i(beta) );
+                                    const libMesh::Real x_term = C1*( (grad_x(beta)+grad_u(beta))*u_gradphi_i(alpha) +
+                                                                      (grad_x(alpha)+grad_u(alpha))*u_gradphi_i(beta) );
 
-                                    const libMesh::Real y_term = C1*( (_grad_y_data[qp](beta)+_grad_v_data[qp](beta))*u_gradphi_i(alpha) +
-                                                                      (_grad_y_data[qp](alpha)+_grad_v_data[qp](alpha))*u_gradphi_i(beta) );
+                                    const libMesh::Real y_term = C1*( (grad_y(beta)+grad_v(beta))*u_gradphi_i(alpha) +
+                                                                      (grad_y(alpha)+grad_v(alpha))*u_gradphi_i(beta) );
 
-                                    const libMesh::Real z_term = C1*( (_grad_z_data[qp](beta)+_grad_w_data[qp](beta))*u_gradphi_i(alpha) +
-                                                                      (_grad_z_data[qp](alpha)+_grad_w_data[qp](alpha))*u_gradphi_i(beta) );
+                                    const libMesh::Real z_term = C1*( (grad_z(beta)+grad_w(beta))*u_gradphi_i(alpha) +
+                                                                      (grad_z(alpha)+grad_w(alpha))*u_gradphi_i(beta) );
 
                                     Kuu(i,j) += x_term*dgamma_du;
 
@@ -574,33 +574,6 @@ namespace GRINS
           } // is_stress
       }
   }//end compute_postprocessed_quantity
-
-
-  template<typename StressStrainLaw>
-  void ElasticMembrane<StressStrainLaw>::get_residual(libMesh::Real (&res)[3], unsigned int qp, unsigned int dof)
-  {
-    //TODO: were to get dim from??
-    unsigned int dim =2;
-    for( unsigned int alpha = 0; alpha < dim; alpha++ )
-      {
-        for( unsigned int beta = 0; beta < dim; beta++ )
-          {
-                    
-            res[1] += _residual_factor_data[qp][dof]*
-              ( (_grad_x_data[qp](beta)  + _grad_u_data[qp](beta)) *_u_gradphi_data[qp][dof](alpha) +
-                (_grad_x_data[qp](alpha) + _grad_u_data[qp](alpha))*_u_gradphi_data[qp][dof](beta) );
-    
-            res[2] += _residual_factor_data[qp][dof]*
-              ( (_grad_y_data[qp](beta)  + _grad_v_data[qp](beta)) *_u_gradphi_data[qp][dof](alpha) +
-                (_grad_y_data[qp](alpha) + _grad_v_data[qp](alpha))*_u_gradphi_data[qp][dof](beta) );
-    
-            res[3] += _residual_factor_data[qp][dof]*
-              ( (_grad_z_data[qp](beta)  + _grad_w_data[qp](beta)) *_u_gradphi_data[qp][dof](alpha) +
-                (_grad_z_data[qp](alpha) + _grad_w_data[qp](alpha))*_u_gradphi_data[qp][dof](beta) );
-          }
-      }
-    
-  }// end get_residual
   
   
 } // end namespace GRINS

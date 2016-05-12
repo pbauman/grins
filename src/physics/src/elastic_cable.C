@@ -25,6 +25,7 @@
 // This class
 #include "grins/elastic_cable.h"
 
+
 // GRINS
 #include "grins_config.h"
 #include "grins/generic_ic_handler.h"
@@ -242,8 +243,8 @@ namespace GRINS
                                                      const libMesh::Gradient &gradu,
                                                      const libMesh::Gradient &gradv,
                                                      const libMesh::Gradient &gradw,
-                                                     libMesh::TensorValue<libMesh::Real>& t, /*tau*/
-                                                     ElasticityTensor C)
+                                                     libMesh::TensorValue<libMesh::Real> & t, /*tau*/
+                                                     ElasticityTensor & C)
   {
     // Need these to build up the covariant and contravariant metric tensors
     const std::vector<libMesh::RealGradient>& dxdxi  = this->get_fe(context)->get_dxyzdxi();
@@ -266,7 +267,7 @@ namespace GRINS
     // Compute stress tensor
     libMesh::TensorValue<libMesh::Real> tau;
     ElasticityTensor Ctemp;
-    this->_stress_strain_law.compute_stress_and_elasticity(dim,a_contra,a_cov,A_contra,A_cov,tau,C);
+    this->_stress_strain_law.compute_stress_and_elasticity(dim,a_contra,a_cov,A_contra,A_cov,tau,Ctemp);
     t = tau;
     C = Ctemp;
   }

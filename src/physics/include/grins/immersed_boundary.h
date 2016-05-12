@@ -70,8 +70,6 @@ namespace GRINS
     // A getter function for the Viscosity object
     libMesh::Real get_viscosity_value(AssemblyContext& context, unsigned int qp) const;
 
-    //! Compute residual from the SolidMechanics Physics to be used in forcing term calculation
-    inline void get_residual( libMesh::Real (&res)[3], unsigned int qp, unsigned int dof );
 
   protected:
 

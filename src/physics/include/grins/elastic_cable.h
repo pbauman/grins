@@ -78,8 +78,8 @@ namespace GRINS
                                const libMesh::Gradient &gradu,
                                const libMesh::Gradient &gradv,
                                const libMesh::Gradient &gradw,
-                               libMesh::TensorValue<libMesh::Real>& t, /*stress (tau)*/
-                               ElasticityTensor C );
+                               libMesh::TensorValue<libMesh::Real> & t, /*stress (tau)*/
+                               ElasticityTensor & C );
    
   private:
 
