@@ -25,12 +25,11 @@
 
 #include "grins/immersed_boundary.h"
 
-
 // GRINS
 #include "grins/common.h"
 #include "grins/assembly_context.h"
 #include "grins/physics_naming.h"
-#include "grins/inc_nav_stokes_macro.h"
+#include "grins/elasticity_tensor.h"
 #include "grins/materials_parsing.h"
 #include "grins/variables_parsing.h"
 #include "grins/variable_warehouse.h"
@@ -45,37 +44,35 @@
 namespace GRINS
 {
 
-  template<typename SolidMechanicsAbstract, typename Mu>
-  void ImmersedBoundary<SolidMechanicsAbstract, Mu>::init_variables( libMesh::FEMSystem* system )
+  template<typename SolidMechanics>
+  void ImmersedBoundary<SolidMechanics>::init_variables( libMesh::FEMSystem* system )
   {
     this->_dim = system->get_mesh().mesh_dimension();
-
     this->_flow_vars.init(system);
-    this->_press_var.init(system);
-
-    this->_mu.init(system);
-
-    return;
+    this->_disp_var.init(system);
   }
 
-  template<typename SolidMechanicsAbstract, typename Mu>
-  void ImmersedBoundary<SolidMechanicsAbstract, Mu>::set_time_evolving_vars( libMesh::FEMSystem* system )
+  template<typename SolidMechanics>
+  void ImmersedBoundary<SolidMechanics>::set_time_evolving_vars( libMesh::FEMSystem* system )
   {
     const unsigned int dim = system->get_mesh().mesh_dimension();
 
-    // Tell the system to march velocity forward in time, but
-    // leave p as a constraint only
+    // Tell the system to march velocity and displacements forward in time
     system->time_evolving(_flow_vars.u());
     system->time_evolving(_flow_vars.v());
 
-    if (dim == 3)
-      system->time_evolving(_flow_vars.w());
+    system->time_evolving(_disp_vars.u());
+    system->time_evolving(_disp_vars.v());
 
-    return;
+    if (dim == 3)
+      {
+        system->time_evolving(_flow_vars.w());
+        system->time_evolving(_disp_vars.v());
+      }
   }
 
-  template<typename SolidMechanicsAbstract, typename Mu>
-  void ImmersedBoundary<SolidMechanicsAbstract, Mu>::init_context( AssemblyContext& context )
+  template<typename SolidMechanics>
+  void ImmersedBoundary<SolidMechanics>::init_context( AssemblyContext& context )
   {
     // We should prerequest all the data
     // we will need to build the linear system
@@ -84,25 +81,89 @@ namespace GRINS
     context.get_element_fe(_flow_vars.u())->get_phi();
     context.get_element_fe(_flow_vars.u())->get_dphi();
     context.get_element_fe(_flow_vars.u())->get_xyz();
-
-    context.get_element_fe(_press_var.p())->get_phi();
-    context.get_element_fe(_press_var.p())->get_xyz();
-
+ 
     context.get_side_fe(_flow_vars.u())->get_JxW();
     context.get_side_fe(_flow_vars.u())->get_phi();
     context.get_side_fe(_flow_vars.u())->get_dphi();
     context.get_side_fe(_flow_vars.u())->get_xyz();
-
-    return;
   }
-
-  template<typename SolidMechanicsAbstract, typename Mu>
-  libMesh::Real ImmersedBoundary<SolidMechanicsAbstract, Mu>::get_viscosity_value(AssemblyContext& context, unsigned int qp) const
-  {
-    return this->_mu(context, qp);
-  }
-
 
   
+  template<typename SolidMechanics>
+  void ImmersedBoundary<SolidMechanics>::element_time_derivative( bool compute_jacobian,
+                                                               AssemblyContext& context,
+                                                               CachedValues& /*cache*/ )
+  {
+    const unsigned int n_u_dofs = context.get_dof_indices(this->_disp_vars.u()).size();
+
+    unsigned int n_qpoints = context.get_element_qrule().n_points();
+
+    const std::vector<libMesh::Real> &JxW = this->get_fe(context)->get_JxW();
+
+    // Residuals that we're populating
+    libMesh::DenseSubVector<libMesh::Number> &Fu = context.get_elem_residual(this->_disp_vars.u());
+    libMesh::DenseSubVector<libMesh::Number> &Fv = context.get_elem_residual(this->_disp_vars.v());
+    libMesh::DenseSubVector<libMesh::Number> &Fw = context.get_elem_residual(this->_disp_vars.w());
+
+    // The velocity shape functions at interior quadrature points.
+    const std::vector<std::vector<libMesh::Real> >& u_phi =
+      context.get_element_fe(this->_flow_vars.u())->get_phi();
+
+    // The velocity shape function gradients (in global coords.)
+    // at interior quadrature points.
+    const std::vector<std::vector<libMesh::RealGradient> >& u_gradphi =
+      context.get_element_fe(this->_flow_vars.u())->get_dphi();
+
+    // TODO: I prolly need to get these for the solid too...but those vars are still broken
+
+
+    for (unsigned int qp=0; qp != n_qpoints; qp++)
+      {
+        //check to see if we are part of the solid. Do we check qp dofs the element? I think should be dof
+        bool is_solid = 1;
+        if (is_solid)
+          {
+
+            //Factor 1: fsi term
+            // get the stress tensor for the solid physics
+            libMesh::Gradient grad_u,grad_v,grad_w;
+            this->precompute_graduvw(context, qp, grad_u,grad_v,grad_w);
+
+            libMesh::TensorValue<libMesh::Real> tau;
+            ElasticityTensor C;
+            this->precompute_tau(context,qp,grad_u,grad_v,grad_w,tau,C);
+
+            //how to compute Piola-Kirchoff stress tensor? is it J tau F^-t where F is grad_s X_h as in
+            // the paper?
+            
+            //how to do a double dot product? by hand? (needed to weight by the flow shape funvtions at the body)
+
+
+
+
+            //Factor 2: acceleration term
+            //drho density factor how to get dimension of the solid mesh?
+            //how to get velocity values at a current vs previous point in time
+            
+          }
+        else 
+          //do nothing? liquid fe shouldnt be touched...
+
+      }
+
+  }//end elem time derivative
+
+
+
+  // TODO how do we advance  the structure forward in time?!?!?!
+  // how do the displacement variables help track this
+
+
+ 
 
 } // namespace GRINS
+
+
+//TODO this prolly should be instantiated in a specific derived class and not in this one
+//Instantiate
+//template class GRINS::ImmersedBoundary<GRINS::ElasticCableConstantGravity>;

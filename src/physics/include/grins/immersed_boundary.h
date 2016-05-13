@@ -26,7 +26,11 @@
 //GRINS
 #include "grins/physics.h"
 #include "grins/velocity_fe_variables.h"
-#include "grins/pressure_fe_variable.h"
+#include "grins/common.h"
+
+#include "grins/var_typedefs.h"
+//#include "grins/solid_mechanics_variables.h"
+//#include "grins/solid_mechanics_fe_variables.h"
 
 #include "libmesh/fem_context.h"
 
@@ -35,18 +39,15 @@ namespace GRINS
 
   //! Physics class for Immersed Boundary Method
   /*!
-    This physics class implements the classical Incompressible Navier-Stokes equations with an Immersed
-    Boundary.
-    This is a templated class, the class Viscosity can be instantiated as a specific type
-    (right now:ConstantViscosity or SpatiallyVaryingViscosity) to allow the user
-    to specify a constant or spatially varying viscosity in the input file
+    This physics class implements the classical Immersed  Boundary Method.
+    This is a templated class, the class SolidMechanics can be instantiated as a specific type
+    (right now:ElasticCable or ElasticMembrane)
    */
 
-  template<typename SolidMechanicsAbstract, typename Viscosity>
+  template<typename SolidMechanics>
   class ImmersedBoundary : public Physics
   {
   public:
-
 
     ImmersedBoundary(const std::string& my_physics_name,
                                    const std::string& core_physics_name,
@@ -54,11 +55,7 @@ namespace GRINS
 
     ~ImmersedBoundary(){};
 
-   
-    //! Initialization of Navier-Stokes variables
-    /*!
-      Add velocity and pressure variables to system.
-     */
+    //! Initializes the FE Variables    
     virtual void init_variables( libMesh::FEMSystem* system );
 
     //! Sets velocity variables to be time-evolving
@@ -67,9 +64,8 @@ namespace GRINS
     // Context initialization
     virtual void init_context( AssemblyContext& context );
 
-    // A getter function for the Viscosity object
-    libMesh::Real get_viscosity_value(AssemblyContext& context, unsigned int qp) const;
-
+    virtual void element_time_derivative( bool compute_jacobian, AssemblyContext& context,
+                                          CachedValues& cache );
 
   protected:
 
@@ -77,20 +73,19 @@ namespace GRINS
     /*! \todo Do we really need to cache this? */
     unsigned int _dim;
 
+    //! FE variables for the flow and for the solid
     VelocityFEVariables _flow_vars;
-    PressureFEVariable _press_var;
+    VelocityFEVariables _disp_vars;
     
-    //! Material parameters, read from input
-    /** \todo Create objects to allow for function specification */
-    libMesh::Number _rho;
+    //wtf is wrong with these
+//    SolidMechanicsFEVariables _disp_vars;  
 
-    //! Viscosity object
-    Viscosity _mu;
+    //! The solidmechanics class
+    SolidMechanics _solid_mech;
    
   private:
     ImmersedBoundary();
 
-    void register_variables();
 
   };
 
