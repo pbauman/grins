@@ -28,9 +28,9 @@
 #include "grins/velocity_fe_variables.h"
 #include "grins/common.h"
 
-#include "grins/var_typedefs.h"
+//#include "grins/var_typedefs.h"
 //#include "grins/solid_mechanics_variables.h"
-//#include "grins/solid_mechanics_fe_variables.h"
+#include "grins/solid_mechanics_fe_variables.h"
 
 #include "libmesh/fem_context.h"
 
@@ -49,9 +49,7 @@ namespace GRINS
   {
   public:
 
-    ImmersedBoundary(const std::string& my_physics_name,
-                                   const std::string& core_physics_name,
-                                   const GetPot& input);
+    ImmersedBoundary(const std::string& my_physics_name, const GetPot& input);
 
     ~ImmersedBoundary(){};
 
@@ -67,6 +65,9 @@ namespace GRINS
     virtual void element_time_derivative( bool compute_jacobian, AssemblyContext& context,
                                           CachedValues& cache );
 
+    //! function to pull material density from the input file
+    void get_material_density();
+    
   protected:
 
     //! Physical dimension of problem
@@ -75,10 +76,9 @@ namespace GRINS
 
     //! FE variables for the flow and for the solid
     VelocityFEVariables _flow_vars;
-    VelocityFEVariables _disp_vars;
     
     //wtf is wrong with these
-//    SolidMechanicsFEVariables _disp_vars;  
+    SolidMechanicsFEVariables _disp_vars;  
 
     //! The solidmechanics class
     SolidMechanics _solid_mech;

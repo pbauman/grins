@@ -45,6 +45,12 @@ namespace GRINS
 {
 
   template<typename SolidMechanics>
+  ImmersedBoundary<SolidMechanics>::ImmersedBoundary(const GRINS::PhysicsName& physics_name, const GetPot& input)
+  {
+    this->_solid_mech = new SolidMechanics(physics_name, input);
+  }
+  
+  template<typename SolidMechanics>
   void ImmersedBoundary<SolidMechanics>::init_variables( libMesh::FEMSystem* system )
   {
     this->_dim = system->get_mesh().mesh_dimension();
@@ -90,6 +96,10 @@ namespace GRINS
 
   
   template<typename SolidMechanics>
+  void get_material_density();
+  
+  
+  template<typename SolidMechanics>
   void ImmersedBoundary<SolidMechanics>::element_time_derivative( bool compute_jacobian,
                                                                AssemblyContext& context,
                                                                CachedValues& /*cache*/ )
@@ -126,6 +136,8 @@ namespace GRINS
 
             //Factor 1: fsi term
             // get the stress tensor for the solid physics
+
+            //these are gradients w.r.t. the master element coordinates
             libMesh::Gradient grad_u,grad_v,grad_w;
             this->precompute_graduvw(context, qp, grad_u,grad_v,grad_w);
 
@@ -135,6 +147,8 @@ namespace GRINS
 
             //how to compute Piola-Kirchoff stress tensor? is it J tau F^-t where F is grad_s X_h as in
             // the paper?
+
+            // how to get dimension of solid mesh to get modified piola (eqn 17)
             
             //how to do a double dot product? by hand? (needed to weight by the flow shape funvtions at the body)
 
@@ -142,7 +156,8 @@ namespace GRINS
 
 
             //Factor 2: acceleration term
-            //drho density factor how to get dimension of the solid mesh?
+            //drho density factor how to get dimension of the solid mesh? needed for density (eq 17)
+            
             //how to get velocity values at a current vs previous point in time
             
           }
@@ -151,7 +166,7 @@ namespace GRINS
 
       }
 
-  }//end elem time derivative
+  } //end elem time derivative
 
 
 
@@ -162,7 +177,6 @@ namespace GRINS
  
 
 } // namespace GRINS
-
 
 //TODO this prolly should be instantiated in a specific derived class and not in this one
 //Instantiate
