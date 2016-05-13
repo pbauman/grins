@@ -27,11 +27,7 @@
 #include "grins/physics.h"
 #include "grins/velocity_fe_variables.h"
 #include "grins/common.h"
-
-//#include "grins/var_typedefs.h"
-//#include "grins/solid_mechanics_variables.h"
-#include "grins/solid_mechanics_fe_variables.h"
-
+#include "grins/displacement_fe_variables.h"
 #include "libmesh/fem_context.h"
 
 namespace GRINS
@@ -62,12 +58,10 @@ namespace GRINS
     // Context initialization
     virtual void init_context( AssemblyContext& context );
 
+    // ! Residual contributions from the solid in the flow
     virtual void element_time_derivative( bool compute_jacobian, AssemblyContext& context,
                                           CachedValues& cache );
-
-    //! function to pull material density from the input file
-    void get_material_density();
-    
+   
   protected:
 
     //! Physical dimension of problem
@@ -76,9 +70,7 @@ namespace GRINS
 
     //! FE variables for the flow and for the solid
     VelocityFEVariables _flow_vars;
-    
-    //wtf is wrong with these
-    SolidMechanicsFEVariables _disp_vars;  
+    DisplacementFEVariables _disp_vars;  
 
     //! The solidmechanics class
     SolidMechanics _solid_mech;

@@ -1,11 +1,10 @@
+
 # Mesh related options
 [mesh-options]
 mesh_option = 'read_mesh_from_file'
-mesh_filename = 'mesh.e'
-
-uniformly_refine = '2'
-
+mesh_filename = 'immersed_boundary_mesh.e'
 []
+
 
 # Options for time solvers
 [unsteady-solver]
@@ -20,11 +19,7 @@ deltat = 0.1
 [linear-nonlinear-solver]
 max_nonlinear_iterations = 10
 max_linear_iterations = 2500
-
 initial_linear_tolerance = '1.0e-12'
-
-verify_analytic_jacobians = '1.e-6'
-
 []
 
 # Visualization options
@@ -43,42 +38,23 @@ print_mesh_info = 'true'
 print_log_info = 'true'
 solver_verbose = 'true'
 solver_quiet = 'false'
-
 echo_physics = 'true'
-
 []
 
-# [restart-options]
-#
-# restart_file = 'stokes_tsection.xdr'
 
 # Options related to all Physics
 [Physics]
-
 enabled_physics = 'ImmersedBoundary
                    IncompressibleNavierStokes'
 
 # Options for ImmersedBoundary physics
 [./ImmersedBoundary]
-
-rho_solid = '1.0'
-
+## nothing?
 []
 
 
-# Options for Navier Stokes physics
-[./IncompressibleNavierStokes]
-
-rho = '1.0'
-mu = '1.0e-3'
-
-bc_ids = '1 2 3 4 6 7 8'
-bc_types = 'no_slip no_slip no_slip no_slip no_slip parabolic_profile no_slip'
-
-parabolic_profile_coeffs_7 = '0.0 0.0 -4.0 0.0 4.0 0.0'
-parabolic_profile_var_7 = 'u'
-parabolic_profile_fix_7 = 'v'
-
+[./Materials]
+_rho = 1.0 ##density of the solid
 []
 
 [Variables]
@@ -86,10 +62,6 @@ parabolic_profile_fix_7 = 'v'
       names = 'u v'
       fe_family = 'LAGRANGE'
       order = 'SECOND'
-   [../Pressure]
-      names = 'p'
-      fe_family = 'LAGRANGE'
-      order = 'FIRST'
    [../Displacement]
       names = 'x y'
       fe_family = 'LAGRANGE'

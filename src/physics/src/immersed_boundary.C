@@ -46,8 +46,12 @@ namespace GRINS
 
   template<typename SolidMechanics>
   ImmersedBoundary<SolidMechanics>::ImmersedBoundary(const GRINS::PhysicsName& physics_name, const GetPot& input)
+    : Physics(physics_name, input),
+      _flow_vars(input,physics_name),
+      _disp_vars(input, physics_name)
   {
     this->_solid_mech = new SolidMechanics(physics_name, input);
+    MaterialsParsing::read_density( physics_name, input, (*this), this->_rho );
   }
   
   template<typename SolidMechanics>
@@ -93,11 +97,6 @@ namespace GRINS
     context.get_side_fe(_flow_vars.u())->get_dphi();
     context.get_side_fe(_flow_vars.u())->get_xyz();
   }
-
-  
-  template<typename SolidMechanics>
-  void get_material_density();
-  
   
   template<typename SolidMechanics>
   void ImmersedBoundary<SolidMechanics>::element_time_derivative( bool compute_jacobian,
@@ -111,9 +110,9 @@ namespace GRINS
     const std::vector<libMesh::Real> &JxW = this->get_fe(context)->get_JxW();
 
     // Residuals that we're populating
-    libMesh::DenseSubVector<libMesh::Number> &Fu = context.get_elem_residual(this->_disp_vars.u());
-    libMesh::DenseSubVector<libMesh::Number> &Fv = context.get_elem_residual(this->_disp_vars.v());
-    libMesh::DenseSubVector<libMesh::Number> &Fw = context.get_elem_residual(this->_disp_vars.w());
+    libMesh::DenseSubVector<libMesh::Number> &Fu = context.get_elem_residual(this->_flow_vars.u());
+    libMesh::DenseSubVector<libMesh::Number> &Fv = context.get_elem_residual(this->_flow_vars.v());
+    libMesh::DenseSubVector<libMesh::Number> &Fw = context.get_elem_residual(this->_flow_vars.w());
 
     // The velocity shape functions at interior quadrature points.
     const std::vector<std::vector<libMesh::Real> >& u_phi =
@@ -124,8 +123,8 @@ namespace GRINS
     const std::vector<std::vector<libMesh::RealGradient> >& u_gradphi =
       context.get_element_fe(this->_flow_vars.u())->get_dphi();
 
-    // TODO: I prolly need to get these for the solid too...but those vars are still broken
-
+    // these shape functions wont exist in the solid. I will need to locate the fluid element on which the solid element lies  (solid vs fluid is updated using the elem->subdomain_id())
+    
 
     for (unsigned int qp=0; qp != n_qpoints; qp++)
       {
@@ -144,14 +143,12 @@ namespace GRINS
             libMesh::TensorValue<libMesh::Real> tau;
             ElasticityTensor C;
             this->precompute_tau(context,qp,grad_u,grad_v,grad_w,tau,C);
-
-            //how to compute Piola-Kirchoff stress tensor? is it J tau F^-t where F is grad_s X_h as in
-            // the paper?
+            //this tau is the piola kirch stress tensor
+            
 
             // how to get dimension of solid mesh to get modified piola (eqn 17)
             
-            //how to do a double dot product? by hand? (needed to weight by the flow shape funvtions at the body)
-
+            //how to do a double dot product? by hand!
 
 
 
@@ -160,24 +157,12 @@ namespace GRINS
             
             //how to get velocity values at a current vs previous point in time
             
-          }
-        else 
-          //do nothing? liquid fe shouldnt be touched...
-
-      }
-
+          }//is solid
+      }//qp loop
   } //end elem time derivative
-
-
-
-  // TODO how do we advance  the structure forward in time?!?!?!
-  // how do the displacement variables help track this
-
-
- 
 
 } // namespace GRINS
 
 //TODO this prolly should be instantiated in a specific derived class and not in this one
 //Instantiate
-//template class GRINS::ImmersedBoundary<GRINS::ElasticCableConstantGravity>;
+template class GRINS::ImmersedBoundary<GRINS::ElasticCable>;
