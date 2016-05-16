@@ -80,7 +80,7 @@ namespace GRINS
                                const libMesh::Gradient &gradu,
                                const libMesh::Gradient &gradv,
                                const libMesh::Gradient &gradw,
-                               libMesh::TensorValue<libMesh::Real> & t, /*stress (tau)*/
+                               libMesh::TensorValue<libMesh::Real> & tau,
                                ElasticityTensor & C );
   
   private:
@@ -119,17 +119,13 @@ namespace GRINS
     const libMesh::DenseSubVector<libMesh::Number>& w_coeffs = context.get_elem_solution( this->_disp_vars.w() );
 
     // Compute gradients  w.r.t. master element coordinates
-    libMesh::Gradient grad_u, grad_v, grad_w;
     for( unsigned int d = 0; d < n_u_dofs; d++ )
       {
         libMesh::RealGradient u_gradphi( dphi_dxi[d][qp], dphi_deta[d][qp] );
-        grad_u += u_coeffs(d)*u_gradphi;
-        grad_v += v_coeffs(d)*u_gradphi;
-        grad_w += w_coeffs(d)*u_gradphi;
+        gradu += u_coeffs(d)*u_gradphi;
+        gradv += v_coeffs(d)*u_gradphi;
+        gradw += w_coeffs(d)*u_gradphi;
       }
-    gradu = grad_u;
-    gradv = grad_v;
-    gradw = grad_w;
   }
 
   template<typename StressStrainLaw> inline
@@ -137,13 +133,13 @@ namespace GRINS
                                                         const libMesh::Gradient &gradu,
                                                         const libMesh::Gradient &gradv,
                                                         const libMesh::Gradient &gradw,
-                                                        libMesh::TensorValue<libMesh::Real> & t, /*tau*/
+                                                        libMesh::TensorValue<libMesh::Real> & tau,
                                                         ElasticityTensor & C)
   {
     // Need these to build up the covariant and contravariant metric tensors
     const std::vector<libMesh::RealGradient>& dxdxi  = this->get_fe(context)->get_dxyzdxi();
 
-    const unsigned int dim = 2; // The cable dimension is always 1 for this physics
+    const unsigned int dim = 2; // The membrane dimension is always 2 for this physics
 
     // Compute & store gradients  w.r.t. actual element coordinates
     libMesh::RealGradient grad_x( dxdxi[qp](0) );
@@ -159,11 +155,7 @@ namespace GRINS
                                   lambda_sq );
 
     // Compute stress tensor
-    libMesh::TensorValue<libMesh::Real> tau;
-    ElasticityTensor Ctemp;
-    this->_stress_strain_law.compute_stress_and_elasticity(dim,a_contra,a_cov,A_contra,A_cov,tau,Ctemp);
-    t = tau;
-    C = Ctemp;
+    this->_stress_strain_law.compute_stress_and_elasticity(dim,a_contra,a_cov,A_contra,A_cov,tau,C);
   }
 
 
