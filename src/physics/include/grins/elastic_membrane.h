@@ -68,15 +68,15 @@ namespace GRINS
                                                  const libMesh::Point& point,
                                                  libMesh::Real& value );
 
-    //! Precompute data needed for residual inline function
-    void precompute_graduvw(const AssemblyContext& context, unsigned int qp,
+    //! Precompute data needed for get_stress inline function
+    void get_grad_uvw(const AssemblyContext& context, unsigned int qp,
                                    libMesh::Gradient &gradu,
                                    libMesh::Gradient &gradv,
                                    libMesh::Gradient &gradw);
 
 
-    //! Precompute tau, needed for residual
-    void precompute_tau(const AssemblyContext& context, unsigned int qp,
+    //! Precompute stress and elasticity
+    void get_stress_and_elasticity(const AssemblyContext& context, unsigned int qp,
                                const libMesh::Gradient &gradu,
                                const libMesh::Gradient &gradv,
                                const libMesh::Gradient &gradw,
@@ -103,7 +103,7 @@ namespace GRINS
   /* ------------- Inline Functions ---------------*/
 
   template<typename StressStrainLaw> inline
-  void ElasticMembrane<StressStrainLaw>::precompute_graduvw(const AssemblyContext& context, unsigned int qp,
+  void ElasticMembrane<StressStrainLaw>::get_grad_uvw(const AssemblyContext& context, unsigned int qp,
                                                             libMesh::Gradient &gradu,
                                                             libMesh::Gradient &gradv,
                                                             libMesh::Gradient &gradw)
@@ -129,7 +129,7 @@ namespace GRINS
   }
 
   template<typename StressStrainLaw> inline
-  void ElasticMembrane<StressStrainLaw>::precompute_tau(const AssemblyContext& context, unsigned int qp,
+  void ElasticMembrane<StressStrainLaw>::get_stress_and_elasticity(const AssemblyContext& context, unsigned int qp,
                                                         const libMesh::Gradient &gradu,
                                                         const libMesh::Gradient &gradv,
                                                         const libMesh::Gradient &gradw,

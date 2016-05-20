@@ -67,14 +67,14 @@ namespace GRINS
                                                  libMesh::Real& value );
 
     //! Precompute data needed for residual inline function
-    void precompute_graduvw(const AssemblyContext& context, unsigned int qp,
+    void get_grad_uvw(const AssemblyContext& context, unsigned int qp,
                                    libMesh::Gradient &gradu,
                                    libMesh::Gradient &gradv,
                                    libMesh::Gradient &gradw);
 
 
     //! Precompute tau, needed for residual
-    void precompute_tau(const AssemblyContext& context, unsigned int qp,
+    void get_stress_and_elasticity(const AssemblyContext& context, unsigned int qp,
                                const libMesh::Gradient &gradu,
                                const libMesh::Gradient &gradv,
                                const libMesh::Gradient &gradw,
@@ -100,7 +100,7 @@ namespace GRINS
   /* ------------- Inline Functions ---------------*/
 
   template<typename StressStrainLaw> inline
-  void ElasticCable<StressStrainLaw>::precompute_graduvw(const AssemblyContext& context, unsigned int qp,
+  void ElasticCable<StressStrainLaw>::get_grad_uvw(const AssemblyContext& context, unsigned int qp,
                                                          libMesh::Gradient &gradu,
                                                          libMesh::Gradient &gradv,
                                                          libMesh::Gradient &gradw)
@@ -126,7 +126,7 @@ namespace GRINS
 
   
   template<typename StressStrainLaw> inline
-  void ElasticCable<StressStrainLaw>::precompute_tau(const AssemblyContext& context, unsigned int qp,
+  void ElasticCable<StressStrainLaw>::get_stress_and_elasticity(const AssemblyContext& context, unsigned int qp,
                                                      const libMesh::Gradient &gradu,
                                                      const libMesh::Gradient &gradv,
                                                      const libMesh::Gradient &gradw,

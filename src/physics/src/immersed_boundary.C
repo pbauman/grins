@@ -138,11 +138,11 @@ namespace GRINS
 
             //these are gradients w.r.t. the master element coordinates
             libMesh::Gradient grad_u,grad_v,grad_w;
-            this->precompute_graduvw(context, qp, grad_u,grad_v,grad_w);
+            this->get_grad_uvw(context, qp, grad_u,grad_v,grad_w);
 
             libMesh::TensorValue<libMesh::Real> tau;
             ElasticityTensor C;
-            this->precompute_tau(context,qp,grad_u,grad_v,grad_w,tau,C);
+            this->get_stress_and_elasticity(context,qp,grad_u,grad_v,grad_w,tau,C);
             //this tau is the piola kirch stress tensor
             
 

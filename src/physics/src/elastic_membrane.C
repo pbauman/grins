@@ -159,12 +159,12 @@ namespace GRINS
     for (unsigned int qp=0; qp != n_qpoints; qp++)
       {
         libMesh::Gradient grad_u, grad_v,grad_w;
-        this->precompute_graduvw(context, qp, grad_u,grad_v,grad_w);
+        this->get_grad_uvw(context, qp, grad_u,grad_v,grad_w);
 
         // Compute stress and elasticity tensors
         libMesh::TensorValue<libMesh::Real> tau;
         ElasticityTensor C;
-        this->precompute_tau(context,qp,grad_u,grad_v,grad_w,tau,C);
+        this->get_stress_and_elasticity(context,qp,grad_u,grad_v,grad_w,tau,C);
 
         libMesh::RealGradient grad_x( dxdxi[qp](0), dxdeta[qp](0) );
         libMesh::RealGradient grad_y( dxdxi[qp](1), dxdeta[qp](1) );
