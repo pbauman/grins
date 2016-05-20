@@ -41,6 +41,9 @@ namespace GRINS
     ElasticCable( const PhysicsName& physics_name, const GetPot& input,
                   bool is_compressible );
 
+    ElasticCable();
+
+    
     virtual ~ElasticCable(){};
 
     //! Register postprocessing variables for ElasticCable
@@ -78,12 +81,12 @@ namespace GRINS
                                const libMesh::Gradient &gradu,
                                const libMesh::Gradient &gradv,
                                const libMesh::Gradient &gradw,
-                               libMesh::TensorValue<libMesh::Real> & t, /*stress (tau)*/
+                               libMesh::TensorValue<libMesh::Real> & tau, /*stress*/
                                ElasticityTensor & C );
-   
+  protected:
+    
   private:
 
-    ElasticCable();
 
     //! Index from registering this quantity. Each component will have it's own index.
     std::vector<unsigned int> _stress_indices;

@@ -30,23 +30,29 @@
 #include "grins/displacement_fe_variables.h"
 #include "libmesh/fem_context.h"
 
+#include "grins/elastic_cable.h"
+
+
 namespace GRINS
 {
 
   //! Physics class for Immersed Boundary Method
   /*!
     This physics class implements the classical Immersed  Boundary Method.
-    This is a templated class, the class SolidMechanics can be instantiated as a specific type
+    This is a templated class, the class SolidMech can be instantiated as a specific type
     (right now:ElasticCable or ElasticMembrane)
    */
 
-  template<typename SolidMechanics>
+  template<typename SolidMech>
   class ImmersedBoundary : public Physics
   {
   public:
 
     ImmersedBoundary(const std::string& my_physics_name, const GetPot& input);
 
+    ImmersedBoundary();
+
+    
     ~ImmersedBoundary(){};
 
     //! Initializes the FE Variables    
@@ -64,19 +70,21 @@ namespace GRINS
    
   protected:
 
+    
     //! Physical dimension of problem
     /*! \todo Do we really need to cache this? */
     unsigned int _dim;
 
-    //! FE variables for the flow and for the solid
+    //! FE variables for the flow
     VelocityFEVariables _flow_vars;
+
+    //! FE variables for the solid
     DisplacementFEVariables _disp_vars;  
 
     //! The solidmechanics class
-    SolidMechanics _solid_mech;
+    SolidMech * _solid_mech;
    
   private:
-    ImmersedBoundary();
 
 
   };

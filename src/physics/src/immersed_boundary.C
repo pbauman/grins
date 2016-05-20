@@ -34,36 +34,41 @@
 #include "grins/variables_parsing.h"
 #include "grins/variable_warehouse.h"
 
+// for the instantiation
+#include "grins/elastic_cable.h"
+#include "grins/elastic_membrane.h"
+#include "grins/hookes_law.h"
+
 // libMesh
 #include "libmesh/utility.h"
 #include "libmesh/string_to_enum.h"
 #include "libmesh/getpot.h"
 #include "libmesh/fem_system.h"
 #include "libmesh/fem_context.h"
+#include "libmesh/quadrature.h"
 
 namespace GRINS
 {
 
-  template<typename SolidMechanics>
-  ImmersedBoundary<SolidMechanics>::ImmersedBoundary(const GRINS::PhysicsName& physics_name, const GetPot& input)
+  template<typename SolidMech>
+  ImmersedBoundary<SolidMech>::ImmersedBoundary(const GRINS::PhysicsName& physics_name, const GetPot& input)
     : Physics(physics_name, input),
       _flow_vars(input,physics_name),
-      _disp_vars(input, physics_name)
+      _disp_vars(input,physics_name,false,true,false) /* is2d, is3d, is constraint (how do we know this?)*/
   {
-    this->_solid_mech = new SolidMechanics(physics_name, input);
-    MaterialsParsing::read_density( physics_name, input, (*this), this->_rho );
+    this->_solid_mech = new SolidMech(physics_name, input, false); /*is_compressible*/
   }
   
-  template<typename SolidMechanics>
-  void ImmersedBoundary<SolidMechanics>::init_variables( libMesh::FEMSystem* system )
+  template<typename SolidMech>
+  void ImmersedBoundary<SolidMech>::init_variables( libMesh::FEMSystem* system )
   {
     this->_dim = system->get_mesh().mesh_dimension();
     this->_flow_vars.init(system);
-    this->_disp_var.init(system);
+    this->_disp_vars.init(system);
   }
 
-  template<typename SolidMechanics>
-  void ImmersedBoundary<SolidMechanics>::set_time_evolving_vars( libMesh::FEMSystem* system )
+  template<typename SolidMech>
+  void ImmersedBoundary<SolidMech>::set_time_evolving_vars( libMesh::FEMSystem* system )
   {
     const unsigned int dim = system->get_mesh().mesh_dimension();
 
@@ -81,8 +86,8 @@ namespace GRINS
       }
   }
 
-  template<typename SolidMechanics>
-  void ImmersedBoundary<SolidMechanics>::init_context( AssemblyContext& context )
+  template<typename SolidMech>
+  void ImmersedBoundary<SolidMech>::init_context( AssemblyContext& context )
   {
     // We should prerequest all the data
     // we will need to build the linear system
@@ -98,8 +103,8 @@ namespace GRINS
     context.get_side_fe(_flow_vars.u())->get_xyz();
   }
   
-  template<typename SolidMechanics>
-  void ImmersedBoundary<SolidMechanics>::element_time_derivative( bool compute_jacobian,
+  template<typename SolidMech>
+  void ImmersedBoundary<SolidMech>::element_time_derivative( bool compute_jacobian,
                                                                AssemblyContext& context,
                                                                CachedValues& /*cache*/ )
   {
@@ -143,13 +148,9 @@ namespace GRINS
             libMesh::TensorValue<libMesh::Real> tau;
             ElasticityTensor C;
             this->get_stress_and_elasticity(context,qp,grad_u,grad_v,grad_w,tau,C);
-            //this tau is the piola kirch stress tensor
-            
-
-            // how to get dimension of solid mesh to get modified piola (eqn 17)
-            
+            //this tau is the piola kirch stress tensor in the reference configuration
+                        
             //how to do a double dot product? by hand!
-
 
 
             //Factor 2: acceleration term
@@ -163,6 +164,7 @@ namespace GRINS
 
 } // namespace GRINS
 
-//TODO this prolly should be instantiated in a specific derived class and not in this one
+
 //Instantiate
-template class GRINS::ImmersedBoundary<GRINS::ElasticCable>;
+template class GRINS::ImmersedBoundary<GRINS::ElasticCable<GRINS::HookesLaw> >;
+
