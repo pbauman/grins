@@ -36,6 +36,7 @@
 
 // for the instantiation
 #include "grins/elastic_cable.h"
+
 #include "grins/elastic_membrane.h"
 #include "grins/hookes_law.h"
 
@@ -82,7 +83,7 @@ namespace GRINS
     if (dim == 3)
       {
         system->time_evolving(_flow_vars.w());
-        system->time_evolving(_disp_vars.v());
+        system->time_evolving(_disp_vars.w());
       }
   }
 
@@ -96,7 +97,8 @@ namespace GRINS
     context.get_element_fe(_flow_vars.u())->get_phi();
     context.get_element_fe(_flow_vars.u())->get_dphi();
     context.get_element_fe(_flow_vars.u())->get_xyz();
- 
+
+    //these arent needed?
     context.get_side_fe(_flow_vars.u())->get_JxW();
     context.get_side_fe(_flow_vars.u())->get_phi();
     context.get_side_fe(_flow_vars.u())->get_dphi();
@@ -108,31 +110,29 @@ namespace GRINS
                                                                AssemblyContext& context,
                                                                CachedValues& /*cache*/ )
   {
+    //Gather info we might need for ibm 
     const unsigned int n_u_dofs = context.get_dof_indices(this->_disp_vars.u()).size();
-
     unsigned int n_qpoints = context.get_element_qrule().n_points();
-
-    const std::vector<libMesh::Real> &JxW = this->get_fe(context)->get_JxW();
+    const std::vector<libMesh::Real> &JxW = context.get_element_fe(this->_flow_vars.u())->get_JxW();
 
     // Residuals that we're populating
     libMesh::DenseSubVector<libMesh::Number> &Fu = context.get_elem_residual(this->_flow_vars.u());
     libMesh::DenseSubVector<libMesh::Number> &Fv = context.get_elem_residual(this->_flow_vars.v());
     libMesh::DenseSubVector<libMesh::Number> &Fw = context.get_elem_residual(this->_flow_vars.w());
 
-    // The velocity shape functions at interior quadrature points.
-    const std::vector<std::vector<libMesh::Real> >& u_phi =
-      context.get_element_fe(this->_flow_vars.u())->get_phi();
+    // The velocity shape functions at interior quadrature points. (we only need their gradients prol)
+    const std::vector<std::vector<libMesh::Real> >& u_phi = context.get_element_fe(this->_flow_vars.u())->get_phi();
 
-    // The velocity shape function gradients (in global coords.)
-    // at interior quadrature points.
-    const std::vector<std::vector<libMesh::RealGradient> >& u_gradphi =
-      context.get_element_fe(this->_flow_vars.u())->get_dphi();
+    // The velocity shape function gradients (in global coords.) at interior quadrature points.
+    const std::vector<std::vector<libMesh::RealGradient> >& u_gradphi = context.get_element_fe(this->_flow_vars.u())->get_dphi();
 
     // these shape functions wont exist in the solid. I will need to locate the fluid element on which the solid element lies  (solid vs fluid is updated using the elem->subdomain_id())
     
 
     for (unsigned int qp=0; qp != n_qpoints; qp++)
       {
+        libMesh::Real jac = JxW[qp];
+
         //check to see if we are part of the solid. Do we check qp dofs the element? I think should be dof
         bool is_solid = 1;
         if (is_solid)
@@ -143,18 +143,25 @@ namespace GRINS
 
             //these are gradients w.r.t. the master element coordinates
             libMesh::Gradient grad_u,grad_v,grad_w;
-            this->get_grad_uvw(context, qp, grad_u,grad_v,grad_w);
+            _solid_mech->get_grad_uvw(context, qp, grad_u,grad_v,grad_w);
 
             libMesh::TensorValue<libMesh::Real> tau;
             ElasticityTensor C;
-            this->get_stress_and_elasticity(context,qp,grad_u,grad_v,grad_w,tau,C);
+            _solid_mech->get_stress_and_elasticity(context,qp,grad_u,grad_v,grad_w,tau,C);
             //this tau is the piola kirch stress tensor in the reference configuration
                         
             //how to do a double dot product? by hand!
+            for (unsigned int i=0; i != n_u_dofs; i++)
+              {
+                Fu(i) += jac*u_phi[i][qp];
+                Fv(i) += jac*u_phi[i][qp];
 
+                if (_dim == 3){
+                  Fw(i) += jac*u_phi[i][qp];
+                }
 
+              }
             //Factor 2: acceleration term
-            //drho density factor how to get dimension of the solid mesh? needed for density (eq 17)
             
             //how to get velocity values at a current vs previous point in time
             
@@ -166,5 +173,6 @@ namespace GRINS
 
 
 //Instantiate
+// why is this borked when i use Cable but not membrane?
 template class GRINS::ImmersedBoundary<GRINS::ElasticCable<GRINS::HookesLaw> >;
 

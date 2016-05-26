@@ -31,6 +31,7 @@
 #include "libmesh/fem_context.h"
 
 #include "grins/elastic_cable.h"
+#include "grins/elastic_membrane.h"
 
 
 namespace GRINS
@@ -69,7 +70,6 @@ namespace GRINS
                                           CachedValues& cache );
    
   protected:
-
     
     //! Physical dimension of problem
     /*! \todo Do we really need to cache this? */
@@ -88,5 +88,5 @@ namespace GRINS
 
 
   };
-
+  
 } //End namespace block
