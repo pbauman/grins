@@ -174,5 +174,6 @@ namespace GRINS
 
 //Instantiate
 // why is this borked when i use Cable but not membrane?
-template class GRINS::ImmersedBoundary<GRINS::ElasticCable<GRINS::HookesLaw> >;
+//template class GRINS::ImmersedBoundary<GRINS::ElasticCable<GRINS::HookesLaw> >;
+template class GRINS::ImmersedBoundary<GRINS::ElasticMembrane<GRINS::HookesLaw> >;
 

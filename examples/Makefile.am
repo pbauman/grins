@@ -207,13 +207,13 @@ mixeddiminflatingsheet_SCRIPTS = $(top_builddir)/examples/mixed_dim_inflating_sh
 EXTRA_DIST += $(mixeddiminflatingsheet_DATA)
 
 #=======================================================================
-# Immersed Boundary Method Example
+# Immersed Boundary Method Benchmark
 #=======================================================================
-immersedboundarydir = $(prefix)/examples/immersed_boundary
-immersedboundary_DATA  = $(top_srcdir)/examples/immersed_boundary/immersed_boundary.in
-immersedboundary_SCRIPTS = $(top_builddir)/examples/immersed_boundary/run.sh
+immersedboundarybenchmarkdir = $(prefix)/examples/immersed_boundary_benchmark
+immersedboundarybenchmark_DATA  = $(top_srcdir)/examples/immersed_boundary_benchmark/immersed_boundary_benchmark.in
+immersedboundarybenchmark_SCRIPTS = $(top_builddir)/examples/immersed_boundary_benchmark/run.sh
 
-EXTRA_DIST += $(immersedboundary_DATA)
+EXTRA_DIST += $(immersedboundarybenchmark_DATA)
 
 #=======================================================================
 # Transient AMR Example
