@@ -86,6 +86,8 @@ namespace GRINS
    
   private:
 
+    //! The subdomain id for the solid that is read from input
+    int _subdomain_id;
 
   };
   

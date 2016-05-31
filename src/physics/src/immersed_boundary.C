@@ -43,6 +43,7 @@
 #include "libmesh/getpot.h"
 #include "libmesh/fem_system.h"
 #include "libmesh/quadrature.h"
+#include "libmesh/elem.h"
 
 namespace GRINS
 {
@@ -51,9 +52,18 @@ namespace GRINS
   ImmersedBoundary<SolidMech>::ImmersedBoundary(const GRINS::PhysicsName& physics_name, const GetPot& input)
     : Physics(physics_name, input),
       _flow_vars(input,physics_name),
-      _disp_vars(input,physics_name,false,true,false) /* is2d, is3d, is constraint (how do we know this?)*/
+      _disp_vars(input,physics_name,false,true,false) /* is2d, is3d, is constraint*/
   {
     this->_solid_mech = new SolidMech(physics_name, input, false); /*is_compressible*/
+
+    //get the subdomain id for the solid from the input
+    this->_subdomain_id = input.vector_variable_size( "ImmersedBoundary/Solid/enabled_subdomains" );
+    if( this->_subdomain_id == 0 )
+      {
+        std::cerr << "Error: Must specify at least one subdomain id to identify the solid." << std::endl;
+        libmesh_error();
+      }
+    
   }
   
   template<typename SolidMech>
@@ -103,8 +113,8 @@ namespace GRINS
   
   template<typename SolidMech>
   void ImmersedBoundary<SolidMech>::element_time_derivative( bool compute_jacobian,
-                                                               AssemblyContext& context,
-                                                               CachedValues& /*cache*/ )
+                                                             AssemblyContext& context,
+                                                             CachedValues& /*cache*/ )
   {
     //Gather info we might need for ibm 
     const unsigned int n_u_dofs = context.get_dof_indices(this->_disp_vars.u()).size();
@@ -122,29 +132,22 @@ namespace GRINS
     // The velocity shape function gradients (in global coords.) at interior quadrature points.
     const std::vector<std::vector<libMesh::RealGradient> >& u_gradphi = context.get_element_fe(this->_flow_vars.u())->get_dphi();
 
-    // these shape functions wont exist in the solid. I will need to locate the fluid element on which the solid element lies  (solid vs fluid is updated using the elem->subdomain_id())
-    
+    // these shape functions wont exist in the solid. I will need to locate the fluid element on which the solid element lies
 
-    for (unsigned int qp=0; qp != n_qpoints; qp++)
+    if (context.get_elem().subdomain_id() == this->_subdomain_id)
       {
-        libMesh::Real jac = JxW[qp];
-
-        //check to see if we are part of the solid. Do we check qp dofs the element? I think should be dof
-        bool is_solid = 1;
-        if (is_solid)
+        for (unsigned int qp=0; qp != n_qpoints; qp++)
           {
-
-            //Factor 1: fsi term
-            // get the stress tensor for the solid physics
+            libMesh::Real jac = JxW[qp];
 
             //these are gradients w.r.t. the master element coordinates
             libMesh::Gradient grad_u,grad_v,grad_w;
             _solid_mech->get_grad_uvw(context, qp, grad_u,grad_v,grad_w);
 
-            libMesh::TensorValue<libMesh::Real> tau;
+            libMesh::TensorValue<libMesh::Real> tau;// piola kirchoff stress tensor in the reference configuration
             ElasticityTensor C;
+            // get the stress tensor for the solid physics
             _solid_mech->get_stress_and_elasticity(context,qp,grad_u,grad_v,grad_w,tau,C);
-            //this tau is the piola kirchoff stress tensor in the reference configuration
                         
             //how to do a double dot product? by hand!
             for (unsigned int i=0; i != n_u_dofs; i++)
@@ -153,12 +156,9 @@ namespace GRINS
                 
                 Fu(i) += jac*u_phi[i][qp];
 
-                  //tau._coords[0]*u_gradphi[i][qp] + tau._coords[1]*u_gradphi[0][1][qp] + tau._coords[2]*u_gradphi[0][2][qp] + \
-                  //tau._coords[3]*u_gradphi[1][0][qp] + tau._coords[4]*u_gradphi[1][1][qp] + tau._coords[5]*u_gradphi[1][2][qp] + \
-                  //tau._coords[6]*u_gradphi[2][0][qp] + tau._coords[7]*u_gradphi[2][1][qp] + tau._coords[8]*u_gradphi[2][2][qp] ;
-
-                
-                
+                //tau._coords[0]*u_gradphi[i][qp] + tau._coords[1]*u_gradphi[0][1][qp] + tau._coords[2]*u_gradphi[0][2][qp] + \
+                //tau._coords[3]*u_gradphi[1][0][qp] + tau._coords[4]*u_gradphi[1][1][qp] + tau._coords[5]*u_gradphi[1][2][qp] + \
+                //tau._coords[6]*u_gradphi[2][0][qp] + tau._coords[7]*u_gradphi[2][1][qp] + tau._coords[8]*u_gradphi[2][2][qp] ;
                 Fu(i) += jac*u_phi[i][qp];
                 Fv(i) += jac*u_phi[i][qp];
 
@@ -167,12 +167,10 @@ namespace GRINS
                 }
 
               }
-            //Factor 2: acceleration term
+            //Factor 2: acceleration term: how to get velocity values at a current vs previous point in time
             
-            //how to get velocity values at a current vs previous point in time
-            
-          }//is solid
-      }//qp loop
+          }//qp loop
+      }
   } //end elem time derivative
 } // namespace GRINS
 
