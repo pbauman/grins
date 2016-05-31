@@ -209,8 +209,9 @@ EXTRA_DIST += $(mixeddiminflatingsheet_DATA)
 #=======================================================================
 # Immersed Boundary Method Benchmark
 #=======================================================================
-immersedboundarybenchmarkdir = $(prefix)/examples/immersed_boundary_benchmark
-immersedboundarybenchmark_DATA  = $(top_srcdir)/examples/immersed_boundary_benchmark/immersed_boundary_benchmark.in
+immersedboundarybenchmarkdir      = $(prefix)/examples/immersed_boundary_benchmark
+immersedboundarybenchmark_DATA    = $(top_srcdir)/examples/immersed_boundary_benchmark/immersed_boundary_benchmark.in
+immersedboundarybenchmark_DATA   += $(top_srcdir)/examples/immersed_boundary_benchmark/ibm_benchmark_mesh.e
 immersedboundarybenchmark_SCRIPTS = $(top_builddir)/examples/immersed_boundary_benchmark/run.sh
 
 EXTRA_DIST += $(immersedboundarybenchmark_DATA)

@@ -1,3 +1,4 @@
+
 //-----------------------------------------------------------------------bl-
 //--------------------------------------------------------------------------
 //
@@ -22,7 +23,7 @@
 //
 //-----------------------------------------------------------------------el-
 
-
+// this class
 #include "grins/immersed_boundary.h"
 
 // GRINS
@@ -30,22 +31,17 @@
 #include "grins/assembly_context.h"
 #include "grins/physics_naming.h"
 #include "grins/elasticity_tensor.h"
-#include "grins/materials_parsing.h"
-#include "grins/variables_parsing.h"
-#include "grins/variable_warehouse.h"
 
 // for the instantiation
 #include "grins/elastic_cable.h"
-
 #include "grins/elastic_membrane.h"
 #include "grins/hookes_law.h"
+#include "grins/hookes_law_1d.h"
+#include "grins/hyperelasticity.h"
 
 // libMesh
-#include "libmesh/utility.h"
-#include "libmesh/string_to_enum.h"
 #include "libmesh/getpot.h"
 #include "libmesh/fem_system.h"
-#include "libmesh/fem_context.h"
 #include "libmesh/quadrature.h"
 
 namespace GRINS
@@ -148,11 +144,21 @@ namespace GRINS
             libMesh::TensorValue<libMesh::Real> tau;
             ElasticityTensor C;
             _solid_mech->get_stress_and_elasticity(context,qp,grad_u,grad_v,grad_w,tau,C);
-            //this tau is the piola kirch stress tensor in the reference configuration
+            //this tau is the piola kirchoff stress tensor in the reference configuration
                         
             //how to do a double dot product? by hand!
             for (unsigned int i=0; i != n_u_dofs; i++)
               {
+
+                
+                Fu(i) += jac*u_phi[i][qp];
+
+                  //tau._coords[0]*u_gradphi[i][qp] + tau._coords[1]*u_gradphi[0][1][qp] + tau._coords[2]*u_gradphi[0][2][qp] + \
+                  //tau._coords[3]*u_gradphi[1][0][qp] + tau._coords[4]*u_gradphi[1][1][qp] + tau._coords[5]*u_gradphi[1][2][qp] + \
+                  //tau._coords[6]*u_gradphi[2][0][qp] + tau._coords[7]*u_gradphi[2][1][qp] + tau._coords[8]*u_gradphi[2][2][qp] ;
+
+                
+                
                 Fu(i) += jac*u_phi[i][qp];
                 Fv(i) += jac*u_phi[i][qp];
 
@@ -168,12 +174,10 @@ namespace GRINS
           }//is solid
       }//qp loop
   } //end elem time derivative
-
 } // namespace GRINS
 
 
 //Instantiate
-// why is this borked when i use Cable but not membrane?
-//template class GRINS::ImmersedBoundary<GRINS::ElasticCable<GRINS::HookesLaw> >;
-template class GRINS::ImmersedBoundary<GRINS::ElasticMembrane<GRINS::HookesLaw> >;
+template class GRINS::ImmersedBoundary< GRINS::ElasticCable<GRINS::HookesLaw1D> >;
+template class GRINS::ImmersedBoundary< GRINS::ElasticMembrane<GRINS::HookesLaw> >;
 
