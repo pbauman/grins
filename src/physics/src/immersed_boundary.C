@@ -1,4 +1,3 @@
-
 //-----------------------------------------------------------------------bl-
 //--------------------------------------------------------------------------
 //
@@ -77,8 +76,6 @@ namespace GRINS
   template<typename SolidMech>
   void ImmersedBoundary<SolidMech>::set_time_evolving_vars( libMesh::FEMSystem* system )
   {
-    const unsigned int dim = system->get_mesh().mesh_dimension();
-
     // Tell the system to march velocity and displacements forward in time
     system->time_evolving(_flow_vars.u());
     system->time_evolving(_flow_vars.v());
@@ -86,7 +83,7 @@ namespace GRINS
     system->time_evolving(_disp_vars.u());
     system->time_evolving(_disp_vars.v());
 
-    if (dim == 3)
+    if (_dim == 3)
       {
         system->time_evolving(_flow_vars.w());
         system->time_evolving(_disp_vars.w());
@@ -126,14 +123,14 @@ namespace GRINS
     libMesh::DenseSubVector<libMesh::Number> &Fv = context.get_elem_residual(this->_flow_vars.v());
     libMesh::DenseSubVector<libMesh::Number> &Fw = context.get_elem_residual(this->_flow_vars.w());
 
-    // The velocity shape functions at interior quadrature points. (we only need their gradients prol)
+    // The velocity shape functions at interior quadrature points. (we only need their gradients prolly in elem_time_deriv)
     const std::vector<std::vector<libMesh::Real> >& u_phi = context.get_element_fe(this->_flow_vars.u())->get_phi();
 
     // The velocity shape function gradients (in global coords.) at interior quadrature points.
+    // these shape functions wont exist in the solid. I will need to locate the fluid element on which the solid element lies
     const std::vector<std::vector<libMesh::RealGradient> >& u_gradphi = context.get_element_fe(this->_flow_vars.u())->get_dphi();
 
-    // these shape functions wont exist in the solid. I will need to locate the fluid element on which the solid element lies
-
+    //ibm acts as a source term only on solid elements 
     if (context.get_elem().subdomain_id() == this->_subdomain_id)
       {
         for (unsigned int qp=0; qp != n_qpoints; qp++)
@@ -153,19 +150,18 @@ namespace GRINS
             for (unsigned int i=0; i != n_u_dofs; i++)
               {
 
-                
-                Fu(i) += jac*u_phi[i][qp];
-
-                //tau._coords[0]*u_gradphi[i][qp] + tau._coords[1]*u_gradphi[0][1][qp] + tau._coords[2]*u_gradphi[0][2][qp] + \
-                //tau._coords[3]*u_gradphi[1][0][qp] + tau._coords[4]*u_gradphi[1][1][qp] + tau._coords[5]*u_gradphi[1][2][qp] + \
-                //tau._coords[6]*u_gradphi[2][0][qp] + tau._coords[7]*u_gradphi[2][1][qp] + tau._coords[8]*u_gradphi[2][2][qp] ;
-                Fu(i) += jac*u_phi[i][qp];
-                Fv(i) += jac*u_phi[i][qp];
-
-                if (_dim == 3){
-                  Fw(i) += jac*u_phi[i][qp];
-                }
-
+                for (int alpha = 0; alpha < _dim; alpha++)
+                  {
+                    for (int beta = 0;beta < _dim; beta++)
+                      {
+                        Fu(i) += tau(alpha,beta)*jac*u_gradphi[i][qp](alpha);
+                        Fv(i) += tau(alpha,beta)*jac*u_gradphi[i][qp](alpha);
+                      
+                        if (_dim == 3){
+                          Fw(i) += tau(alpha,beta)*jac*u_gradphi[i][qp](alpha);
+                        }
+                      }
+                  }
               }
             //Factor 2: acceleration term: how to get velocity values at a current vs previous point in time
             
