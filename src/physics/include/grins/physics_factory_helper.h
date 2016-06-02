@@ -67,6 +67,14 @@ namespace GRINS
                                            std::string& model,
                                            std::string& strain_energy );
 
+    //! Determine solid mechanics and stress-strain law used by immersed boundary framework
+    static void parse_immersed_boundary_components( const GetPot& input,
+                                                    const std::string& physics,
+                                                    std::string& solidmech,
+                                                    std::string& model,
+                                                    std::string& strain_energy );
+
+    
     //! Determine thermochemistry model type
     static void parse_thermochemistry_model( const GetPot& input,
                                              const std::string& physics,

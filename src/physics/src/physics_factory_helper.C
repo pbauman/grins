@@ -214,7 +214,7 @@ namespace GRINS
     if( !have_elasticity_model &&
         !input.have_variable("Materials/"+material+"/StressStrainLaw/model") )
       {
-         // But since the old is deprecated, we'll just them to supply the new
+        // But since the old is deprecated, we'll just them to supply the new
         libmesh_error_msg("ERROR: Must specify Materials/"+material+"/StressStrainLaw/model!");
       }
 
@@ -249,6 +249,37 @@ namespace GRINS
       }
   }
 
+  static void parse_immersed_boundary_components( const GetPot& input,
+                                                  const std::string& physics,
+                                                  std::string& solidmech,
+                                                  std::string& stress_strain_model,
+                                                  std::string& strain_energy )
+  {
+
+    std::string material = MaterialsParsing::material_name( input, physics );
+
+    
+    if( !input.have_variable("Materials/"+material+"/StressStrainLaw/model") )
+      {
+        libmesh_error_msg("ERROR: Must specify Materials/"+material+"/StressStrainLaw/model!");
+      }
+
+    if( input.have_variable("Materials/"+material+"/StressStrainLaw/model") )
+      {
+        MaterialsParsing::stress_strain_model( input, physics, material,
+                                               stress_strain_model, strain_energy );
+      }
+
+    // Wat?
+    else
+      {
+        libmesh_error();
+      }
+      
+      
+  } //end parse_immersed_boundary_components
+
+  
   void PhysicsFactoryHelper::parse_thermochemistry_model( const GetPot& input,
                                                           const std::string& physics,
                                                           std::string& model )
@@ -325,7 +356,7 @@ namespace GRINS
     // mixing_model option is now deprecated in favor of transport_model
     else if( input.have_variable("Physics/Antioch/mixing_model") )
       {
-         std::string warning = "Warning: Option Physics/Antioch/mixing_model is DEPRECATED.\n";
+        std::string warning = "Warning: Option Physics/Antioch/mixing_model is DEPRECATED.\n";
         warning += "         Please update to use Use Materials/MATERIAL_NAME/GasMixture/Antioch/transport_model.\n";
         grins_warning(warning);
 
