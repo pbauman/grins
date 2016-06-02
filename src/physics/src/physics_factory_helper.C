@@ -249,34 +249,20 @@ namespace GRINS
       }
   }
 
-  static void parse_immersed_boundary_components( const GetPot& input,
+  void PhysicsFactoryHelper::parse_immersed_boundary_components( const GetPot& input,
                                                   const std::string& physics,
-                                                  std::string& solidmech,
-                                                  std::string& stress_strain_model,
-                                                  std::string& strain_energy )
+                                                  std::string& solid_mech)
   {
 
-    std::string material = MaterialsParsing::material_name( input, physics );
-
-    
-    if( !input.have_variable("Materials/"+material+"/StressStrainLaw/model") )
+    if( input.have_variable("Physics/"+physics+"/solid_mechanics") )
       {
-        libmesh_error_msg("ERROR: Must specify Materials/"+material+"/StressStrainLaw/model!");
+        solid_mech = input("Physics/"+physics+"/solid_mechanics", "DIE!");
       }
-
-    if( input.have_variable("Materials/"+material+"/StressStrainLaw/model") )
-      {
-        MaterialsParsing::stress_strain_model( input, physics, material,
-                                               stress_strain_model, strain_energy );
-      }
-
-    // Wat?
     else
       {
-        libmesh_error();
+        libmesh_error_msg("ERROR: solid_mechanics not specified for the ImmersedBoundary Physics!");
       }
-      
-      
+    
   } //end parse_immersed_boundary_components
 
   

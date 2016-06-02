@@ -171,9 +171,3 @@ namespace GRINS
       }
   } //end elem time derivative
 } // namespace GRINS
-
-
-//Instantiate
-template class GRINS::ImmersedBoundary< GRINS::ElasticCable<GRINS::HookesLaw1D> >;
-template class GRINS::ImmersedBoundary< GRINS::ElasticMembrane<GRINS::HookesLaw> >;
-

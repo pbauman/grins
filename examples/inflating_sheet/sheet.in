@@ -15,22 +15,21 @@
 
 [Physics]
 
-   enabled_physics = 'Fluids
-                      ImmersedBoundary'
-                      
-   [./ImmersedBoundary]
-      enabled_subdomain = '1'
-      solid_mechanics = 'ElasticMembrane'
-   [../]
-   
-   [./ElasticMembrane]
-      material = 'Membrane'
-   [../]
+   enabled_physics = 'ElasticMembrane
+                      ElasticMembraneConstantPressure'
 
-   [./Fluids]
-      enaled_subomdain = '2'
-      material = ''
-   [../]
+   [./ElasticMembrane]
+
+      material = 'Membrane'
+
+      ic_ids = '1'
+      ic_types = 'parsed'
+      ic_variables = 'Uz'
+      ic_values = '0.3*cos(pi/2*sqrt(x^2+y^2))'
+
+   [../ElasticMembraneConstantPressure]
+
+      pressure = '0.3'
 []
 
 [BoundaryConditions]

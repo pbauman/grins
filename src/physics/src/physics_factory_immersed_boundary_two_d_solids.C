@@ -23,20 +23,18 @@
 //-----------------------------------------------------------------------el-
 
 // This class
-#include "grins/physics_factory_immersed_boundary.h"
+#include "grins/physics_factory_immersed_boundary_two_d_solids.h"
 
 // GRINS
 #include "grins/physics_factory_helper.h"
+#include "grins/immersed_boundary.h"
 
 // Solid Mechanics headers
-#include "grins/elastic_cable.h"
-#include "grins/elastic_cable_rayleigh_damping.h"
 #include "grins/elastic_membrane.h"
 #include "grins/elastic_membrane_rayleigh_damping.h"
 
 // Stress Strain law headers
 #include "grins/hookes_law.h"
-#include "grins/hookes_law_1d.h"
 #include "grins/incompressible_plane_stress_hyperelasticity.h"
 #include "grins/mooney_rivlin.h"
 #include "grins/hyperelasticity.h"
@@ -45,45 +43,42 @@
 
 namespace GRINS
 {
+
   template<template<typename> class DerivedPhysics>
-  libMesh::UniquePtr<Physics> PhysicsFactoryImmersedBoundary<DerivedPhysics>::build_physics( const GetPot& input,
-                                                                                             const std::string& physics_name )
+  libMesh::UniquePtr<Physics> PhysicsFactoryImmersedBoundaryTwoDSolids<DerivedPhysics>::build_physics( const GetPot& input,
+                                                                                                       const std::string& physics_name )
   {
     std::string core_physics = this->find_core_physics_name(physics_name);
 
-    std::string solidmech = "none";
-    std::string stress_strain_model = "none";
-    std::string strain_energy = "none";
-
+    std::string solid_mech = "none";
     PhysicsFactoryHelper::parse_immersed_boundary_components( input,
                                                               core_physics,
-                                                              solidmech,
-                                                              stress_strain_model,
-                                                              strain_energy );
+                                                              solid_mech);
+
+    //Check to see if input solid mechanics are pre-existing
+    std::map< std::string, FactoryAbstract< Physics > * > & existing_factories  = this->factory_map();
+    std::map< std::string, FactoryAbstract< Physics > * >::iterator factory_it;
+
+    factory_it = existing_factories.find(solid_mech);
+    if (factory_it == existing_factories.end())
+      {
+        std::string error = "Error: Invalid solid_mechanics specified:  " + solid_mech+ '\n';
+        error += "       Valid values are: ElasticMembrane, ElasticCable"; 
+          libmesh_error_msg(error);
+        }
+    
+    //Now parse the supplied Solid Mechanics for valid stress strain models
+    std::string stress_strain_model = "none";
+    std::string strain_energy = "none";
+    PhysicsFactoryHelper::parse_stress_strain_model( input,
+                                                     core_physics,
+                                                     stress_strain_model,
+                                                     strain_energy);
+
 
     libMesh::UniquePtr<Physics> new_physics;
 
-    //parse input for solid mechanics and their correspondong stress-strain laws
-    
-    //solid behaviour for 1d cable
-    if (solidmech == std::string("cable"))
-      {
-        if( stress_strain_model == std::string("hookes_law") )
-          {
-            new_physics.reset( new DerivedPhysics<HookesLaw1D>
-                               (physics_name,input, false /*is_compressible*/) );
-          }
-        else
-          {
-            std::string error = "Error: Invalid stress-strain model: "+stress_strain_model+"!\n";
-            error += "       Valid values are: hookes_law\n";
-            libmesh_error_msg(error);
-          }
-      }
-
-
-      //2d membrane
-    if (solidmech == std::string("membrane"))
+    if (solid_mech == std::string("ElasticMembrane"))
         {
           if( stress_strain_model == std::string("hookes_law") )
             new_physics.reset( new DerivedPhysics<HookesLaw>
@@ -101,7 +96,6 @@ namespace GRINS
                   error += "       Valid values are: mooney_rivlin\n";
                   libmesh_error_msg(error);
                 }
-
             }
           else
             {
@@ -115,20 +109,13 @@ namespace GRINS
     libmesh_assert(new_physics);
     return new_physics;
     
-  }//end PhysicsFactoryImmersedBoundary
+  }//end PhysicsFactoryImmersedBoundaryOneDSolids
   
   // Instantiate all the immersed boundary factories.
-  PhysicsFactoryImmersedBoundary<ElasticMembrane> grins_factory_ibm_elastic_membrane
+  PhysicsFactoryImmersedBoundaryTwoDSolids<ElasticMembrane> grins_factory_ibm_elastic_membrane
   (PhysicsNaming::elastic_membrane(),PhysicsNaming::immersed_boundary());
   
-  PhysicsFactoryImmersedBoundary<ElasticMembraneRayleighDamping> grins_factory_ibm_elastic_membrane_rayleigh_damping
+  PhysicsFactoryImmersedBoundaryTwoDSolids<ElasticMembraneRayleighDamping> grins_factory_ibm_elastic_membrane_rayleigh_damping
   (PhysicsNaming::elastic_membrane_rayleigh_damping(),PhysicsNaming::immersed_boundary());
-  
-  PhysicsFactoryImmersedBoundary<ElasticCable> grins_factory_ibm_elastic_cable
-  (PhysicsNaming::elastic_cable(),PhysicsNaming::immersed_boundary());
-  
-  PhysicsFactoryImmersedBoundary<ElasticCableRayleighDamping> grins_factory_ibm_elastic_cable_rayleigh_damping
-  (PhysicsNaming::elastic_cable_rayleigh_damping(),PhysicsNaming::immersed_boundary());
-  
-  
+    
 } // end namespace GRINS

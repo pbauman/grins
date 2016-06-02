@@ -22,32 +22,32 @@
 //
 //-----------------------------------------------------------------------el-
 
-#ifndef GRINS_PHYSICS_FACTORY_IMMERSED_BOUNDARY_H
-#define GRINS_PHYSICS_FACTORY_IMMERSED_BOUNDARY_H
+#ifndef GRINS_PHYSICS_FACTORY_IMMERSED_BOUNDARY_TWO_D_SOLIDS_H
+#define GRINS_PHYSICS_FACTORY_IMMERSED_BOUNDARY_TWO_D_SOLIDS_H
 
 // GRINS
-#include "grins/physics_factory_with_core.h"
+#include "grins/physics_factory_plane_stress_solids.h"
 
 namespace GRINS
 {
   template<template<typename> class DerivedPhysics>
-  class PhysicsFactoryImmersedBoundary : public PhysicsFactoryWithCore
-  {
-  public:
-    PhysicsFactoryImmersedBoundary( const std::string& physics_name,
-                                     const std::string& core_physics_name )
-      : PhysicsFactoryWithCore(physics_name,core_physics_name)
-    {}
-
-    ~PhysicsFactoryImmersedBoundary(){};
-
-  protected:
-
-    virtual libMesh::UniquePtr<Physics> build_physics( const GetPot& input,
-                                                       const std::string& physics_name );
-
-  };
-
+    class PhysicsFactoryImmersedBoundaryTwoDSolids : public PhysicsFactoryPlaneStressSolids<DerivedPhysics>
+    {
+    public:
+    PhysicsFactoryImmersedBoundaryTwoDSolids( const std::string& physics_name,
+                                              const std::string& core_physics_name )
+      : PhysicsFactoryPlaneStressSolids<DerivedPhysics>(physics_name,core_physics_name)
+        {}
+      
+      ~PhysicsFactoryImmersedBoundaryTwoDSolids(){};
+      
+    protected:
+      
+      virtual libMesh::UniquePtr<Physics> build_physics( const GetPot& input,
+                                                         const std::string& physics_name );
+      
+    };
+  
 } // end namespace GRINS
 
-#endif // GRINS_PHYSICS_FACTORY_IMMERSED_BOUNDARY_H
+#endif // GRINS_PHYSICS_FACTORY_IMMERSED_BOUNDARY_TWO_D_SOLIDS_H

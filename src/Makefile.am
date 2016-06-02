@@ -155,7 +155,8 @@ libgrins_la_SOURCES += physics/src/physics_factory_heat_transfer.C
 libgrins_la_SOURCES += physics/src/physics_factory_variable_density_flow.C
 libgrins_la_SOURCES += physics/src/physics_factory_plane_stress_solids.C
 libgrins_la_SOURCES += physics/src/physics_factory_one_d_stress_solids.C
-libgrins_la_SOURCES += physics/src/physics_factory_immersed_boundary.C
+libgrins_la_SOURCES += physics/src/physics_factory_immersed_boundary_one_d_solids.C
+libgrins_la_SOURCES += physics/src/physics_factory_immersed_boundary_two_d_solids.C
 libgrins_la_SOURCES += physics/src/physics_factory_reacting_flows.C
 libgrins_la_SOURCES += physics/src/physics_builder.C
 libgrins_la_SOURCES += physics/src/immersed_boundary.C
@@ -420,14 +421,14 @@ include_HEADERS += physics/include/grins/physics_factory_basic.h
 include_HEADERS += physics/include/grins/physics_factory_with_core.h
 include_HEADERS += physics/include/grins/physics_factory_incompressible_flow.h
 include_HEADERS += physics/include/grins/physics_factory_incompressible_turb_flow.h
+include_HEADERS += physics/include/grins/physics_factory_immersed_boundary_one_d_solids.h
+include_HEADERS += physics/include/grins/physics_factory_immersed_boundary_two_d_solids.h
 include_HEADERS += physics/include/grins/physics_factory_heat_transfer.h
 include_HEADERS += physics/include/grins/physics_factory_variable_density_flow.h
 include_HEADERS += physics/include/grins/physics_factory_plane_stress_solids.h
 include_HEADERS += physics/include/grins/physics_factory_one_d_stress_solids.h
-include_HEADERS += physics/src/physics_factory_immersed_boundary.C
 include_HEADERS += physics/include/grins/physics_factory_reacting_flows.h
 include_HEADERS += physics/include/grins/physics_builder.h
-include_HEADERS += physics/include/grins/immersed_boundary.h
 
 # src/properties headers
 include_HEADERS += properties/include/grins/property_types.h

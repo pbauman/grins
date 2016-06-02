@@ -11,18 +11,35 @@
 [Physics]
   enabled_physics = 'ImmersedBoundary
                      IncompressibleNavierStokes'
+                     
   [./ImmersedBoundary]
     enabled_subdomains = '2'
-    material = 'Solid'
+    solid_mechanics = 'ElasticMembrane'
   [../]
+  
+  [./ElasticMembrane]
+    material = 'Membrane'
+  [../]
+  
   [./IncompressibleNavierStokes]
     enabled_subdomains = '1'
     material = 'Fluid'
-  [../]  
-[]
+  [../]
+[]  
 
 # Properties related to the fluid and solid parameters
 [Materials]
+
+  [./Membrane]
+    [./StressStrainLaw]
+      model = 'hookes_law'
+      [./HookesLaw]
+        E = '10000'  # Youngs modulus
+        nu = '0.3'   # Poisson's ratio
+      [../]
+    [../]  
+  [../]
+  
   [./Fluid]
     [./Density]
       value = '1'
@@ -31,15 +48,6 @@
       model = 'constant'
       value = '1'
     [../]
-  [../]
-  [./Solid]
-    [./StressStrainLaw]
-      model = 'hookes_law'
-      [./HookesLaw]
-        E = '10000'  # Youngs modulus
-        nu = '0.3'   # Poisson's ratio
-      [../]
-    [../]  
   [../]
 []
 
