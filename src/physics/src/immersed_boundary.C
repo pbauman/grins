@@ -30,6 +30,7 @@
 #include "grins/assembly_context.h"
 #include "grins/physics_naming.h"
 #include "grins/elasticity_tensor.h"
+#include "grins/variable_warehouse.h"
 
 // for the instantiation
 #include "grins/elastic_cable.h"
@@ -48,12 +49,12 @@ namespace GRINS
 {
 
   template<typename SolidMech>
-  ImmersedBoundary<SolidMech>::ImmersedBoundary(const GRINS::PhysicsName& physics_name, const GetPot& input)
-    : Physics(physics_name, input),
-      _flow_vars(input,physics_name),
-      _disp_vars(input,physics_name,false,true,false) /* is2d, is3d, is constraint*/
+  ImmersedBoundary<SolidMech>::ImmersedBoundary(const std::string& my_physics_name, const std::string& core_physics_name, const GetPot& input)
+    : Physics(my_physics_name, input),
+      _flow_vars(GRINSPrivate::VariableWarehouse::get_variable_subclass<VelocityVariable>(VariablesParsing::physics_velocity_variable_name(input,core_physics_name))),
+      _disp_vars(GRINSPrivate::VariableWarehouse::get_variable_subclass<DisplacementVariable>(VariablesParsing::physics_disp_variable_name(input,core_physics_name)))
   {
-    this->_solid_mech = new SolidMech(physics_name, input, false); /*is_compressible*/
+    this->_solid_mech = new SolidMech(my_physics_name, input, false); /*is_compressible*/
 
     //get the subdomain id for the solid from the input
     this->_subdomain_id = input.vector_variable_size( "ImmersedBoundary/Solid/enabled_subdomains" );
@@ -69,8 +70,9 @@ namespace GRINS
   void ImmersedBoundary<SolidMech>::init_variables( libMesh::FEMSystem* system )
   {
     this->_dim = system->get_mesh().mesh_dimension();
-    this->_flow_vars.init(system);
-    this->_disp_vars.init(system);
+    //we dont init vars anymore?
+    //this->_flow_vars.init_vars(system);
+    //this->_disp_vars.init_vars(system);
   }
 
   template<typename SolidMech>

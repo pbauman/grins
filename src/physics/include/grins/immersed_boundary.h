@@ -25,9 +25,8 @@
 
 //GRINS
 #include "grins/physics.h"
-#include "grins/velocity_fe_variables.h"
+#include "grins/multi_component_vector_variable.h"
 #include "grins/common.h"
-#include "grins/displacement_fe_variables.h"
 #include "libmesh/fem_context.h"
 
 #include "grins/elastic_cable.h"
@@ -49,7 +48,7 @@ namespace GRINS
   {
   public:
 
-    ImmersedBoundary(const std::string& my_physics_name, const GetPot& input);
+    ImmersedBoundary(const std::string& my_physics_name, const std::string& core_physics_name, const GetPot& input);
 
     ImmersedBoundary();
 
@@ -76,10 +75,10 @@ namespace GRINS
     unsigned int _dim;
 
     //! FE variables for the flow
-    VelocityFEVariables _flow_vars;
+    VelocityVariable & _flow_vars;
 
     //! FE variables for the solid
-    DisplacementFEVariables _disp_vars;  
+    DisplacementVariable & _disp_vars;  
 
     //! The solidmechanics class
     SolidMech * _solid_mech;
