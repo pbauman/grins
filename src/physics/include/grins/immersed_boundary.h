@@ -27,10 +27,10 @@
 #include "grins/physics.h"
 #include "grins/multi_component_vector_variable.h"
 #include "grins/common.h"
-#include "libmesh/fem_context.h"
+#include "grins/solid_mechanics_abstract.h"
 
-#include "grins/elastic_cable.h"
-#include "grins/elastic_membrane.h"
+
+#include "libmesh/fem_context.h"
 
 
 namespace GRINS
@@ -40,7 +40,7 @@ namespace GRINS
   /*!
     This physics class implements the classical Immersed  Boundary Method.
     This is a templated class, the class SolidMech can be instantiated as a specific type
-    (right now:ElasticCable or ElasticMembrane)
+    (right now: ElasticCable or ElasticMembrane)
    */
 
   template<typename SolidMech>
@@ -48,15 +48,12 @@ namespace GRINS
   {
   public:
 
-    ImmersedBoundary(const std::string& my_physics_name, const std::string& core_physics_name, const GetPot& input);
+    ImmersedBoundary(const std::string & my_physics_name, libMesh::UniquePtr<SolidMech> & solid_mech_ptr,  const GetPot& input);
 
     ImmersedBoundary();
 
     
     ~ImmersedBoundary(){};
-
-    //! Initializes the FE Variables    
-    virtual void init_variables( libMesh::FEMSystem* system );
 
     //! Sets velocity variables to be time-evolving
     virtual void set_time_evolving_vars( libMesh::FEMSystem* system );
@@ -80,9 +77,9 @@ namespace GRINS
     //! FE variables for the solid
     DisplacementVariable & _disp_vars;  
 
-    //! The solidmechanics class
-    SolidMech * _solid_mech;
-   
+    //! Solid Mechanics from the ibm factory
+    libMesh::UniquePtr<SolidMech> _solid_mech;
+    
   private:
 
     //! The subdomain id for the solid that is read from input

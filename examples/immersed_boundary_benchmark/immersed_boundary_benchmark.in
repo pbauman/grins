@@ -5,6 +5,7 @@
 [Mesh]
   [./Read]
     filename = 'ibm_benchmark_mesh.e'
+  [../]  
 []
 
 # Options related to all Physics
@@ -19,6 +20,7 @@
   
   [./ElasticMembrane]
     material = 'Membrane'
+    
   [../]
   
   [./IncompressibleNavierStokes]
@@ -29,8 +31,13 @@
 
 # Properties related to the fluid and solid parameters
 [Materials]
-
   [./Membrane]
+    [./MembraneThickness]
+      value = '0.05'
+    [../]
+    [./Density]
+      value = '1.0'
+    [../]
     [./StressStrainLaw]
       model = 'hookes_law'
       [./HookesLaw]
@@ -42,7 +49,7 @@
   
   [./Fluid]
     [./Density]
-      value = '1'
+      value = '1.0'
     [../]
     [./Viscosity]
       model = 'constant'
@@ -74,24 +81,43 @@
   [../]
 []
 
+
 [BoundaryConditions]
-  bc_ids = '4 2 1:3 6 5:7:8'
-  bc_id_name_map = 'Inflow Outflow Walls Cylinder Structure'
 
-  [./Inflow]
-    type = 'constant_dirichlet'
-    u = '1.0'
-    v = '0.0'
-  [./Outflow]
-    type = 'homogeneous_neumann'
-  [./Walls]
-    type = 'no_slip'
-  [./Cylinder]
-    type = 'no_slip'
-  [./Structure]
-    type = 'no_slip'
+   bc_ids = '4 1:3 6 5:7:8 2'
+   bc_id_name_map = 'Inflow Walls Cylinder Membrane Outflow'
+
+   [./Inflow]
+      [./Velocity]
+         type = 'constant_dirichlet'
+         Ux = '1.0'
+      [../]
+   [../]
+
+   [./Walls]
+      [./Velocity]
+         type = 'no_slip'
+      [../]
+   [../]   
+
+   [./Outflow]
+      [./Velocity]
+         type = 'homogeneous_neumann'
+      [../]
+   [../]
+
+   [./Cylinder]
+      [./Velocity]
+         type = 'no_slip'
+      [../]
+   [../]
+
+   [./Membrane]
+      [./Displacement]
+        type = 'homogeneous_neumann'
+      [../]
+   [../]
 []
-
 
 # Visualization options #
 [vis-options]
@@ -99,7 +125,7 @@ output_vis = 'true'
 vis_output_file_prefix = 'fsi'
 output_residual = 'true'
 output_format = 'ExodusII xdr'
-
+[]
 
 # Options for print info to the screen
 [screen-options]
