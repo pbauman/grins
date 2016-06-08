@@ -58,6 +58,9 @@ namespace GRINS
     //! Sets velocity variables to be time-evolving
     virtual void set_time_evolving_vars( libMesh::FEMSystem* system );
 
+    //! init variables and stuff we need
+    virtual void init_variables( libMesh::FEMSystem* system);
+    
     // Context initialization
     virtual void init_context( AssemblyContext& context );
 
@@ -83,8 +86,18 @@ namespace GRINS
   private:
 
     //! The subdomain id for the solid that is read from input
-    int _subdomain_id;
+    // TODO: make this a set for multiple solid subdomains
+    libMesh::Number _solid_subdomain_id;
 
+    //! The fluid mechanics associated with the IBM method from the input
+    std::string _fluid_mechanics;
+    
+    //! The subdomain id for the fluid that is read from input
+    std::set<libMesh::subdomain_id_type> _fluid_subdomain_set;
+
+    //! The locator object used to find fluid elements
+    libMesh::UniquePtr < libMesh::PointLocatorBase > _pnt_lctr;
+    
   };
   
 } //End namespace block

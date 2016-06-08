@@ -62,16 +62,55 @@ namespace GRINS
       _solid_mech(solid_mech_ptr.release())
   {
 
-    std::cout << "constructing ibm physics" << std::endl;
+    std::cout << "Constructing IBM physics" << std::endl;
                    
-    //get the subdomain id for the solid from the input
-    this->_subdomain_id = input.vector_variable_size( "Physics/ImmersedBoundary/enabled_subdomains" );
-    if( this->_subdomain_id == 0 )
+    // Get the solid subdomain id from the input
+    unsigned int n_solid_domains = input.vector_variable_size( "Physics/ImmersedBoundary/enabled_subdomains" );
+    if( n_solid_domains == 0 )
       {
         std::string err = "Error: Must specify enabled_subdomains id to identify the solid in the IBM physics.\n";
         libmesh_error_msg(err);
       }
+    else
+      {
+        this->set_parameter(_solid_subdomain_id, input, "Physics/ImmersedBoundary/enabled_subdomains", 1 );
+      }
+
+    // Get the fluid mechanics from the input, this is needed to query the fluid subdomain ids
+    bool have_fluid_mech = input.have_variable( "Physics/ImmersedBoundary/fluid_mechanics" );
+    if( !have_fluid_mech )
+      {
+        std::string err = "Error: Must specify fluid_mechanics to identify the fluid in the IBM physics.\n";
+        libmesh_error_msg(err);
+      }
+    else
+      {
+        this->_fluid_mechanics = input( "Physics/ImmersedBoundary/fluid_mechanics", "DIE!" );
+      }
+
+    // Get the subdomain ids for the fluid
+    unsigned int n_fluid_subdomains = input.vector_variable_size( "Physics/"+ _fluid_mechanics  +"/enabled_subdomains" );
+    if( n_fluid_subdomains == 0 )
+      {
+        std::string err = "Error: Must specify enabled_subdomains for the fluid. \n";
+        libmesh_error_msg(err);
+      }
+    else
+      {
+        std::string fluid_id_loc = "Physics/"+ _fluid_mechanics + "/enabled_subdomains";
+        for( unsigned int fluid_dom_idx = 0; fluid_dom_idx < n_fluid_subdomains; fluid_dom_idx++)
+          {
+            _fluid_subdomain_set.insert( input("fluid_id_loc", -1, fluid_dom_idx) );
+          }
+      }
     
+  }
+
+  template<typename SolidMech>
+  void ImmersedBoundary<SolidMech>::init_variables( libMesh::FEMSystem* system )
+  {
+    // Get the point locator object that will find the right fluid element
+    _pnt_lctr = system->get_mesh().sub_point_locator();
   }
   
   template<typename SolidMech>
@@ -101,89 +140,92 @@ namespace GRINS
     context.get_element_fe(_flow_vars.u())->get_phi();
     context.get_element_fe(_flow_vars.u())->get_dphi();
     context.get_element_fe(_flow_vars.u())->get_xyz();
-
   }
   
   template<typename SolidMech>
   void ImmersedBoundary<SolidMech>::element_time_derivative( bool compute_jacobian,
                                                              AssemblyContext& context,
                                                              CachedValues& /*cache*/ )
-  {
+  {   
 
-    //ibm acts as a source term only on solid elements 
-    if (context.get_elem().subdomain_id() == this->_subdomain_id)
+    //IBM acts as a source term only under solid elements 
+    if (context.get_elem().subdomain_id() == this->_solid_subdomain_id )
       {
-
-        //Gather general info we might need for ibm 
-        const unsigned int n_u_dofs = context.get_dof_indices(this->_disp_vars.u()).size();
+        //Gather general info for the solid element 
         const unsigned int n_qpoints = context.get_element_qrule().n_points();
-        const std::vector<libMesh::Real> &JxW = context.get_element_fe(this->_flow_vars.u())->get_JxW();
+        const unsigned int n_u_dofs = context.get_dof_indices(this->_disp_vars.u()).size();            
+        libMesh::PointLocatorBase &  lctr = *_pnt_lctr;
         
+        // Since IBM only acts as a source on the fluid, need to inverse map solid quad points onto the
+        // fluid elements and reinit the fluid fe with the mapped quad points
+
+        // Global coordinates of the solid qp points
+        const  std::vector<libMesh::Point> solid_qp_pts = context.get_element_fe(this->_flow_vars.u())->get_xyz();
+
+        // First loop over solid qp to precompute needed info
         for (unsigned int qp=0; qp != n_qpoints; qp++)
           {
-            // since ibm only acts as a source on the fluid, need to inverse map quad points on the
-            // fluid elements and reinit the fluid fe with the mapped quad points
-            // the regular context.get_element_fe shape functions wont exist in the solid: need to locate the fluid element on which the solid element lies
+            //we should precompute gradphi and such here (needs to be inside the init_context )
+          }        
 
-            // get the point locator object
-            libMesh::UniquePtr < libMesh::PointLocatorBase > pnt_lctr = context.get_system().get_mesh().sub_point_locator();
-            libMesh::PointLocatorBase & lctr = *pnt_lctr;            
-
+        // Now do the real work over the solid qps
+        for (unsigned int qp=0; qp != n_qpoints; qp++)
+          {
             //get a pointer to the fluid element that contains the solid qp
-            //TODO: this call should also provide the fluid subdomain id in order to speed up the search
-            const libMesh::Elem * fluid_elem = lctr( context.get_elem().point(qp) ); 
-            
+            const libMesh::Elem * fluid_elem = lctr( solid_qp_pts[qp], &_fluid_subdomain_set ); 
+
             libMesh::FEBase * fluid_element_fe;
             context.get_element_fe<libMesh::Real>(this->_flow_vars.u(), fluid_element_fe);
 
-            //reinit the fluid element with the mapped quadrature points
-            fluid_element_fe->reinit(fluid_elem);
-              
-            
+            // Reinit the fluid element with the mapped solid quadrature points
+            fluid_element_fe->reinit(fluid_elem, &solid_qp_pts);
+
+            // The velocity shape function gradients (in global coords.) at interior quadrature points of the fluid element
+            const std::vector<std::vector<libMesh::Number> >& dphidxi = fluid_element_fe->get_dphidxi();
+            const std::vector<std::vector<libMesh::Number> >& dphideta = fluid_element_fe->get_dphideta();
+            const std::vector<std::vector<libMesh::Number> >& dphidzeta = fluid_element_fe->get_dphidzeta();
+
+            // Jacobian vector at the quadrature points
+            const std::vector<libMesh::Real> &JxW = fluid_element_fe->get_JxW();
+                    
             // Residuals that we're populating
             libMesh::DenseSubVector<libMesh::Number> &Fu = context.get_elem_residual(this->_flow_vars.u());
             libMesh::DenseSubVector<libMesh::Number> &Fv = context.get_elem_residual(this->_flow_vars.v());
-            libMesh::DenseSubVector<libMesh::Number> &Fw = context.get_elem_residual(this->_flow_vars.w());
-            
-            // The velocity shape functions at interior quadrature points. (we only need their gradients prolly in elem_time_deriv)
-            const std::vector<std::vector<libMesh::Real> >& u_phi = context.get_element_fe(this->_flow_vars.u())->get_phi();
-
-
-
-            
-            // The velocity shape function gradients (in global coords.) at interior quadrature points.
-            const std::vector<std::vector<libMesh::RealGradient> >& u_gradphi = context.get_element_fe(this->_flow_vars.u())->get_dphi();
-
-            libMesh::Real jac = JxW[qp];
-
-            //these are gradients w.r.t. the master element coordinates
+            //libMesh::DenseSubVector<libMesh::Number> &Fw = context.get_elem_residual(this->_flow_vars.w());
+                      
+            //Gradients w.r.t. the master element coordinates
             libMesh::Gradient grad_u,grad_v,grad_w;
             _solid_mech->get_grad_uvw(context, qp, grad_u,grad_v,grad_w);
 
-            // the piola kirchoff stress tensor in the reference configuration
+            // Piola-kirchoff stress tensor in the reference configuration
             libMesh::TensorValue<libMesh::Real> tau;
             ElasticityTensor C;
             _solid_mech->get_stress_and_elasticity(context,qp,grad_u,grad_v,grad_w,tau,C);
-                        
+
             for (unsigned int i=0; i != n_u_dofs; i++)
               {
-                
+                // tau:grad_phi source term
                 for (int alpha = 0; alpha < _dim; alpha++)
                   {
                     for (int beta = 0;beta < _dim; beta++)
                       {
-                        Fu(i) += tau(alpha,beta)*jac*u_gradphi[i][qp](alpha);
-                        Fv(i) += tau(alpha,beta)*jac*u_gradphi[i][qp](alpha);
+                        Fu(i) += tau(alpha,beta)*JxW[qp]*(dphidxi[i][qp] + dphideta[i][qp] + dphidzeta[i][qp] );
+                        Fv(i) += tau(alpha,beta)*JxW[qp]*(dphidxi[i][qp] + dphideta[i][qp] + dphidzeta[i][qp] );
                       
                         if (_dim == 3){
-                          Fw(i) += tau(alpha,beta)*jac*u_gradphi[i][qp](alpha);
+                          //            Fw(i) += tau(alpha,beta)*JxW[qp]*(dphidxi[i][qp] + dphideta[i][qp] + dphidzeta[i][qp] );
                         }
                       }
                   }
               } //dof loop
 
             //TODO : Factor 2: acceleration term: how to get velocity values at a current vs previous point in time
-            
+          
+            if (compute_jacobian)
+              {
+                //TODO: not implemented
+              }
+                       
           }// qp loop
       } // if elem subdomain id is right
   } //end elem time derivative

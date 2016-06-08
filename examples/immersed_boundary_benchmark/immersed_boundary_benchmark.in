@@ -1,10 +1,9 @@
-
 #Input file for the immersed boundary benchmark example
 
 # Mesh related options
 [Mesh]
   [./Read]
-    filename = 'ibm_benchmark_mesh.e'
+    filename = 'ibm_benchmark_mesh_coarse.e'
   [../]  
 []
 
@@ -16,13 +15,12 @@
   [./ImmersedBoundary]
     enabled_subdomains = '2'
     solid_mechanics = 'ElasticMembrane'
+    fluid_mechanics = 'IncompressibleNavierStokes'
   [../]
   
   [./ElasticMembrane]
     material = 'Membrane'
-    
   [../]
-  
   [./IncompressibleNavierStokes]
     enabled_subdomains = '1'
     material = 'Fluid'
@@ -46,7 +44,11 @@
       [../]
     [../]  
   [../]
-  
+  [./ImmersedBoundary]
+    [./Density]
+      value = '1.0'
+    [../]
+  [../]
   [./Fluid]
     [./Density]
       value = '1.0'
@@ -110,6 +112,9 @@
       [./Velocity]
          type = 'no_slip'
       [../]
+      [./Displacement]
+         type = 'homogeneous_neumann'
+      [../]
    [../]
 
    [./Membrane]
@@ -122,9 +127,9 @@
 # Visualization options #
 [vis-options]
 output_vis = 'true'
-vis_output_file_prefix = 'fsi'
+vis_output_file_prefix = 'IBM_benchmark'
 output_residual = 'true'
-output_format = 'ExodusII xdr'
+output_format = 'ExodusII'
 []
 
 # Options for print info to the screen
