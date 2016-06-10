@@ -88,6 +88,18 @@ namespace GRINS
         this->_fluid_mechanics = input( "Physics/ImmersedBoundary/fluid_mechanics", "DIE!" );
       }
 
+    // Get the solid mechanics from the input, this is needed to prerequest data in init_context
+    bool have_solid_mech = input.have_variable( "Physics/ImmersedBoundary/solid_mechanics" );
+    if( !have_solid_mech )
+      {
+        std::string err = "Error: Must specify solid_mechanics to identify the solid in the IBM physics.\n";
+        libmesh_error_msg(err);
+      }
+    else
+      {
+        this->_solid_mechanics = input( "Physics/ImmersedBoundary/solid_mechanics", "DIE!" );
+      }
+
     // Get the subdomain ids for the fluid
     unsigned int n_fluid_subdomains = input.vector_variable_size( "Physics/"+ _fluid_mechanics  +"/enabled_subdomains" );
     if( n_fluid_subdomains == 0 )
@@ -134,25 +146,40 @@ namespace GRINS
     // we will need to build the linear system
     // or evaluate a quantity of interest.
 
-
-    //membrane context inits
-    context.get_element_fe(_disp_vars.u(),2)->get_JxW();
-    context.get_element_fe(_disp_vars.u(),2)->get_phi();
-    context.get_element_fe(_disp_vars.u(),2)->get_dphidxi();
-    context.get_element_fe(_disp_vars.u(),2)->get_dphideta();
-    //for metric tensors of the membrane
-    context.get_element_fe(_disp_vars.u(),2)->get_dxyzdxi();
-    context.get_element_fe(_disp_vars.u(),2)->get_dxyzdeta();
-    context.get_element_fe(_disp_vars.u(),2)->get_dxidx();
-    context.get_element_fe(_disp_vars.u(),2)->get_dxidy();
-    context.get_element_fe(_disp_vars.u(),2)->get_dxidz();
-    context.get_element_fe(_disp_vars.u(),2)->get_detadx();
-    context.get_element_fe(_disp_vars.u(),2)->get_detady();
-    context.get_element_fe(_disp_vars.u(),2)->get_detadz();
-
-
-    context.get_element_fe(_flow_vars.u(),2)->get_dphidxi();
-
+    if (_solid_mechanics == "ElasticMembrane")
+      {
+        //membrane context inits
+        context.get_element_fe(_disp_vars.u(),2)->get_JxW();
+        context.get_element_fe(_disp_vars.u(),2)->get_phi();
+        context.get_element_fe(_disp_vars.u(),2)->get_dphidxi();
+        context.get_element_fe(_disp_vars.u(),2)->get_dphideta();
+        //for metric tensors of the membrane
+        context.get_element_fe(_disp_vars.u(),2)->get_dxyzdxi();
+        context.get_element_fe(_disp_vars.u(),2)->get_dxyzdeta();
+        context.get_element_fe(_disp_vars.u(),2)->get_dxidx();
+        context.get_element_fe(_disp_vars.u(),2)->get_dxidy();
+        context.get_element_fe(_disp_vars.u(),2)->get_dxidz();
+        context.get_element_fe(_disp_vars.u(),2)->get_detadx();
+        context.get_element_fe(_disp_vars.u(),2)->get_detady();
+        context.get_element_fe(_disp_vars.u(),2)->get_detadz();
+      }
+    else if (_solid_mechanics == "ElasticCable")
+      {
+        //cable context inits
+        context.get_element_fe(_disp_vars.u(),1)->get_JxW();
+        context.get_element_fe(_disp_vars.u(),1)->get_phi();
+        context.get_element_fe(_disp_vars.u(),1)->get_dphidxi();
+        //for metric tensors of cable
+        context.get_element_fe(_disp_vars.u(),1)->get_dxyzdxi();
+        context.get_element_fe(_disp_vars.u(),1)->get_dxidx();
+        context.get_element_fe(_disp_vars.u(),1)->get_dxidy();
+        context.get_element_fe(_disp_vars.u(),1)->get_dxidz();
+      }
+    else
+      {
+        std::string err = "ERROR: solid_mechanics not properly specified";
+        libmesh_error_msg(err);
+      }
     // First loop over solid qp to precompute needed info
     //const unsigned int n_qpoints = context.get_element_qrule().n_points();
     //for (unsigned int qp=0; qp != n_qpoints; qp++)
@@ -217,7 +244,7 @@ namespace GRINS
             libMesh::DenseSubVector<libMesh::Number> * w_disp = NULL;
 
             // Only get the residuals for the dimension we need
-            if ( this->_disp_vars.dim() == 2 )
+            if ( this->_disp_vars.dim() >= 2 )
               {
                 v_disp = &context.get_elem_residual(this->_disp_vars.v());
               }
@@ -239,6 +266,9 @@ namespace GRINS
             ElasticityTensor C;
             _solid_mech->get_stress_and_elasticity(context,qp,grad_u,grad_v,grad_w,tau,C);
 
+            libMesh::Elem * solid_elem = &context.get_elem();
+            std::cout << (*solid_elem).id() << std::endl;
+            
             for (unsigned int i=0; i != n_u_dofs; i++)
               {
                 // Tau:grad_phi source term contributions
@@ -256,13 +286,38 @@ namespace GRINS
                       }
                   }
 
-                // Solid var contributions
-                u_disp(i) +=1;
-                if (this->_disp_vars.dim() == 2)
-                  (*v_disp)(i) +=1;
+                // Solid variable contributions
+                libMesh::Point solid_dof = solid_elem->point(i);
+
+                
+                libMesh::Number dof_x_disp,dof_y_disp,dof_z_disp;
+                dof_x_disp = context.point_value(this->_disp_vars.u(), solid_dof);
+                if (this->_disp_vars.dim() >= 2)
+                  dof_y_disp = context.point_value(this->_disp_vars.v(), solid_dof);
+                else
+                  dof_y_disp = 0;
                 if (this->_disp_vars.dim() == 3)
-                  (*w_disp)(i) +=1;
-               
+                  dof_z_disp = context.point_value(this->_disp_vars.w(), solid_dof);
+                else
+                  dof_z_disp = 0;
+                
+                libMesh::Point qp_disp(solid_dof(0) + dof_x_disp, solid_dof(1) + dof_y_disp, solid_dof(2) + dof_z_disp);
+
+                libMesh::Number xval,yval,zval;
+                xval = context.point_value(_flow_vars.u(), qp_disp);
+
+                if (this->_flow_vars.dim() >= 2)
+                  yval = context.point_value(_flow_vars.v(), qp_disp);
+
+                if (this->_flow_vars.dim() ==3)
+                  zval = context.point_value(_flow_vars.w(), qp_disp);
+
+                u_disp(i) += xval;
+                if (this->_disp_vars.dim() >= 2)
+                  (*v_disp)(i) += yval;
+                if (this->_disp_vars.dim() == 3)
+                  (*w_disp)(i) += zval;
+                
               } //dof loop
 
             //TODO : Factor 2: acceleration term: this will be implemented in the mass_residual :

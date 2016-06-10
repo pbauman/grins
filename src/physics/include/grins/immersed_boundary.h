@@ -91,7 +91,10 @@ namespace GRINS
 
     //! The fluid mechanics associated with the IBM method from the input
     std::string _fluid_mechanics;
-    
+
+    //! The solid mechanics associated with the IBM method from the input
+    std::string _solid_mechanics;
+
     //! The subdomain id for the fluid that is read from input
     std::set<libMesh::subdomain_id_type> _fluid_subdomain_set;
 
