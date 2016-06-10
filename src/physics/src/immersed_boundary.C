@@ -110,6 +110,7 @@ namespace GRINS
   void ImmersedBoundary<SolidMech>::init_variables( libMesh::FEMSystem* system )
   {
     // Get the point locator object that will find the right fluid element
+    // TODO: move this to somewhere not so hackish
     _pnt_lctr = system->get_mesh().sub_point_locator();
   }
   
@@ -120,13 +121,9 @@ namespace GRINS
     system->time_evolving(_flow_vars.u());
     system->time_evolving(_flow_vars.v());
 
-    system->time_evolving(_disp_vars.u());
-    system->time_evolving(_disp_vars.v());
-
     if (_dim == 3)
       {
         system->time_evolving(_flow_vars.w());
-        system->time_evolving(_disp_vars.w());
       }
   }
 
@@ -136,10 +133,32 @@ namespace GRINS
     // We should prerequest all the data
     // we will need to build the linear system
     // or evaluate a quantity of interest.
-    context.get_element_fe(_flow_vars.u())->get_JxW();
-    context.get_element_fe(_flow_vars.u())->get_phi();
-    context.get_element_fe(_flow_vars.u())->get_dphi();
-    context.get_element_fe(_flow_vars.u())->get_xyz();
+
+
+    //membrane context inits
+    context.get_element_fe(_disp_vars.u(),2)->get_JxW();
+    context.get_element_fe(_disp_vars.u(),2)->get_phi();
+    context.get_element_fe(_disp_vars.u(),2)->get_dphidxi();
+    context.get_element_fe(_disp_vars.u(),2)->get_dphideta();
+    //for metric tensors of the membrane
+    context.get_element_fe(_disp_vars.u(),2)->get_dxyzdxi();
+    context.get_element_fe(_disp_vars.u(),2)->get_dxyzdeta();
+    context.get_element_fe(_disp_vars.u(),2)->get_dxidx();
+    context.get_element_fe(_disp_vars.u(),2)->get_dxidy();
+    context.get_element_fe(_disp_vars.u(),2)->get_dxidz();
+    context.get_element_fe(_disp_vars.u(),2)->get_detadx();
+    context.get_element_fe(_disp_vars.u(),2)->get_detady();
+    context.get_element_fe(_disp_vars.u(),2)->get_detadz();
+
+
+    context.get_element_fe(_flow_vars.u(),2)->get_dphidxi();
+
+    // First loop over solid qp to precompute needed info
+    //const unsigned int n_qpoints = context.get_element_qrule().n_points();
+    //for (unsigned int qp=0; qp != n_qpoints; qp++)
+    // {
+        //we should precompute gradphi here
+    //  }        
   }
   
   template<typename SolidMech>
@@ -154,46 +173,64 @@ namespace GRINS
         //Gather general info for the solid element 
         const unsigned int n_qpoints = context.get_element_qrule().n_points();
         const unsigned int n_u_dofs = context.get_dof_indices(this->_disp_vars.u()).size();            
-        libMesh::PointLocatorBase &  lctr = *_pnt_lctr;
         
         // Since IBM only acts as a source on the fluid, need to inverse map solid quad points onto the
         // fluid elements and reinit the fluid fe with the mapped quad points
-
+        libMesh::PointLocatorBase &  lctr = *_pnt_lctr; //locator object
+        
         // Global coordinates of the solid qp points
-        const  std::vector<libMesh::Point> solid_qp_pts = context.get_element_fe(this->_flow_vars.u())->get_xyz();
+        const std::vector<libMesh::Point> solid_qp_pts = context.get_element_fe(this->_disp_vars.u())->get_xyz();                     
 
-        // First loop over solid qp to precompute needed info
+        // The main qp loop which calculates residual contributions
         for (unsigned int qp=0; qp != n_qpoints; qp++)
           {
-            //we should precompute gradphi and such here (needs to be inside the init_context )
-          }        
 
-        // Now do the real work over the solid qps
-        for (unsigned int qp=0; qp != n_qpoints; qp++)
-          {
-            //get a pointer to the fluid element that contains the solid qp
-            const libMesh::Elem * fluid_elem = lctr( solid_qp_pts[qp], &_fluid_subdomain_set ); 
+            // The shape functions need to be evaluated at the displaced body.
+            // first get the displacement of the solid variables
+            libMesh::Number x_disp,y_disp,z_disp;
+            context.interior_value(this->_disp_vars.u(), qp, x_disp);
+            context.interior_value(this->_disp_vars.v(), qp, y_disp);
+            context.interior_value(this->_disp_vars.w(), qp, z_disp);
+            libMesh::Point qp_disp(x_disp,y_disp,z_disp);
 
-            libMesh::FEBase * fluid_element_fe;
-            context.get_element_fe<libMesh::Real>(this->_flow_vars.u(), fluid_element_fe);
+            // Get a pointer to the fluid element that contains the displaced solid qp
+            const libMesh::Elem * fluid_elem = lctr( solid_qp_pts[qp] + qp_disp , &_fluid_subdomain_set ); 
+
+            //the dimension shouldnt be hardcoded as 2 for the fluid element
+            libMesh::UniquePtr<libMesh::FEGenericBase<libMesh::Real> > fluid_element_fe(libMesh::FEGenericBase<libMesh::Real>::build(2, context.get_element_fe(_flow_vars.u())->get_fe_type()));
+            const std::vector<std::vector<libMesh::RealGradient> >& fluid_dphi = fluid_element_fe->get_dphi();
 
             // Reinit the fluid element with the mapped solid quadrature points
             fluid_element_fe->reinit(fluid_elem, &solid_qp_pts);
 
-            // The velocity shape function gradients (in global coords.) at interior quadrature points of the fluid element
-            const std::vector<std::vector<libMesh::Number> >& dphidxi = fluid_element_fe->get_dphidxi();
-            const std::vector<std::vector<libMesh::Number> >& dphideta = fluid_element_fe->get_dphideta();
-            const std::vector<std::vector<libMesh::Number> >& dphidzeta = fluid_element_fe->get_dphidzeta();
-
             // Jacobian vector at the quadrature points
-            const std::vector<libMesh::Real> &JxW = fluid_element_fe->get_JxW();
+            const std::vector<libMesh::Real> &JxW = context.get_element_fe(_disp_vars.u(),2)->get_JxW();
                     
-            // Residuals that we're populating
-            libMesh::DenseSubVector<libMesh::Number> &Fu = context.get_elem_residual(this->_flow_vars.u());
-            libMesh::DenseSubVector<libMesh::Number> &Fv = context.get_elem_residual(this->_flow_vars.v());
-            //libMesh::DenseSubVector<libMesh::Number> &Fw = context.get_elem_residual(this->_flow_vars.w());
+            // Fluid Residuals that we're populating
+            libMesh::DenseSubVector<libMesh::Number> & Fu = context.get_elem_residual(this->_flow_vars.u()); //R_{u}
+            libMesh::DenseSubVector<libMesh::Number> & Fv = context.get_elem_residual(this->_flow_vars.v()); //R_{v}
+            libMesh::DenseSubVector<libMesh::Number> * Fw = NULL;
+
+            // Solid residuals
+            libMesh::DenseSubVector<libMesh::Number> & u_disp = context.get_elem_residual(this->_disp_vars.u()); 
+            libMesh::DenseSubVector<libMesh::Number> * v_disp = NULL;
+            libMesh::DenseSubVector<libMesh::Number> * w_disp = NULL;
+
+            // Only get the residuals for the dimension we need
+            if ( this->_disp_vars.dim() == 2 )
+              {
+                v_disp = &context.get_elem_residual(this->_disp_vars.v());
+              }
+            if ( this->_disp_vars.dim() == 3 )
+              {
+                w_disp = &context.get_elem_residual(this->_disp_vars.w());
+              }
+            if ( this->_flow_vars.dim() == 3 )
+              {
+                Fw = &context.get_elem_residual(this->_flow_vars.w()); //R_{w}
+              }
                       
-            //Gradients w.r.t. the master element coordinates
+            // Gradients w.r.t. the master element coordinates
             libMesh::Gradient grad_u,grad_v,grad_w;
             _solid_mech->get_grad_uvw(context, qp, grad_u,grad_v,grad_w);
 
@@ -204,22 +241,32 @@ namespace GRINS
 
             for (unsigned int i=0; i != n_u_dofs; i++)
               {
-                // tau:grad_phi source term
+                // Tau:grad_phi source term contributions
                 for (int alpha = 0; alpha < _dim; alpha++)
                   {
                     for (int beta = 0;beta < _dim; beta++)
                       {
-                        Fu(i) += tau(alpha,beta)*JxW[qp]*(dphidxi[i][qp] + dphideta[i][qp] + dphidzeta[i][qp] );
-                        Fv(i) += tau(alpha,beta)*JxW[qp]*(dphidxi[i][qp] + dphideta[i][qp] + dphidzeta[i][qp] );
+                        Fu(i) += tau(alpha,beta)*JxW[qp]*fluid_dphi[i][qp](beta);
+                        Fv(i) += tau(alpha,beta)*JxW[qp]*fluid_dphi[i][qp](beta);
                       
-                        if (_dim == 3){
-                          //            Fw(i) += tau(alpha,beta)*JxW[qp]*(dphidxi[i][qp] + dphideta[i][qp] + dphidzeta[i][qp] );
-                        }
+                        if (this->_flow_vars.dim() == 3)
+                          {
+                            (*Fw)(i) += tau(alpha,beta)*JxW[qp]*fluid_dphi[i][qp](beta);
+                          }
                       }
                   }
+
+                // Solid var contributions
+                u_disp(i) +=1;
+                if (this->_disp_vars.dim() == 2)
+                  (*v_disp)(i) +=1;
+                if (this->_disp_vars.dim() == 3)
+                  (*w_disp)(i) +=1;
+               
               } //dof loop
 
-            //TODO : Factor 2: acceleration term: how to get velocity values at a current vs previous point in time
+            //TODO : Factor 2: acceleration term: this will be implemented in the mass_residual :
+            // how to get velocity values at a current vs previous point in time
           
             if (compute_jacobian)
               {
@@ -235,7 +282,5 @@ namespace GRINS
   template class ImmersedBoundary<ElasticCable<HookesLaw1D> >;
   template class ImmersedBoundary<ElasticMembrane<HookesLaw> >;
   template class ImmersedBoundary<ElasticMembrane<IncompressiblePlaneStressHyperelasticity<MooneyRivlin > > >;
-  
-  
   
 } // namespace GRINS
