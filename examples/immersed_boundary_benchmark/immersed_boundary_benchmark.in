@@ -4,28 +4,30 @@
 [Mesh]
   [./Read]
     filename = 'ibm_benchmark_mesh.e'
-  [../]  
+  [../]
 []
 
 # Options related to all Physics
 [Physics]
-  enabled_physics = 'ImmersedBoundary
-                     IncompressibleNavierStokes'
-                     
+  enabled_physics = 'IncompressibleNavierStokes
+                     ImmersedBoundary'
+
+  [./IncompressibleNavierStokes]
+    enabled_subdomains = '1'
+    material = 'Fluid'
+  [../]
+
   [./ImmersedBoundary]
     enabled_subdomains = '2'
     solid_mechanics = 'ElasticMembrane'
     fluid_mechanics = 'IncompressibleNavierStokes'
   [../]
-  
+
   [./ElasticMembrane]
     material = 'Membrane'
   [../]
-  [./IncompressibleNavierStokes]
-    enabled_subdomains = '1'
-    material = 'Fluid'
-  [../]
-[]  
+
+[]
 
 # Properties related to the fluid and solid parameters
 [Materials]
@@ -42,7 +44,7 @@
         E = '10000'  # Youngs modulus
         nu = '0.3'   # Poisson's ratio
       [../]
-    [../]  
+    [../]
   [../]
   [./ImmersedBoundary]
     [./Density]
@@ -61,7 +63,7 @@
 []
 
 
-# Options for finite element groups
+# Options for chosen Variables
 [Variables]
   [./Displacement]
       names = 'Ux Uy Uz'
@@ -99,7 +101,7 @@
       [./Velocity]
          type = 'no_slip'
       [../]
-   [../]   
+   [../]
    [./Outflow]
       [./Velocity]
          type = 'homogeneous_neumann'
@@ -109,9 +111,6 @@
       [./Velocity]
          type = 'no_slip'
       [../]
-      [./Displacement]
-         type = 'homogeneous_neumann'
-      [../]
    [../]
    [./Membrane]
       [./Displacement]
@@ -119,6 +118,9 @@
       [../]
    [../]
    [./ContactWall]
+      [./Velocity]
+        type = 'homogeneous_neumann'
+      [../]
       [./Displacement]
         type = 'pinned'
       [../]
@@ -143,6 +145,7 @@ solver_quiet = 'false'
 echo_physics = 'true'
 []
 
+# Options related to the solver
 [linear-nonlinear-solver]
    use_numerical_jacobians_only = 'true'
 []

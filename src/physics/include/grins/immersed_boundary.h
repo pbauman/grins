@@ -23,6 +23,9 @@
 //-----------------------------------------------------------------------el-
 
 
+#ifndef GRINS_IMMERSED_BOUNDARY_H
+#define GRINS_IMMERSED_BOUNDARY_H
+
 //GRINS
 #include "grins/physics.h"
 #include "grins/multi_component_vector_variable.h"
@@ -52,7 +55,7 @@ namespace GRINS
 
     ImmersedBoundary();
 
-    
+
     ~ImmersedBoundary(){};
 
     //! Sets velocity variables to be time-evolving
@@ -60,16 +63,16 @@ namespace GRINS
 
     //! init variables and stuff we need
     virtual void init_variables( libMesh::FEMSystem* system);
-    
+
     // Context initialization
     virtual void init_context( AssemblyContext& context );
 
     // ! Residual contributions from the solid in the flow
     virtual void element_time_derivative( bool compute_jacobian, AssemblyContext& context,
                                           CachedValues& cache );
-   
+
   protected:
-    
+
     //! Physical dimension of problem
     /*! \todo Do we really need to cache this? */
     unsigned int _dim;
@@ -78,15 +81,15 @@ namespace GRINS
     VelocityVariable & _flow_vars;
 
     //! FE variables for the solid
-    DisplacementVariable & _disp_vars;  
+    DisplacementVariable & _disp_vars;
 
     //! Solid Mechanics from the ibm factory
     libMesh::UniquePtr<SolidMech> _solid_mech;
-    
+
   private:
 
-    //! The subdomain id for the solid that is read from input
-    // TODO: make this a set for multiple solid subdomains
+    //! The subdomain id for the solid that is read from input for now we allow only one solid body
+    // TODO: make this a set for multiple solid subdomains once there are ContactMechanics physics in place
     libMesh::Number _solid_subdomain_id;
 
     //! The fluid mechanics associated with the IBM method from the input
@@ -95,12 +98,13 @@ namespace GRINS
     //! The solid mechanics associated with the IBM method from the input
     std::string _solid_mechanics;
 
-    //! The subdomain id for the fluid that is read from input
+    //! The subdomain ids for the fluid that are read from input
     std::set<libMesh::subdomain_id_type> _fluid_subdomain_set;
 
     //! The locator object used to find fluid elements
     libMesh::UniquePtr < libMesh::PointLocatorBase > _pnt_lctr;
-    
+
   };
-  
+
 } //End namespace block
+#endif //GRINS_IMMERSED_BOUNDARY_H
