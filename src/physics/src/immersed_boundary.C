@@ -237,23 +237,34 @@ namespace GRINS
             // TODO: hardcoded dim 2
             const std::vector<libMesh::Real> &JxW = context.get_element_fe(_disp_vars.u(),2)->get_JxW();
 
+
+            // Build up info for fluid residual vectors
+            std::vector<libMesh::dof_id_type> fluid_u_dof_indices;
+            std::vector<libMesh::dof_id_type> fluid_v_dof_indices;
+            std::vector<libMesh::dof_id_type> fluid_w_dof_indices;
+            context.get_system().get_dof_map().dof_indices(fluid_elem_qp, fluid_u_dof_indices, _flow_vars.u());
+            context.get_system().get_dof_map().dof_indices(fluid_elem_qp, fluid_v_dof_indices, _flow_vars.v());
+            if (this->_flow_vars.dim() == 3)
+              context.get_system().get_dof_map().dof_indices(fluid_elem_qp, fluid_w_dof_indices, _flow_vars.w());
+
+
+            const unsigned int fl_dof_size = libMesh::FEInterface::n_dofs(2, fluid_element_fe->get_fe_type(), fluid_elem_qp->type());
+
             // Fluid Residuals that we're populating
-            libMesh::DenseSubVector<libMesh::Number> & Fu = context.get_elem_residual(this->_flow_vars.u()); //R_{u}
-            libMesh::DenseSubVector<libMesh::Number> & Fv = context.get_elem_residual(this->_flow_vars.v()); //R_{v}
-            libMesh::DenseSubVector<libMesh::Number> * Fw = NULL;
+            libMesh::DenseVector<libMesh::Number> Fu_new(fl_dof_size);
+            libMesh::DenseVector<libMesh::Number> Fv_new(fl_dof_size);
+            libMesh::DenseVector<libMesh::Number> Fw_new(fl_dof_size);
 
             // Solid residuals
             libMesh::DenseSubVector<libMesh::Number> & u_disp = context.get_elem_residual(this->_disp_vars.u());
             libMesh::DenseSubVector<libMesh::Number> * v_disp = NULL;
             libMesh::DenseSubVector<libMesh::Number> * w_disp = NULL;
 
-            // Only get the residuals for the dimension we need
+            // Only get the solid residuals for the dimension we need
             if ( this->_disp_vars.dim() >= 2 )
               v_disp = &context.get_elem_residual(this->_disp_vars.v());
             if ( this->_disp_vars.dim() == 3 )
               w_disp = &context.get_elem_residual(this->_disp_vars.w());
-            if ( this->_flow_vars.dim() == 3 )
-              Fw = &context.get_elem_residual(this->_flow_vars.w()); //R_{w}
 
             // Gradients w.r.t. the master element coordinates
             libMesh::Gradient grad_u,grad_v,grad_w;
@@ -264,26 +275,27 @@ namespace GRINS
             ElasticityTensor C;
             _solid_mech->get_stress_and_elasticity(context,qp,grad_u,grad_v,grad_w,tau,C);
 
-
-            const unsigned int n_u_dofs = context.get_dof_indices(this->_disp_vars.u()).size();
-
-            for (unsigned int i=0; i != n_u_dofs; i++)
+            for (unsigned int i=0; i != fl_dof_size; i++)
               {
                 // Tau:grad_phi source term contributions
                 for (int alpha = 0; alpha < this->_disp_vars.dim(); alpha++)
                   {
                     for (int beta = 0; beta < this->_disp_vars.dim(); beta++)
                       {
-                        Fu(i) += tau(alpha,beta)*JxW[qp]*fluid_dphi[i][qp](beta);
-                        Fv(i) += tau(alpha,beta)*JxW[qp]*fluid_dphi[i][qp](beta);
+                        Fu_new(i) += tau(alpha,beta)*JxW[qp]*fluid_dphi[i][qp](beta);
+                        Fv_new(i) += tau(alpha,beta)*JxW[qp]*fluid_dphi[i][qp](beta);
 
                         if (this->_flow_vars.dim() == 3)
                           {
-                            (*Fw)(i) += tau(alpha,beta)*JxW[qp]*fluid_dphi[i][qp](beta);
+                            Fw_new(i) += tau(alpha,beta)*JxW[qp]*fluid_dphi[i][qp](beta);
                           }
                       }
                   }
+              } //fluid dof loop
 
+            const unsigned int sl_dof_size = context.get_dof_indices(_disp_vars.u()).size();
+            for (unsigned int i=0; i != sl_dof_size; i++)
+              {
                 // Solid variable contributions
                 // Solid variables evolve via the underlying velocity of the displaced solid dofs
                 // Contributions depend on the dimensionality of the solid body
@@ -341,7 +353,6 @@ namespace GRINS
                     {
                       fl_vel_xval += fl_phi[l][0] * ucoef[l];
                     }
-
                   if (this->_flow_vars.dim() >= 2 )
                     {
                       std::vector<libMesh::Number> vcoef;
@@ -351,7 +362,6 @@ namespace GRINS
                           fl_vel_yval += fl_phi[l][0] * vcoef[l];
                         }
                     }
-
                   if (this->_flow_vars.dim() == 3 )
                     {
                       std::vector<libMesh::Number> wcoef;
@@ -370,7 +380,7 @@ namespace GRINS
                   if (this->_disp_vars.dim() == 3 )
                     (*w_disp)(i) = fl_vel_zval;
 
-                  } //dof loop
+                  } //solid dof loop
 
                 //TODO : Factor 2: acceleration term: this will be implemented in the mass_residual :
                 // how to get velocity values at a current vs previous point in time
@@ -380,6 +390,20 @@ namespace GRINS
                     //TODO: immersed_boundary jacobian not implemented
                     libmesh_not_implemented();
                   }
+
+                // Now  constrain the fluid residual vectors and then add them to the system
+                libMesh::FEMSystem & femsys = libMesh::cast_ref<libMesh::FEMSystem&>(const_cast<libMesh::System&>(context.get_system()));
+
+                context.get_system().get_dof_map().constrain_element_vector(Fu_new, fluid_u_dof_indices, false);
+                context.get_system().get_dof_map().constrain_element_vector(Fv_new, fluid_v_dof_indices, false);
+                if ( this->_flow_vars.dim() == 3 )
+                  context.get_system().get_dof_map().constrain_element_vector(Fw_new, fluid_w_dof_indices, false);
+
+                femsys.rhs->add_vector(Fu_new, fluid_u_dof_indices);
+                femsys.rhs->add_vector(Fv_new, fluid_v_dof_indices);
+                if ( this->_flow_vars.dim() == 3 )
+                  femsys.rhs->add_vector(Fw_new, fluid_w_dof_indices);
+
 
               }// qp loop
           } // if elem subdomain id == solid

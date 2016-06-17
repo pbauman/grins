@@ -68,7 +68,7 @@
   [./Displacement]
       names = 'Ux Uy'
       fe_family = 'LAGRANGE'
-      order = 'SECOND'
+      order = 'FIRST'
       enabled_subdomains = '2'
   [../]
   [./Velocity]
@@ -119,7 +119,7 @@
    [../]
    [./ContactWall]
       [./Velocity]
-        type = 'homogeneous_neumann'
+        type = 'no_slip'
       [../]
       [./Displacement]
         type = 'pinned'
