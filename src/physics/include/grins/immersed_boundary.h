@@ -32,18 +32,18 @@
 #include "grins/common.h"
 #include "grins/solid_mechanics_abstract.h"
 
-
+//libMesh
 #include "libmesh/fem_context.h"
 
 
 namespace GRINS
 {
 
-  //! Physics class for Immersed Boundary Method
+  //! Physics class for the Immersed Boundary Method
   /*!
-    This physics class implements the classical Immersed  Boundary Method.
+    This physics class implements the classical FEM Immersed  Boundary Method.
     This is a templated class, the class SolidMech can be instantiated as a specific type
-    (right now: ElasticCable or ElasticMembrane)
+    (right now as: ElasticCable or ElasticMembrane)
    */
 
   template<typename SolidMech>
@@ -52,30 +52,24 @@ namespace GRINS
   public:
 
     ImmersedBoundary(const std::string & my_physics_name, libMesh::UniquePtr<SolidMech> & solid_mech_ptr,  const GetPot& input);
-
     ImmersedBoundary();
-
 
     ~ImmersedBoundary(){};
 
     //! Sets velocity variables to be time-evolving
     virtual void set_time_evolving_vars( libMesh::FEMSystem* system );
 
-    //! init variables and stuff we need
+    //! Init variables and stuff we need
     virtual void init_variables( libMesh::FEMSystem* system);
 
-    // Context initialization
+    //! Context initialization
     virtual void init_context( AssemblyContext& context );
 
-    // ! Residual contributions from the solid in the flow
+    //! Residual contributions from the solid in the flow
     virtual void element_time_derivative( bool compute_jacobian, AssemblyContext& context,
                                           CachedValues& cache );
 
   protected:
-
-    //! Physical dimension of problem
-    /*! \todo Do we really need to cache this? */
-    unsigned int _dim;
 
     //! FE variables for the flow
     VelocityVariable & _flow_vars;

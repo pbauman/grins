@@ -50,7 +50,6 @@
 #include "libmesh/mesh_base.h"
 #include "libmesh/fe.h"
 #include "libmesh/fe_interface.h"
-#include "libmesh/diff_context.h"
 #include "libmesh/dof_map.h"
 
 
@@ -136,7 +135,7 @@ namespace GRINS
     system->time_evolving(_flow_vars.u());
     system->time_evolving(_flow_vars.v());
 
-    if (_dim == 3)
+    if ( _flow_vars.dim() == 3 )
       {
         system->time_evolving(_flow_vars.w());
       }
@@ -197,18 +196,16 @@ namespace GRINS
     //IBM acts as a source term only under solid elements
     if (context.get_elem().subdomain_id() == this->_solid_subdomain_id )
       {
-        //Gather general info for the solid element
-        const unsigned int n_qpoints = context.get_element_qrule().n_points();
-        const unsigned int n_u_dofs = context.get_dof_indices(this->_disp_vars.u()).size();
-
         // Since IBM only acts as a source on the fluid, need to inverse map solid quad points onto the
         // fluid elements and reinit the fluid fe with the mapped quad points
         libMesh::PointLocatorBase &  lctr = *_pnt_lctr; //locator object
 
         // Global coordinates of the solid qp points
-        const std::vector<libMesh::Point> solid_qp_pts = context.get_element_fe(this->_disp_vars.u())->get_xyz();
+        const std::vector<libMesh::Point> solid_qp_pts = context.get_element_fe( this->_disp_vars.u() )->get_xyz();
 
         libMesh::Elem * solid_elem = &context.get_elem();
+
+        const unsigned int n_qpoints = context.get_element_qrule().n_points();
 
         // The main qp loop which calculates residual contributions
         for (unsigned int qp=0; qp != n_qpoints; qp++)
@@ -227,7 +224,7 @@ namespace GRINS
 
             // Get a pointer to the fluid element that contains the displaced solid qp
             const libMesh::Elem * fluid_elem_qp = lctr( solid_qp_pts[qp] + qp_disp , &_fluid_subdomain_set );
-            libmesh_assert(fluid_elem_qp); //we found the element?
+            libmesh_assert(fluid_elem_qp); //ensure we find an element
 
             // TODO: the dimension shouldnt be hardcoded as 2 for the fluid element
             libMesh::UniquePtr<libMesh::FEGenericBase<libMesh::Real> > fluid_element_fe(libMesh::FEGenericBase<libMesh::Real>::build(2, context.get_element_fe(_flow_vars.u())->get_fe_type()));
@@ -236,7 +233,8 @@ namespace GRINS
             // Reinit the fluid element with the mapped solid quadrature points
             fluid_element_fe->reinit(fluid_elem_qp, &solid_qp_pts);
 
-            // Jacobian vector at the quadrature points
+            // Jacobian values vector at the quadrature points
+            // TODO: hardcoded dim 2
             const std::vector<libMesh::Real> &JxW = context.get_element_fe(_disp_vars.u(),2)->get_JxW();
 
             // Fluid Residuals that we're populating
@@ -266,12 +264,15 @@ namespace GRINS
             ElasticityTensor C;
             _solid_mech->get_stress_and_elasticity(context,qp,grad_u,grad_v,grad_w,tau,C);
 
+
+            const unsigned int n_u_dofs = context.get_dof_indices(this->_disp_vars.u()).size();
+
             for (unsigned int i=0; i != n_u_dofs; i++)
               {
                 // Tau:grad_phi source term contributions
-                for (int alpha = 0; alpha < _dim; alpha++)
+                for (int alpha = 0; alpha < this->_disp_vars.dim(); alpha++)
                   {
-                    for (int beta = 0;beta < _dim; beta++)
+                    for (int beta = 0; beta < this->_disp_vars.dim(); beta++)
                       {
                         Fu(i) += tau(alpha,beta)*JxW[qp]*fluid_dphi[i][qp](beta);
                         Fv(i) += tau(alpha,beta)*JxW[qp]*fluid_dphi[i][qp](beta);
@@ -286,19 +287,18 @@ namespace GRINS
                 // Solid variable contributions
                 // Solid variables evolve via the underlying velocity of the displaced solid dofs
                 // Contributions depend on the dimensionality of the solid body
-
                 libMesh::Point solid_dof_loc = solid_elem->point(i);
-                std::cout << "solid doc_location " <<solid_dof_loc << std::endl;
 
                 std::vector<libMesh::dof_id_type> solid_dof_indices;
                 context.get_system().get_dof_map().dof_indices(solid_elem,solid_dof_indices);
 
-                //how much the dof moved
+                // How much each dof moved
                 libMesh::Number dof_x_disp = 0.;
                 libMesh::Number dof_y_disp = 0.;
                 libMesh::Number dof_z_disp = 0.;
 
-                // Constrained dofs dont move
+                // Find how much the solid dofs have displaced
+                // Note: constrained dofs dont move
                 if (! context.get_system().get_dof_map().is_constrained_dof( solid_dof_indices[i] ))
                   {
                     dof_x_disp = context.point_value(this->_disp_vars.u(), solid_dof_loc);
@@ -308,75 +308,67 @@ namespace GRINS
                         dof_z_disp = context.point_value(this->_disp_vars.w(), solid_dof_loc);
                   }
 
-                  libMesh::Point dof_loc_new(solid_dof_loc(0) + dof_x_disp, solid_dof_loc(1) + dof_y_disp, solid_dof_loc(2) + dof_z_disp);
-                  std::vector<libMesh::Point> dof_loc_new_vec;
-                  dof_loc_new_vec.push_back(dof_loc_new);
+                  libMesh::Point new_dof_loc(solid_dof_loc(0) + dof_x_disp, solid_dof_loc(1) + dof_y_disp, solid_dof_loc(2) + dof_z_disp);
+                  std::vector<libMesh::Point> new_dof_loc_vec;
+                  new_dof_loc_vec.push_back(new_dof_loc);
 
                   // Get a pointer to the fluid element that contains the displaced solid dof
-                  const libMesh::Elem * fluid_elem_dof = lctr( dof_loc_new , &_fluid_subdomain_set );
-                  libmesh_assert(fluid_elem_dof); //we found the element?
+                  const libMesh::Elem * fluid_elem_dof = lctr( new_dof_loc , &_fluid_subdomain_set );
+                  libmesh_assert(fluid_elem_dof); // ensure we found an element
 
                   // TODO: the dimension shouldnt be hardcoded as 2 for the fluid element
                   libMesh::UniquePtr<libMesh::FEGenericBase<libMesh::Real> > fluid_element_fe_dof(libMesh::FEGenericBase<libMesh::Real>::build(2, context.get_element_fe(_flow_vars.u())->get_fe_type()));
                   const std::vector<std::vector<libMesh::Real> >& fl_phi = fluid_element_fe_dof->get_phi();
 
                   // Reinit the fluid element to obtain its velocities to supply the solid displacements
-                  fluid_element_fe_dof->reinit(fluid_elem_dof, &dof_loc_new_vec);
+                  fluid_element_fe_dof->reinit(fluid_elem_dof, &new_dof_loc_vec);
 
-                  libMesh::Number xval=0.;
-                  libMesh::Number yval=0.;
-                  libMesh::Number zval=0.;
+                  // Fluid velocities (to be computed) at displaced solid dofs
+                  libMesh::Number fl_vel_xval=0.;
+                  libMesh::Number fl_vel_yval=0.;
+                  libMesh::Number fl_vel_zval=0.;
 
                   // TODO: hard coded dim 2 for the  fluid
-                  libMesh::DiffContext mydc(context.get_system());
+                  const unsigned int n_fl_dofs = libMesh::FEInterface::n_dofs(2, fluid_element_fe_dof->get_fe_type(), fluid_elem_dof->type());
 
                   std::vector<libMesh::dof_id_type> fluid_dof_indices;
                   context.get_system().get_dof_map().dof_indices(fluid_elem_dof,fluid_dof_indices);
-                  //const unsigned int n_fl_dofs = fluid_dof_indices.size();
-
-                  const unsigned int n_fl_dofs = libMesh::FEInterface::n_dofs(2, fluid_element_fe_dof->get_fe_type(), fluid_elem_dof->type());
-
-                  /// wtf?
-                  //libMesh::NumericVector<libMesh::Number>  ucoef;
-                  //libMesh::NumericVector<libMesh::Number> *  ucoef_ptr = &ucoef;
-                  //context.get_system().current_local_solution.get(fluid_dof_indices, &ucoef);
 
                   std::vector<libMesh::Number> ucoef;
                   context.get_system().current_local_solution->get(fluid_dof_indices, ucoef);
 
                   for (unsigned int l = 0; l != n_fl_dofs; l++)
                     {
-                      xval += fl_phi[l][0] * ucoef[l];
+                      fl_vel_xval += fl_phi[l][0] * ucoef[l];
                     }
 
-                  if (this->_flow_vars.dim() >= 2)
+                  if (this->_flow_vars.dim() >= 2 )
                     {
                       std::vector<libMesh::Number> vcoef;
                       context.get_system().current_local_solution->get(fluid_dof_indices, vcoef);
                       for (unsigned int l = 0; l != n_fl_dofs; l++)
                         {
-                          yval += fl_phi[l][0] * vcoef[l];
+                          fl_vel_yval += fl_phi[l][0] * vcoef[l];
                         }
                     }
 
-                  if (this->_flow_vars.dim() ==3)
+                  if (this->_flow_vars.dim() == 3 )
                     {
                       std::vector<libMesh::Number> wcoef;
                       context.get_system().current_local_solution->get(fluid_dof_indices, wcoef);
                       for (unsigned int l = 0; l != n_fl_dofs; l++)
                         {
-                          zval += fl_phi[l][0] * wcoef[l];
+                          fl_vel_zval += fl_phi[l][0] * wcoef[l];
                         }
 
                     }
 
-                  //now actually set the computed velocities as the displacements of the solid
-                  u_disp(i) = xval;
-                  if (this->_disp_vars.dim() >= 2)
-                    (*v_disp)(i) = yval;
-                  if (this->_disp_vars.dim() == 3)
-                    (*w_disp)(i) = zval;
-
+                  // Finally, set the computed velocities as the displacements of the solid
+                  u_disp(i) = fl_vel_xval;
+                  if (this->_disp_vars.dim() >= 2 )
+                    (*v_disp)(i) = fl_vel_yval;
+                  if (this->_disp_vars.dim() == 3 )
+                    (*w_disp)(i) = fl_vel_zval;
 
                   } //dof loop
 
@@ -386,10 +378,11 @@ namespace GRINS
                 if (compute_jacobian)
                   {
                     //TODO: immersed_boundary jacobian not implemented
+                    libmesh_not_implemented();
                   }
 
               }// qp loop
-          } // if elem subdomain id is right
+          } // if elem subdomain id == solid
       } //end elem time derivative
 
 
