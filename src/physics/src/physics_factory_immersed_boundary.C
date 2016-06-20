@@ -48,12 +48,12 @@ namespace GRINS
                                                                              const std::string& physics_name )
   {
 
-    std::cout << "building ibm physics "<< std::endl;
+    std::cout << "Factory : Building Ibm Physics "<< std::endl;
     std::string solid_mech_input = "none";
     PhysicsFactoryHelper::parse_immersed_boundary_components( input,
                                                               physics_name,
                                                               solid_mech_input);
-    
+
     //Check to see if input solid mechanics are pre-existing
     std::map< std::string, FactoryAbstract< Physics > * > & existing_factories  = this->factory_map();
     std::map< std::string, FactoryAbstract< Physics > * >::iterator factory_it;
@@ -62,10 +62,10 @@ namespace GRINS
     if (factory_it == existing_factories.end())
       {
         std::string error = "Error: Invalid solid_mechanics specified: " + solid_mech_input + '\n';
-        error += "       Valid values are: ElasticMembrane, ElasticCable"; 
+        error += "       Valid values are: ElasticMembrane, ElasticCable";
         libmesh_error_msg(error);
       }
-    
+
 
     //Now parse the supplied Solid Mechanics for valid stress strain models
     std::string stress_strain_model = "none";
@@ -76,12 +76,12 @@ namespace GRINS
                                                      strain_energy);
 
     libMesh::UniquePtr<Physics> new_physics;
-    
+
     if (solid_mech_input == std::string("ElasticCable"))
-      {        
+      {
         if( stress_strain_model == std::string("hookes_law") )
           {
-            libMesh::UniquePtr<ElasticCable<HookesLaw1D>> solid_mech_ptr( new ElasticCable<HookesLaw1D>(physics_name,input,false) );        
+            libMesh::UniquePtr<ElasticCable<HookesLaw1D>> solid_mech_ptr( new ElasticCable<HookesLaw1D>(solid_mech_input,input,false) );
             new_physics.reset( new ImmersedBoundary<ElasticCable<HookesLaw1D> >(physics_name, solid_mech_ptr,  input) );
           }
         else
@@ -95,7 +95,7 @@ namespace GRINS
       {
         if( stress_strain_model == std::string("hookes_law") )
           {
-            libMesh::UniquePtr<ElasticMembrane<HookesLaw>> solid_mech_ptr( new ElasticMembrane<HookesLaw>(physics_name,input,false) );
+            libMesh::UniquePtr<ElasticMembrane<HookesLaw>> solid_mech_ptr( new ElasticMembrane<HookesLaw>(solid_mech_input,input,false) );
             new_physics.reset( new ImmersedBoundary< ElasticMembrane<HookesLaw> >(physics_name, solid_mech_ptr, input) );
           }
 
@@ -103,7 +103,7 @@ namespace GRINS
           {
             if( strain_energy == std::string("mooney_rivlin") )
               {
-                libMesh::UniquePtr< ElasticMembrane< IncompressiblePlaneStressHyperelasticity< MooneyRivlin>>> solid_mech_ptr( new ElasticMembrane< IncompressiblePlaneStressHyperelasticity< MooneyRivlin>>(physics_name,input,false));
+                libMesh::UniquePtr< ElasticMembrane< IncompressiblePlaneStressHyperelasticity< MooneyRivlin>>> solid_mech_ptr( new ElasticMembrane< IncompressiblePlaneStressHyperelasticity< MooneyRivlin>>(solid_mech_input,input,false));
                 new_physics.reset( new ImmersedBoundary< ElasticMembrane< IncompressiblePlaneStressHyperelasticity<MooneyRivlin>>>(physics_name, solid_mech_ptr, input) );
               }
             else
@@ -122,13 +122,15 @@ namespace GRINS
             libmesh_error_msg(error);
           }
       }
-   
+
+    std::cout << "Factory : Building Ibm Physics Complete "<< std::endl;
+
     libmesh_assert(new_physics);
     return new_physics;
-    
-  }//end class PhysicsFactoryImmersedBoundary 
-    
+
+  } //end class PhysicsFactoryImmersedBoundary
+
   // Instantiate the immersed boundary factory
   PhysicsFactoryImmersedBoundary grins_factory_immersed_boundary(PhysicsNaming::immersed_boundary());
-  
+
 } // end namespace GRINS

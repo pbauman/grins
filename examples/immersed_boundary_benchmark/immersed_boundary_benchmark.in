@@ -18,12 +18,13 @@
   [../]
 
   [./ImmersedBoundary]
-    enabled_subdomains = '2'
+    enabled_subdomains = '1 2'
     solid_mechanics = 'ElasticMembrane'
     fluid_mechanics = 'IncompressibleNavierStokes'
   [../]
 
   [./ElasticMembrane]
+    enabled_subdomains = '2'
     material = 'Membrane'
   [../]
 
@@ -41,7 +42,7 @@
     [./StressStrainLaw]
       model = 'hookes_law'
       [./HookesLaw]
-        E = '10000'  # Youngs modulus
+        E = '1000000000'  # Youngs modulus
         nu = '0.3'   # Poisson's ratio
       [../]
     [../]
@@ -61,7 +62,6 @@
     [../]
   [../]
 []
-
 
 # Options for chosen Variables
 [Variables]
@@ -147,5 +147,8 @@ echo_physics = 'true'
 
 # Options related to the solver
 [linear-nonlinear-solver]
+   max_nonlinear_iterations = '1'
    use_numerical_jacobians_only = 'true'
+   continue_after_max_iterations = 'true'
+
 []

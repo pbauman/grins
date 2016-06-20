@@ -98,6 +98,13 @@ namespace GRINS
     //! The locator object used to find fluid elements
     libMesh::UniquePtr < libMesh::PointLocatorBase > _pnt_lctr;
 
+    //! Residual contributions to the fluid
+    void element_time_derivative_fluid(AssemblyContext& context);
+
+    //! Residual contributions to the solid
+    void element_time_derivative_solid(AssemblyContext& context);
+
+
   };
 
 } //End namespace block
