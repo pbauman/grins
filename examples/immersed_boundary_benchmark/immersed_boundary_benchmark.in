@@ -47,11 +47,6 @@
       [../]
     [../]
   [../]
-  [./ImmersedBoundary]
-    [./Density]
-      value = '1.0'
-    [../]
-  [../]
   [./Fluid]
     [./Density]
       value = '1.0'
@@ -93,8 +88,8 @@
 
    [./Inflow]
       [./Velocity]
-         type = 'constant_dirichlet'
-         Vx = '1.0'
+         type = 'parsed_dirichlet'
+         Vx = '0.5*(y-0.21)*(0.2 + y)'
       [../]
    [../]
    [./Walls]
@@ -130,7 +125,7 @@
 # Visualization options #
 [vis-options]
 output_vis = 'true'
-vis_output_file_prefix = 'output_ibm_mesh'
+vis_output_file_prefix = 'output_ibm'
 output_residual = 'true'
 output_format = 'ExodusII'
 []
@@ -147,7 +142,7 @@ echo_physics = 'true'
 
 # Options related to the solver
 [linear-nonlinear-solver]
-   max_nonlinear_iterations = '1'
+   max_nonlinear_iterations = '5'
    use_numerical_jacobians_only = 'true'
    continue_after_max_iterations = 'true'
 

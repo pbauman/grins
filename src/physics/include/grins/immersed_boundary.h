@@ -82,15 +82,14 @@ namespace GRINS
 
   private:
 
-    //! The subdomain id for the solid that is read from input for now we allow only one solid body
-    // TODO: make this a set for multiple solid subdomains once there are ContactMechanics physics in place
-    libMesh::Number _solid_subdomain_id;
-
     //! The fluid mechanics associated with the IBM method from the input
     std::string _fluid_mechanics;
 
     //! The solid mechanics associated with the IBM method from the input
     std::string _solid_mechanics;
+
+    //! The subdomain ids for the solid that is read from input
+    std::set<libMesh::subdomain_id_type> _solid_subdomain_set;
 
     //! The subdomain ids for the fluid that are read from input
     std::set<libMesh::subdomain_id_type> _fluid_subdomain_set;
