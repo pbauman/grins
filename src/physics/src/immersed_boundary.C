@@ -31,7 +31,7 @@
 #include "grins/physics_naming.h"
 #include "grins/elasticity_tensor.h"
 #include "grins/variable_warehouse.h"
-
+#include "grins/multiphysics_sys.h"
 
 // includes for IBM instantiation
 #include "grins/elastic_membrane.h"
@@ -185,6 +185,66 @@ namespace GRINS
   }
 
   template<typename SolidMech>
+  void ImmersedBoundary<SolidMech>::preassembly( MultiphysicsSystem & system )
+  {
+    const libMesh::MeshBase & mesh = system.get_mesh();
+
+    // Build FEMContext to get solid finite element data.
+    // This is probably overkill, but we do it this way
+    // to ensure consistency in the quadrature rule that
+    // will be used in the displacement solution.
+    libMesh::UniquePtr<libMesh::DiffContext> raw_context = system.build_context();
+    libMesh::FEMContext & context = libMesh::cast_ref<libMesh::FEMContext &>(*raw_context);
+
+    for( libMesh::MeshBase::const_element_iterator e = mesh.active_local_elements_begin();
+         e != mesh.active_local_elements_end();
+         ++e )
+      {
+        // Convenience
+        const libMesh::Elem * elem = *e;
+
+        if( is_solid_elem(elem->subdomain_id()) )
+          {
+            const std::vector<libMesh::Point>& qpoints =
+              context.get_element_fe(_disp_vars.u(),2)->get_xyz();
+
+            context.get_element_fe(_disp_vars.u(),2)->get_phi();
+
+            context.pre_fe_reinit(system,elem);
+            context.elem_fe_reinit();
+
+            // Find what fluid element contains each of the quadrature points and cache
+            for( unsigned int qp = 0; qp < qpoints.size(); qp++ )
+              {
+                libMesh::Real u_disp = 0;
+                libMesh::Real v_disp = 0;
+                libMesh::Real w_disp = 0;
+
+                context.interior_value(this->_disp_vars.u(), qp, u_disp);
+                if( this->_disp_vars.dim() >= 2 )
+                  context.interior_value(this->_disp_vars.v(), qp, v_disp);
+                if( this->_disp_vars.dim() == 3 )
+                  context.interior_value(this->_disp_vars.w(), qp, w_disp);
+
+                libMesh::Point U( u_disp, v_disp, w_disp );
+
+                // We need to look for overlap with *displaced* solid point
+                libMesh::Point x = qpoints[qp]+U;
+
+                const libMesh::Elem * fluid_elem =
+                  (*_pnt_lctr)( x, &_fluid_subdomain_set );
+
+                std::map<libMesh::dof_id_type,std::vector<unsigned int> >& solid_elem_map =
+                  _fluid_id_to_solid_ids_qps[fluid_elem->id()];
+
+                std::vector<unsigned int>& solid_qps = solid_elem_map[elem->id()];
+                solid_qps.push_back(qp);
+              }
+          }
+      }
+  }
+
+  template<typename SolidMech>
   void ImmersedBoundary<SolidMech>::element_time_derivative( bool compute_jacobian,
                                                              AssemblyContext & context,
                                                              CachedValues & /*cache*/ )
@@ -281,9 +341,9 @@ namespace GRINS
         for (unsigned int i=0; i != fl_dof_size; i++)
           {
             // Tau:grad_phi source term contributions
-            for (int alpha = 0; alpha < this->_disp_vars.dim(); alpha++)
+            for (unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++)
               {
-                for (int beta = 0; beta < this->_disp_vars.dim(); beta++)
+                for (unsigned int beta = 0; beta < this->_disp_vars.dim(); beta++)
                   {
                     //Fu_new(i) += tau(alpha,beta)*JxW[qp]*fluid_dphi[i][qp](beta);
                     //Fv_new(i) += tau(alpha,beta)*JxW[qp]*fluid_dphi[i][qp](beta);

@@ -70,6 +70,9 @@ namespace GRINS
     virtual void element_time_derivative( bool compute_jacobian, AssemblyContext& context,
                                           CachedValues& cache );
 
+    //! Cache mesh information needed for residual computation
+    virtual void preassembly( MultiphysicsSystem & system );
+
   protected:
 
     //! FE variables for the flow
@@ -102,6 +105,13 @@ namespace GRINS
     //! The locator object used to find fluid elements
     libMesh::UniquePtr<libMesh::PointLocatorBase> _pnt_lctr;
 
+    //! Typedef to reduce code verbosity
+    typedef std::map<libMesh::dof_id_type,
+                     std::map<libMesh::dof_id_type,std::vector<unsigned int> > > FluidToSolidMap;
+
+    /*! Map from fluid element id to solid element ids that touch the fluid element and the
+        associated solid element quadrature points that lie in the fluid element. */
+    FluidToSolidMap _fluid_id_to_solid_ids_qps;
 
     //! Residual contributions to the fluid
     void element_time_derivative_fluid(AssemblyContext& context);
