@@ -197,11 +197,11 @@ namespace GRINS
                                                              CachedValues & /*cache*/ )
   {
     // is the element a fluid elem?
-    if ( _fluid_subdomain_set.find( context.get_elem().subdomain_id() ) != _fluid_subdomain_set.end() )
+    if ( this->is_fluid_elem( context.get_elem().subdomain_id() ) )
         element_time_derivative_fluid(context);
 
     // or is it a solid?
-    if ( _solid_subdomain_set.find( context.get_elem().subdomain_id() ) != _solid_subdomain_set.end() )
+    if ( this->is_solid_elem( context.get_elem().subdomain_id() ) )
         element_time_derivative_solid(context);
 
     //TODO: immersed_boundary solid jacobian not implemented

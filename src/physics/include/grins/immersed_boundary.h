@@ -81,6 +81,10 @@ namespace GRINS
     //! Solid Mechanics from the ibm factory
     libMesh::UniquePtr<SolidMech> _solid_mech;
 
+    bool is_solid_elem( libMesh::subdomain_id_type elem_id );
+
+    bool is_fluid_elem( libMesh::subdomain_id_type elem_id );
+
   private:
 
     //! The fluid mechanics associated with the IBM method from the input
@@ -106,6 +110,20 @@ namespace GRINS
 
     ImmersedBoundary();
   };
+
+  template<typename SolidMech>
+  inline
+  bool ImmersedBoundary<SolidMech>::is_solid_elem( libMesh::subdomain_id_type elem_id )
+  {
+    return _solid_subdomain_set.find(elem_id) != _solid_subdomain_set.end();
+  }
+
+  template<typename SolidMech>
+  inline
+  bool ImmersedBoundary<SolidMech>::is_fluid_elem( libMesh::subdomain_id_type elem_id )
+  {
+    return _fluid_subdomain_set.find(elem_id) != _fluid_subdomain_set.end();
+  }
 
 } //End namespace block
 #endif //GRINS_IMMERSED_BOUNDARY_H
