@@ -63,20 +63,13 @@ namespace GRINS
       _disp_vars(GRINSPrivate::VariableWarehouse::get_variable_subclass<DisplacementVariable>(VariablesParsing::physics_disp_variable_name(input,physics_name))),
       _solid_mech(solid_mech_ptr.release())
   {
-
-    std::cout << "Constructing IBM physics" << std::endl;
-
     // Get the fluid mechanics from the input, this is needed to query the fluid subdomain ids
     bool have_fluid_mech = input.have_variable( "Physics/ImmersedBoundary/fluid_mechanics" );
     if( !have_fluid_mech )
-      {
-        std::string err = "Error: Must specify fluid_mechanics to identify the fluid in the IBM physics.\n";
-        libmesh_error_msg(err);
-      }
+      libmesh_error_msg("Error: Must specify fluid_mechanics to identify the fluid in the IBM physics.\n");
+
     else
-      {
-        this->_fluid_mechanics = input( "Physics/ImmersedBoundary/fluid_mechanics", "DIE!" );
-      }
+      this->_fluid_mechanics = input( "Physics/ImmersedBoundary/fluid_mechanics", "DIE!" );
 
     // Get the solid mechanics from the input, this is needed to prerequest data in init_context
     bool have_solid_mech = input.have_variable( "Physics/ImmersedBoundary/solid_mechanics" );

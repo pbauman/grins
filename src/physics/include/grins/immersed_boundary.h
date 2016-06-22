@@ -100,7 +100,8 @@ namespace GRINS
     std::set<libMesh::subdomain_id_type> _fluid_subdomain_set;
 
     //! The locator object used to find fluid elements
-    libMesh::UniquePtr < libMesh::PointLocatorBase > _pnt_lctr;
+    libMesh::UniquePtr<libMesh::PointLocatorBase> _pnt_lctr;
+
 
     //! Residual contributions to the fluid
     void element_time_derivative_fluid(AssemblyContext& context);
