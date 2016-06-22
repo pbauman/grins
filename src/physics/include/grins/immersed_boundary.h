@@ -51,10 +51,11 @@ namespace GRINS
   {
   public:
 
-    ImmersedBoundary(const std::string & my_physics_name, libMesh::UniquePtr<SolidMech> & solid_mech_ptr,  const GetPot& input);
-    ImmersedBoundary();
+    ImmersedBoundary( const std::string & my_physics_name,
+                      libMesh::UniquePtr<SolidMech> & solid_mech_ptr,
+                      const GetPot& input );
 
-    ~ImmersedBoundary(){};
+    virtual ~ImmersedBoundary(){};
 
     //! Sets velocity variables to be time-evolving
     virtual void set_time_evolving_vars( libMesh::FEMSystem* system );
@@ -103,7 +104,7 @@ namespace GRINS
     //! Residual contributions to the solid
     void element_time_derivative_solid(AssemblyContext& context);
 
-
+    ImmersedBoundary();
   };
 
 } //End namespace block
