@@ -212,7 +212,7 @@ namespace GRINS
     libMesh::PointLocatorBase &  lctr = *_pnt_lctr; //locator object
 
     // Global coordinates of the solid qp points
-    const std::vector<libMesh::Point> solid_qp_pts = context.get_element_fe( this->_disp_vars.u() )->get_xyz();
+    const std::vector<libMesh::Point> & solid_qp_pts = context.get_element_fe( this->_disp_vars.u() )->get_xyz();
 
     const unsigned int n_qpoints = context.get_element_qrule().n_points();
 
