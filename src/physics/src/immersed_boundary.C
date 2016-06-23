@@ -199,7 +199,7 @@ namespace GRINS
   {
     const libMesh::MeshBase & mesh = system.get_mesh();
 
-    for( std::set<libMesh::subdomain_id_type>::const_iteator solid_id_it = _solid_subdomain_set.begin();
+    for( std::set<libMesh::subdomain_id_type>::const_iterator solid_id_it = _solid_subdomain_set.begin();
          solid_id_it != _solid_subdomain_set.end(); ++solid_id_it )
       for( libMesh::MeshBase::const_element_iterator e = mesh.active_local_subdomain_elements_begin(*solid_id_it);
            e != mesh.active_local_subdomain_elements_end(*solid_id_it);
