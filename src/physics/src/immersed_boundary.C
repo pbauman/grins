@@ -258,12 +258,154 @@ namespace GRINS
     if ( this->is_solid_elem( context.get_elem().subdomain_id() ) )
         element_time_derivative_solid(context);
 
-    //TODO: immersed_boundary solid jacobian not implemented
-    if (compute_jacobian)
-        libmesh_not_implemented();
-
   } // element_time_derivative
 
+  template<typename SolidMech>
+  void ImmersedBoundary<SolidMech>::assemble_fluid_var_residual_contributions( bool compute_jacobian,
+                                                                               AssemblyContext & context )
+  {
+    FluidToSolidMap::const_iterator fluid_elem_map_it =
+      _fluid_id_to_solid_ids_qps.find(context.get_elem().id());
+
+    // Check if this fluid element had any solid elements overlapping
+    if( fluid_elem_map_it != _fluid_id_to_solid_ids_qps.end() )
+      {
+        const SolidElemToQpMap & solid_elem_map = fluid_elem_map_it->second;
+
+        for( SolidElemToQpMap::const_iterator solid_elem_map_it = solid_elem_map.begin();
+             solid_elem_map_it != solid_elem_map.end();
+             ++solid_elem_map_it )
+          {
+            // Prepare and reinit helper solid FEMContext for the solid element.
+            libMesh::dof_id_type solid_elem_id = solid_elem_map_it->first;
+            const libMesh::Elem* solid_elem = context.get_system().get_mesh().elem(solid_elem_id);
+
+            const std::vector<unsigned int> & solid_qp_indices = solid_elem_map_it->second;
+
+
+            const std::vector<libMesh::Point>& all_solid_qpoints =
+              _solid_context->get_element_fe(_disp_vars.u(),2)->get_xyz();
+
+            const std::vector<std::vector<libMesh::Real> > & solid_phi =
+              _solid_context->get_element_fe(_disp_vars.u(),2)->get_phi();
+
+             const std::vector<libMesh::Real> & solid_JxW =
+               _solid_context->get_element_fe(_disp_vars.u(),2)->get_JxW();
+
+            _solid_context->pre_fe_reinit(context.get_system(),solid_elem);
+            _solid_context->elem_fe_reinit();
+
+            const unsigned int n_solid_dofs =
+              _solid_context->get_dof_indices(this->_disp_vars.u()).size();
+
+            // Extract the subset of solid quadrature points that overlap with
+            // this fluid element
+            std::vector<libMesh::Point> solid_qpoints(solid_qp_indices.size());
+            for( unsigned int qp = 0; qp < solid_qp_indices.size(); qp++ )
+              solid_qpoints[qp] = all_solid_qpoints[ solid_qp_indices[qp] ];
+
+            // Now construct a fluid finite element using the
+            // solid element quadrature points and
+            libMesh::FEType fluid_fe_type = context.get_element_fe(_flow_vars.u())->get_fe_type();
+            const libMesh::Elem & fluid_elem = context.get_elem();
+
+            libMesh::UniquePtr<libMesh::FEGenericBase<libMesh::Real> > fluid_fe =
+              libMesh::FEGenericBase<libMesh::Real>::build(2,fluid_fe_type);
+
+            const std::vector<std::vector<libMesh::Real> > & fluid_phi = fluid_fe->get_phi();
+
+            fluid_fe->reinit(&fluid_elem,&solid_qpoints);
+
+
+            // Now assemble fluid part of velocity matching term
+            // into solid residual.
+            libMesh::DenseSubVector<libMesh::Number> & Fus =
+              _solid_context->get_elem_residual(this->_disp_vars.u());
+
+            libMesh::DenseSubVector<libMesh::Number> * Fvs = NULL;
+            libMesh::DenseSubVector<libMesh::Number> * Fws = NULL;
+
+            libMesh::DenseSubMatrix<libMesh::Number>& Kus_uf =
+              _solid_context->get_elem_jacobian(this->_disp_vars.u(),this->_flow_vars.u());
+
+            libMesh::DenseSubMatrix<libMesh::Number>* Kvs_vf = NULL;
+            libMesh::DenseSubMatrix<libMesh::Number>* Kws_wf = NULL;
+
+            if ( this->_disp_vars.dim() >= 2 )
+              {
+                Fvs = &_solid_context->get_elem_residual(this->_disp_vars.v());
+                Kvs_vf = &_solid_context->get_elem_jacobian(this->_disp_vars.v(),this->_flow_vars.v());
+              }
+            if ( this->_disp_vars.dim() == 3 )
+              {
+                Fws = &_solid_context->get_elem_residual(this->_disp_vars.w());
+                Kws_wf = &_solid_context->get_elem_jacobian(this->_disp_vars.w(),this->_flow_vars.w());
+              }
+
+            unsigned int n_fluid_dofs = context.get_dof_indices(this->_flow_vars.u()).size();
+
+            unsigned int n_qpoints = solid_qpoints.size();
+
+            for( unsigned int qp = 0; qp < n_qpoints; qp++ )
+              {
+                libMesh::Real Vx = 0.0;
+                libMesh::Real Vy = 0.0;
+                libMesh::Real Vz = 0.0;
+
+                // Compute the fluid velocity at the solid element quadrature points.
+                // The fluid solution dofs come from the incoming context. This way,
+                // we can still have correct numerical Jacobians.
+                for( unsigned int i = 0; i < n_fluid_dofs; i++ )
+                  {
+                    Vx += fluid_phi[i][qp]*(context.get_elem_solution(this->_flow_vars.u()))(i);
+
+                    if ( this->_disp_vars.dim() >= 2 )
+                      Vy += fluid_phi[i][qp]*(context.get_elem_solution(this->_flow_vars.v()))(i);
+
+                    if ( this->_disp_vars.dim() == 3 )
+                      Vz += fluid_phi[i][qp]*(context.get_elem_solution(this->_flow_vars.w()))(i);
+                  }
+
+                // We're working with a subset of the solid quadrature points
+                // so grab the index to the current one
+                unsigned int solid_qp_idx = solid_qp_indices[qp];
+
+                libMesh::Real jac = solid_JxW[solid_qp_idx];
+
+                for( unsigned int i = 0; i < n_solid_dofs; i++ )
+                  {
+                    /*! \todo [PB]: For manifolds, I don't think these are the correct shape
+                                    functions because there are missing terms. */
+                    Fus(i) += Vx*solid_phi[i][solid_qp_idx]*jac;
+
+                    if ( this->_disp_vars.dim() >= 2 )
+                      (*Fvs)(i) += Vy*solid_phi[i][solid_qp_idx]*jac;
+
+                    if ( this->_disp_vars.dim() ==3 )
+                      (*Fws)(i) += Vz*solid_phi[i][solid_qp_idx]*jac;
+
+                    if( compute_jacobian )
+                      {
+                        for( unsigned int j = 0; j < n_fluid_dofs; j++ )
+                          {
+                            libMesh::Real diag_value =
+                              fluid_phi[j][qp]*solid_phi[i][solid_qp_idx]*jac*
+                              context.get_elem_solution_derivative();
+
+                            Kus_uf(i,j) += diag_value;
+
+                            if ( this->_disp_vars.dim() >= 2 )
+                              (*Kvs_vf)(i,j) += diag_value;
+
+                            if ( this->_disp_vars.dim() == 3 )
+                              (*Kws_wf)(i,j) += diag_value;
+                          }
+                      }
+                  }
+              }
+          }
+      }
+  }
 
   template<typename SolidMech>
   void ImmersedBoundary<SolidMech>::element_time_derivative_fluid( AssemblyContext & context )

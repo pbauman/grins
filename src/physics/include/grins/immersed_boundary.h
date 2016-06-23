@@ -84,9 +84,6 @@ namespace GRINS
     //! Solid Mechanics from the ibm factory
     libMesh::UniquePtr<SolidMech> _solid_mech;
 
-    bool is_solid_elem( libMesh::subdomain_id_type elem_id );
-
-    bool is_fluid_elem( libMesh::subdomain_id_type elem_id );
     //! The fluid mechanics associated with the IBM method from the input
     std::string _fluid_mechanics;
 
@@ -120,6 +117,13 @@ namespace GRINS
 
     //! Residual contributions to the solid
     void element_time_derivative_solid(AssemblyContext& context);
+
+    void assemble_fluid_var_residual_contributions( bool compute_jacobian,
+                                                    AssemblyContext & context );
+
+    bool is_solid_elem( libMesh::subdomain_id_type elem_id );
+
+    bool is_fluid_elem( libMesh::subdomain_id_type elem_id );
 
     ImmersedBoundary();
   };
