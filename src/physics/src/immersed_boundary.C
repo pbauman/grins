@@ -199,51 +199,52 @@ namespace GRINS
   {
     const libMesh::MeshBase & mesh = system.get_mesh();
 
-    for( libMesh::MeshBase::const_element_iterator e = mesh.active_local_elements_begin();
-         e != mesh.active_local_elements_end();
-         ++e )
-      {
-        // Convenience
-        const libMesh::Elem * elem = *e;
+    for( std::set<libMesh::subdomain_id_type>::const_iteator solid_id_it = _solid_subdomain_set.begin();
+         solid_id_it != _solid_subdomain_set.end(); ++solid_id_it )
+      for( libMesh::MeshBase::const_element_iterator e = mesh.active_local_subdomain_elements_begin(*solid_id_it);
+           e != mesh.active_local_subdomain_elements_end(*solid_id_it);
+           ++e )
+        {
+          // Convenience
+          const libMesh::Elem * elem = *e;
 
-        if( is_solid_elem(elem->subdomain_id()) )
-          {
-            const std::vector<libMesh::Point>& qpoints =
-              _solid_context->get_element_fe(_disp_vars.u(),2)->get_xyz();
+          libmesh_assert( is_solid_elem(elem->subdomain_id()) );
 
-            _solid_context->get_element_fe(_disp_vars.u(),2)->get_phi();
+          const std::vector<libMesh::Point>& qpoints =
+            _solid_context->get_element_fe(_disp_vars.u(),2)->get_xyz();
 
-            _solid_context->pre_fe_reinit(system,elem);
-            _solid_context->elem_fe_reinit();
+          _solid_context->get_element_fe(_disp_vars.u(),2)->get_phi();
 
-            // Find what fluid element contains each of the quadrature points and cache
-            for( unsigned int qp = 0; qp < qpoints.size(); qp++ )
-              {
-                libMesh::Real u_disp = 0;
-                libMesh::Real v_disp = 0;
-                libMesh::Real w_disp = 0;
+          _solid_context->pre_fe_reinit(system,elem);
+          _solid_context->elem_fe_reinit();
 
-                _solid_context->interior_value(this->_disp_vars.u(), qp, u_disp);
-                if( this->_disp_vars.dim() >= 2 )
-                  _solid_context->interior_value(this->_disp_vars.v(), qp, v_disp);
-                if( this->_disp_vars.dim() == 3 )
-                  _solid_context->interior_value(this->_disp_vars.w(), qp, w_disp);
+          // Find what fluid element contains each of the quadrature points and cache
+          for( unsigned int qp = 0; qp < qpoints.size(); qp++ )
+            {
+              libMesh::Real u_disp = 0;
+              libMesh::Real v_disp = 0;
+              libMesh::Real w_disp = 0;
 
-                libMesh::Point U( u_disp, v_disp, w_disp );
+              _solid_context->interior_value(this->_disp_vars.u(), qp, u_disp);
+              if( this->_disp_vars.dim() >= 2 )
+                _solid_context->interior_value(this->_disp_vars.v(), qp, v_disp);
+              if( this->_disp_vars.dim() == 3 )
+                _solid_context->interior_value(this->_disp_vars.w(), qp, w_disp);
 
-                // We need to look for overlap with *displaced* solid point
-                libMesh::Point x = qpoints[qp]+U;
+              libMesh::Point U( u_disp, v_disp, w_disp );
 
-                const libMesh::Elem * fluid_elem =
-                  (*_point_locator)( x, &_fluid_subdomain_set );
+              // We need to look for overlap with *displaced* solid point
+              libMesh::Point x = qpoints[qp]+U;
 
-                SolidElemToQpMap & solid_elem_map = _fluid_id_to_solid_ids_qps[fluid_elem->id()];
+              const libMesh::Elem * fluid_elem =
+                (*_point_locator)( x, &_fluid_subdomain_set );
 
-                std::vector<unsigned int>& solid_qps = solid_elem_map[elem->id()];
-                solid_qps.push_back(qp);
-              }
-          }
-      }
+              SolidElemToQpMap & solid_elem_map = _fluid_id_to_solid_ids_qps[fluid_elem->id()];
+
+              std::vector<unsigned int>& solid_qps = solid_elem_map[elem->id()];
+              solid_qps.push_back(qp);
+            }
+        }
   }
 
   template<typename SolidMech>
