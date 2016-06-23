@@ -113,6 +113,8 @@ namespace GRINS
         associated solid element quadrature points that lie in the fluid element. */
     FluidToSolidMap _fluid_id_to_solid_ids_qps;
 
+    libMesh::UniquePtr<libMesh::FEMContext> _solid_context;
+
     //! Residual contributions to the fluid
     void element_time_derivative_fluid(AssemblyContext& context);
 

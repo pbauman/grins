@@ -123,6 +123,15 @@ namespace GRINS
     // Get the point locator object that will find the right fluid element
     // TODO: move this to somewhere not so hackish
     _point_locator = system->get_mesh().sub_point_locator();
+
+    // Build helper FEMContexts. We'll use this to handle
+    // supplemental finite element data for variables that
+    // we need, but are not defined on the "current" subdomain.
+    {
+      libMesh::UniquePtr<libMesh::DiffContext> raw_context = system->build_context();
+      libMesh::FEMContext * context = libMesh::cast_ptr<libMesh::FEMContext *>(raw_context.release());
+      _solid_context.reset(context);
+    }
   }
 
   template<typename SolidMech>
@@ -189,13 +198,6 @@ namespace GRINS
   {
     const libMesh::MeshBase & mesh = system.get_mesh();
 
-    // Build FEMContext to get solid finite element data.
-    // This is probably overkill, but we do it this way
-    // to ensure consistency in the quadrature rule that
-    // will be used in the displacement solution.
-    libMesh::UniquePtr<libMesh::DiffContext> raw_context = system.build_context();
-    libMesh::FEMContext & context = libMesh::cast_ref<libMesh::FEMContext &>(*raw_context);
-
     for( libMesh::MeshBase::const_element_iterator e = mesh.active_local_elements_begin();
          e != mesh.active_local_elements_end();
          ++e )
@@ -206,12 +208,12 @@ namespace GRINS
         if( is_solid_elem(elem->subdomain_id()) )
           {
             const std::vector<libMesh::Point>& qpoints =
-              context.get_element_fe(_disp_vars.u(),2)->get_xyz();
+              _solid_context->get_element_fe(_disp_vars.u(),2)->get_xyz();
 
-            context.get_element_fe(_disp_vars.u(),2)->get_phi();
+            _solid_context->get_element_fe(_disp_vars.u(),2)->get_phi();
 
-            context.pre_fe_reinit(system,elem);
-            context.elem_fe_reinit();
+            _solid_context->pre_fe_reinit(system,elem);
+            _solid_context->elem_fe_reinit();
 
             // Find what fluid element contains each of the quadrature points and cache
             for( unsigned int qp = 0; qp < qpoints.size(); qp++ )
@@ -220,11 +222,11 @@ namespace GRINS
                 libMesh::Real v_disp = 0;
                 libMesh::Real w_disp = 0;
 
-                context.interior_value(this->_disp_vars.u(), qp, u_disp);
+                _solid_context->interior_value(this->_disp_vars.u(), qp, u_disp);
                 if( this->_disp_vars.dim() >= 2 )
-                  context.interior_value(this->_disp_vars.v(), qp, v_disp);
+                  _solid_context->interior_value(this->_disp_vars.v(), qp, v_disp);
                 if( this->_disp_vars.dim() == 3 )
-                  context.interior_value(this->_disp_vars.w(), qp, w_disp);
+                  _solid_context->interior_value(this->_disp_vars.w(), qp, w_disp);
 
                 libMesh::Point U( u_disp, v_disp, w_disp );
 
