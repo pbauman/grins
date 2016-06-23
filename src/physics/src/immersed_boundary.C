@@ -252,15 +252,12 @@ namespace GRINS
                                                              AssemblyContext & context,
                                                              CachedValues & /*cache*/ )
   {
-    // is the element a fluid elem?
-    if ( this->is_fluid_elem( context.get_elem().subdomain_id() ) )
-        element_time_derivative_fluid(context);
+    if( this->is_fluid_elem( context.get_elem().subdomain_id() ) )
+      this->assemble_fluid_var_residual_contributions(compute_jacobian,context);
 
-    // or is it a solid?
-    if ( this->is_solid_elem( context.get_elem().subdomain_id() ) )
-        element_time_derivative_solid(context);
-
-  } // element_time_derivative
+    if( this->is_solid_elem( context.get_elem().subdomain_id() ) )
+      this->assemble_solid_var_residual_contributions(compute_jacobian,context);
+  }
 
   template<typename SolidMech>
   void ImmersedBoundary<SolidMech>::assemble_fluid_var_residual_contributions( bool compute_jacobian,
