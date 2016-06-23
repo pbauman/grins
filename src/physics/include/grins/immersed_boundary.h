@@ -73,7 +73,7 @@ namespace GRINS
     //! Cache mesh information needed for residual computation
     virtual void preassembly( MultiphysicsSystem & system );
 
-  protected:
+  private:
 
     //! FE variables for the flow
     VelocityVariable & _flow_vars;
@@ -87,9 +87,6 @@ namespace GRINS
     bool is_solid_elem( libMesh::subdomain_id_type elem_id );
 
     bool is_fluid_elem( libMesh::subdomain_id_type elem_id );
-
-  private:
-
     //! The fluid mechanics associated with the IBM method from the input
     std::string _fluid_mechanics;
 
