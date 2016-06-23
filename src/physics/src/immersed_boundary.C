@@ -122,7 +122,7 @@ namespace GRINS
   {
     // Get the point locator object that will find the right fluid element
     // TODO: move this to somewhere not so hackish
-    _pnt_lctr = system->get_mesh().sub_point_locator();
+    _point_locator = system->get_mesh().sub_point_locator();
   }
 
   template<typename SolidMech>
@@ -232,7 +232,7 @@ namespace GRINS
                 libMesh::Point x = qpoints[qp]+U;
 
                 const libMesh::Elem * fluid_elem =
-                  (*_pnt_lctr)( x, &_fluid_subdomain_set );
+                  (*_point_locator)( x, &_fluid_subdomain_set );
 
                 std::map<libMesh::dof_id_type,std::vector<unsigned int> >& solid_elem_map =
                   _fluid_id_to_solid_ids_qps[fluid_elem->id()];
@@ -269,7 +269,7 @@ namespace GRINS
   {
     // Since IBM only acts as a source on the fluid, need to inverse map solid quad points onto the
     // fluid elements and reinit the fluid fe with the mapped quad points
-    libMesh::PointLocatorBase &  lctr = *_pnt_lctr; //locator object
+    libMesh::PointLocatorBase &  lctr = *_point_locator; //locator object
 
     // Global coordinates of the solid qp points
     const std::vector<libMesh::Point> & solid_qp_pts = context.get_element_fe( this->_disp_vars.u() )->get_xyz();
@@ -385,7 +385,7 @@ namespace GRINS
     // Solid variables evolve via the underlying velocity of the displaced solid dofs
     // Contributions depend on the dimensionality of the solid body
 
-    libMesh::PointLocatorBase &  lctr = *_pnt_lctr; //locator object
+    libMesh::PointLocatorBase &  lctr = *_point_locator; //locator object
 
     libMesh::Elem * solid_elem = &context.get_elem();
 
