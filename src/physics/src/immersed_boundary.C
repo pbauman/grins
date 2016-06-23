@@ -234,8 +234,7 @@ namespace GRINS
                 const libMesh::Elem * fluid_elem =
                   (*_point_locator)( x, &_fluid_subdomain_set );
 
-                std::map<libMesh::dof_id_type,std::vector<unsigned int> >& solid_elem_map =
-                  _fluid_id_to_solid_ids_qps[fluid_elem->id()];
+                SolidElemToQpMap & solid_elem_map = _fluid_id_to_solid_ids_qps[fluid_elem->id()];
 
                 std::vector<unsigned int>& solid_qps = solid_elem_map[elem->id()];
                 solid_qps.push_back(qp);

@@ -103,8 +103,11 @@ namespace GRINS
     libMesh::UniquePtr<libMesh::PointLocatorBase> _point_locator;
 
     //! Typedef to reduce code verbosity
-    typedef std::map<libMesh::dof_id_type,
-                     std::map<libMesh::dof_id_type,std::vector<unsigned int> > > FluidToSolidMap;
+    typedef std::map<libMesh::dof_id_type,std::vector<unsigned int> > SolidElemToQpMap;
+
+    //! Typedef to reduce code verbosity
+    /*! \todo Hash map for the first map? */
+    typedef std::map<libMesh::dof_id_type,SolidElemToQpMap> FluidToSolidMap;
 
     /*! Map from fluid element id to solid element ids that touch the fluid element and the
         associated solid element quadrature points that lie in the fluid element. */
