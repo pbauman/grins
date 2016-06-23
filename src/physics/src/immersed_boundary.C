@@ -441,6 +441,120 @@ namespace GRINS
   }
 
   template<typename SolidMech>
+  void ImmersedBoundary<SolidMech>::assemble_solid_var_residual_contributions( bool compute_jacobian,
+                                                                               AssemblyContext & context )
+  {
+    const unsigned int n_solid_dofs = context.get_dof_indices(this->_disp_vars.u()).size();
+
+    // Global coordinates of the solid qp points
+    const std::vector<libMesh::Point> & solid_qpoints =
+      context.get_element_fe(this->_disp_vars.u(),2)->get_xyz();
+
+    const std::vector<libMesh::Real> & solid_JxW =
+      context.get_element_fe(this->_disp_vars.u(),2)->get_JxW();
+
+    const std::vector<std::vector<libMesh::Real> > & solid_phi =
+      context.get_element_fe(this->_disp_vars.u(),2)->get_phi();
+
+    // Solid residuals
+    libMesh::DenseSubVector<libMesh::Number> & Fus = context.get_elem_residual(this->_disp_vars.u());
+    libMesh::DenseSubVector<libMesh::Number> * Fvs = NULL;
+    libMesh::DenseSubVector<libMesh::Number> * Fws = NULL;
+
+    // Solid Jacobians
+    libMesh::DenseSubMatrix<libMesh::Number>& Kus_us =
+      context.get_elem_jacobian(this->_disp_vars.u(),this->_disp_vars.u());
+
+    libMesh::DenseSubMatrix<libMesh::Number>* Kvs_vs = NULL;
+    libMesh::DenseSubMatrix<libMesh::Number>* Kws_ws = NULL;
+
+    if ( this->_disp_vars.dim() >= 2 )
+      {
+        Fvs = &context.get_elem_residual(this->_disp_vars.v());
+        Kvs_vs = &context.get_elem_jacobian(this->_disp_vars.v(),this->_disp_vars.v());
+      }
+    if ( this->_disp_vars.dim() == 3 )
+      {
+        Fws = &context.get_elem_residual(this->_disp_vars.w());
+        Kws_ws = &context.get_elem_jacobian(this->_disp_vars.w(),this->_disp_vars.w());
+      }
+
+    const unsigned int n_qpoints = context.get_element_qrule().n_points();
+
+    for(unsigned int qp=0; qp != n_qpoints; qp++)
+      {
+        // Velocity of solid at quadrature point. For the steady-state case, this will
+        // be zero since interior_rate won't have anything populated.
+        libMesh::Point Udot;
+        context.interior_rate(this->_disp_vars.u(), qp, Udot(0));
+        if ( this->_disp_vars.dim() >= 2 )
+          context.interior_rate(this->_disp_vars.v(), qp, Udot(1));
+        if ( this->_disp_vars.dim() == 3 )
+          context.interior_rate(this->_disp_vars.w(), qp, Udot(2));
+
+        // Velocity matching term, loop over solid dofs. These
+        // are minus since the fluid velocity part was positive.
+        for( unsigned int i = 0; i < n_solid_dofs; i++ )
+          {
+            Fus(i) -= Udot(0)*solid_phi[i][qp]*solid_JxW[qp];
+
+            if( this->_disp_vars.dim() >= 2 )
+              (*Fvs)(i) -= Udot(1)*solid_phi[i][qp]*solid_JxW[qp];
+
+            if( this->_disp_vars.dim() == 3 )
+              (*Fws)(i) -= Udot(2)*solid_phi[i][qp]*solid_JxW[qp];
+
+            if(compute_jacobian)
+              {
+                for( unsigned int j = 0; j < n_solid_dofs; j++ )
+                  {
+                    libMesh::Real diag_value =
+                      solid_phi[j][qp]*solid_phi[i][qp]*solid_JxW[qp]*
+                      context.get_elem_solution_rate_derivative();
+
+                    Kus_us(i,j) -= diag_value;
+
+                    if ( this->_disp_vars.dim() >= 2 )
+                      (*Kvs_vs)(i,j) -= diag_value;
+
+                    if ( this->_disp_vars.dim() == 3 )
+                      (*Kws_ws)(i,j) -= diag_value;
+                  }
+              }
+          }
+
+        // Quadrature point in the initial configuration
+        const libMesh::Point & X = solid_qpoints[qp];
+
+        // Displacement at quadrature point
+        libMesh::Point U;
+        context.interior_value(this->_disp_vars.u(), qp, U(0));
+        if ( this->_disp_vars.dim() >= 2 )
+          context.interior_value(this->_disp_vars.v(), qp, U(1));
+        if ( this->_disp_vars.dim() == 3 )
+          context.interior_value(this->_disp_vars.w(), qp, U(2));
+
+        // The fluid shape functions need to be evaluated at the *displaced*
+        // location of the solid.
+        const libMesh::Elem * fluid_elem = (*_point_locator)(X+U,&_fluid_subdomain_set);
+
+        /*
+        libMesh::FEType fluid_fe_type = context.get_element_fe(_flow_vars.u())->get_fe_type();
+
+        libMesh::UniquePtr<libMesh::FEGenericBase<libMesh::Real> > fluid_fe =
+        libMesh::FEGenericBase<libMesh::Real>::build(_flow_vars.dim(),fluid_fe_type);
+
+        const std::vector<std::vector<libMesh::RealGradient> > & fluid_dphi = fluid_fe->get_dphi();
+
+        std::vector<libMesh::Point> this_qp(1,solid_qpoints[qp]);
+
+        fluid_fe->reinit(fluid_elem, &this_qp);
+        */
+
+      }
+  }
+
+  template<typename SolidMech>
   void ImmersedBoundary<SolidMech>::element_time_derivative_fluid( AssemblyContext & context )
   {
     // Since IBM only acts as a source on the fluid, need to inverse map solid quad points onto the
