@@ -51,7 +51,8 @@
 #include "libmesh/fe.h"
 #include "libmesh/fe_interface.h"
 #include "libmesh/dof_map.h"
-
+#include "libmesh/sparse_matrix.h"
+#include "libmesh/numeric_vector.h"
 
 namespace GRINS
 {
@@ -270,6 +271,10 @@ namespace GRINS
     // Check if this fluid element had any solid elements overlapping
     if( fluid_elem_map_it != _fluid_id_to_solid_ids_qps.end() )
       {
+        // Get reference to system
+        libMesh::System & base_system = const_cast<libMesh::System &>(context.get_system());
+        libMesh::FEMSystem & system = libMesh::cast_ref<libMesh::FEMSystem &>(base_system);
+
         const SolidElemToQpMap & solid_elem_map = fluid_elem_map_it->second;
 
         for( SolidElemToQpMap::const_iterator solid_elem_map_it = solid_elem_map.begin();
@@ -278,7 +283,7 @@ namespace GRINS
           {
             // Prepare and reinit helper solid FEMContext for the solid element.
             libMesh::dof_id_type solid_elem_id = solid_elem_map_it->first;
-            const libMesh::Elem* solid_elem = context.get_system().get_mesh().elem(solid_elem_id);
+            const libMesh::Elem* solid_elem = system.get_mesh().elem(solid_elem_id);
 
             const std::vector<unsigned int> & solid_qp_indices = solid_elem_map_it->second;
 
@@ -292,7 +297,7 @@ namespace GRINS
              const std::vector<libMesh::Real> & solid_JxW =
                _solid_context->get_element_fe(_disp_vars.u(),2)->get_JxW();
 
-            _solid_context->pre_fe_reinit(context.get_system(),solid_elem);
+            _solid_context->pre_fe_reinit(system,solid_elem);
             _solid_context->elem_fe_reinit();
 
             const unsigned int n_solid_dofs =
@@ -402,9 +407,36 @@ namespace GRINS
                           }
                       }
                   }
+
+              } // end loop over active solid quadrature points
+
+
+            // Since we manually build the solid context, we have to manually
+            // constrain and add the residuals and Jacobians. This
+            /*! \todo  We're hardcoding to the case that the residual is always
+              assembled and homogeneous constraints. */
+            if( compute_jacobian )
+              {
+                system.get_dof_map().constrain_element_matrix_and_vector
+                  ( _solid_context->get_elem_jacobian(),
+                    _solid_context->get_elem_residual(),
+                    _solid_context->get_dof_indices(), false );
+
+                system.matrix->add_matrix( _solid_context->get_elem_jacobian(),
+                                           _solid_context->get_dof_indices() );
               }
-          }
-      }
+            else
+              {
+                system.get_dof_map().constrain_element_vector
+                  ( _solid_context->get_elem_residual(),
+                    _solid_context->get_dof_indices(), false );
+              }
+
+            system.rhs->add_vector( _solid_context->get_elem_residual(),
+                                    _solid_context->get_dof_indices() );
+
+        } // end loop over solid elem map
+      } // end if fluid element has overlapping solid elem
   }
 
   template<typename SolidMech>
