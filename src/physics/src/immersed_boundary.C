@@ -262,14 +262,17 @@ namespace GRINS
   void ImmersedBoundary<SolidMech>::assemble_fluid_var_residual_contributions( bool compute_jacobian,
                                                                                AssemblyContext & context )
   {
+    // For clarity
+    AssemblyContext & fluid_context = context;
+
     FluidToSolidMap::const_iterator fluid_elem_map_it =
-      _fluid_id_to_solid_ids_qps.find(context.get_elem().id());
+      _fluid_id_to_solid_ids_qps.find(fluid_context.get_elem().id());
 
     // Check if this fluid element had any solid elements overlapping
     if( fluid_elem_map_it != _fluid_id_to_solid_ids_qps.end() )
       {
         // Get reference to system
-        libMesh::System & base_system = const_cast<libMesh::System &>(context.get_system());
+        libMesh::System & base_system = const_cast<libMesh::System &>(fluid_context.get_system());
         libMesh::FEMSystem & system = libMesh::cast_ref<libMesh::FEMSystem &>(base_system);
 
         const SolidElemToQpMap & solid_elem_map = fluid_elem_map_it->second;
@@ -311,8 +314,8 @@ namespace GRINS
 
             // Now construct a fluid finite element using the
             // solid element quadrature points and
-            libMesh::FEType fluid_fe_type = context.get_element_fe(_flow_vars.u())->get_fe_type();
-            const libMesh::Elem & fluid_elem = context.get_elem();
+            libMesh::FEType fluid_fe_type = fluid_context.get_element_fe(_flow_vars.u())->get_fe_type();
+            const libMesh::Elem & fluid_elem = fluid_context.get_elem();
 
             libMesh::UniquePtr<libMesh::FEGenericBase<libMesh::Real> > fluid_fe =
               libMesh::FEGenericBase<libMesh::Real>::build(2,fluid_fe_type);
@@ -336,7 +339,7 @@ namespace GRINS
             if ( this->_disp_vars.dim() == 3 )
               Fws = &solid_context.get_elem_residual(this->_disp_vars.w());
 
-            unsigned int n_fluid_dofs = context.get_dof_indices(this->_flow_vars.u()).size();
+            unsigned int n_fluid_dofs = fluid_context.get_dof_indices(this->_flow_vars.u()).size();
 
             libMesh::DenseMatrix<libMesh::Number> K;
             libMesh::DenseSubMatrix<libMesh::Number> Kus_uf(K), Kvs_vf(K), Kws_wf(K);
@@ -373,13 +376,13 @@ namespace GRINS
                 // we can still have correct numerical Jacobians.
                 for( unsigned int i = 0; i < n_fluid_dofs; i++ )
                   {
-                    Vx += fluid_phi[i][qp]*(context.get_elem_solution(this->_flow_vars.u()))(i);
+                    Vx += fluid_phi[i][qp]*(fluid_context.get_elem_solution(this->_flow_vars.u()))(i);
 
                     if ( this->_disp_vars.dim() >= 2 )
-                      Vy += fluid_phi[i][qp]*(context.get_elem_solution(this->_flow_vars.v()))(i);
+                      Vy += fluid_phi[i][qp]*(fluid_context.get_elem_solution(this->_flow_vars.v()))(i);
 
                     if ( this->_disp_vars.dim() == 3 )
-                      Vz += fluid_phi[i][qp]*(context.get_elem_solution(this->_flow_vars.w()))(i);
+                      Vz += fluid_phi[i][qp]*(fluid_context.get_elem_solution(this->_flow_vars.w()))(i);
                   }
 
                 // We're working with a subset of the solid quadrature points
@@ -406,7 +409,7 @@ namespace GRINS
                           {
                             libMesh::Real diag_value =
                               fluid_phi[j][qp]*solid_phi[i][solid_qp_idx]*jac*
-                              context.get_elem_solution_derivative();
+                              fluid_context.get_elem_solution_derivative();
 
                             Kus_uf(i,j) += diag_value;
 
@@ -461,6 +464,9 @@ namespace GRINS
   void ImmersedBoundary<SolidMech>::assemble_solid_var_residual_contributions( bool compute_jacobian,
                                                                                AssemblyContext & context )
   {
+    // For clarity
+    AssemblyContext & solid_context = context;
+
     // Get reference to system
     libMesh::System & base_system = const_cast<libMesh::System &>(context.get_system());
     libMesh::FEMSystem & system = libMesh::cast_ref<libMesh::FEMSystem &>(base_system);
@@ -476,6 +482,9 @@ namespace GRINS
 
     const std::vector<std::vector<libMesh::Real> > & solid_phi =
       context.get_element_fe(this->_disp_vars.u(),2)->get_phi();
+
+    const std::vector<std::vector<libMesh::RealGradient> > & solid_dphi =
+      context.get_element_fe(this->_disp_vars.u(),2)->get_dphi();
 
     libMesh::UniquePtr<libMesh::DiffContext> raw_context = system.build_context();
     libMesh::FEMContext & fluid_context = libMesh::cast_ref<libMesh::FEMContext &>(*raw_context.get());
@@ -507,6 +516,8 @@ namespace GRINS
       }
 
     const unsigned int n_qpoints = context.get_element_qrule().n_points();
+
+    libMesh::DenseMatrix<libMesh::Number> Kmat;
 
     for(unsigned int qp=0; qp != n_qpoints; qp++)
       {
@@ -587,14 +598,13 @@ namespace GRINS
         if( _flow_vars.dim() == 3 )
           Fw = &fluid_context.get_elem_residual(this->_flow_vars.w());
 
-        libMesh::DenseMatrix<libMesh::Number> K;
-        libMesh::DenseSubMatrix<libMesh::Number> Kuf_us(K), Kuf_vs(K), Kuf_ws(K);
-        libMesh::DenseSubMatrix<libMesh::Number> Kvf_us(K), Kvf_vs(K), Kvf_ws(K);
-        libMesh::DenseSubMatrix<libMesh::Number> Kwf_us(K), Kwf_vs(K), Kwf_ws(K);
+        libMesh::DenseSubMatrix<libMesh::Number> Kuf_us(Kmat), Kuf_vs(Kmat), Kuf_ws(Kmat);
+        libMesh::DenseSubMatrix<libMesh::Number> Kvf_us(Kmat), Kvf_vs(Kmat), Kvf_ws(Kmat);
+        libMesh::DenseSubMatrix<libMesh::Number> Kwf_us(Kmat), Kwf_vs(Kmat), Kwf_ws(Kmat);
 
         if( compute_jacobian)
           {
-            K.resize( this->_flow_vars.dim()*n_fluid_dofs, this->_disp_vars.dim()*n_solid_dofs );
+            Kmat.resize( this->_flow_vars.dim()*n_fluid_dofs, this->_disp_vars.dim()*n_solid_dofs );
 
             Kuf_us.reposition( this->_flow_vars.u()*n_fluid_dofs, this->_disp_vars.u()*n_solid_dofs,
                                n_fluid_dofs, n_solid_dofs );
@@ -677,16 +687,15 @@ namespace GRINS
         libMesh::TensorValue<libMesh::Real> tau(P*Ftrans);
 
         // Gradients w.r.t. the master element coordinates
-        /*
-        libMesh::Gradient grad_u,grad_v,grad_w;
         _solid_mech->get_grad_uvw(context, qp, grad_u,grad_v,grad_w);
 
         // Piola-kirchoff stress tensor in the reference configuration
         // TODO: tau needs to be scaled basd on mesh dimension
-        libMesh::TensorValue<libMesh::Real> tau;
+        libMesh::TensorValue<libMesh::Real> blah;
         ElasticityTensor C;
-        _solid_mech->get_stress_and_elasticity(context,qp,grad_u,grad_v,grad_w,tau,C);
+        _solid_mech->get_stress_and_elasticity(context,qp,grad_u,grad_v,grad_w,blah,C);
 
+        /*
         if( tau.norm() > 1.0e-3 )
           std::cout << "grad_u = " << grad_u << std::endl
                     << "grad_v = " << grad_v << std::endl
@@ -699,11 +708,14 @@ namespace GRINS
               libmesh_error_msg("ERROR: Unexpected fluid_dphi size!");
 
             // Zero index for fluid dphi/JxW since we only requested one quad. point.
-            Fu(i) -= tau.slice(0)*fluid_dphi[i][0]*solid_JxW[qp];
-            Fv(i) -= tau.slice(1)*fluid_dphi[i][0]*solid_JxW[qp];
+            for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
+              {
+                Fu(i) -= tau(alpha,0)*fluid_dphi[i][0](alpha)*solid_JxW[qp];
+                Fv(i) -= tau(alpha,1)*fluid_dphi[i][0](alpha)*solid_JxW[qp];
 
-            if (this->_flow_vars.dim() == 3)
-              (*Fw)(i) -= tau.slice(2)*fluid_dphi[i][qp]*solid_JxW[qp];
+                if (this->_flow_vars.dim() == 3)
+                  (*Fw)(i) -= tau(alpha,2)*fluid_dphi[i][qp](alpha)*solid_JxW[qp];
+              }
 
             if( compute_jacobian )
               {
@@ -711,7 +723,7 @@ namespace GRINS
 
                 for (unsigned int j=0; j != n_solid_dofs; j++)
                   {
-                    libMesh::Real term1 = (solid_dphi[j][qp]*(S*Ftrans))*fluid_dphi[i][0];
+                    libMesh::Real term1 = (((S*Ftrans).transpose())*solid_dphi[j][qp])*fluid_dphi[i][0];
 
                     libMesh::Real term3 = (P*solid_dphi[j][qp])*fluid_dphi[i][0];
 
@@ -744,28 +756,28 @@ namespace GRINS
                         for( unsigned int K = 0; K < _disp_vars.dim(); K++ )
                           for( unsigned int L = 0; L < _disp_vars.dim(); L++ )
                             {
-                              Kuf_us(i,j) -= F(0,I)*C(I,J,K,L)*F(0,K)*(Ftrans.row(J)*fluid_dphi[i][0])*solid_phi[j][qp](L);
-                              Kvf_us(i,j) -= F(1,I)*C(I,J,K,L)*F(0,K)*(Ftrans.row(J)*fluid_dphi[i][0])*solid_phi[j][qp](L);
+                              Kuf_us(i,j) -= F(0,I)*C(I,J,K,L)*F(0,K)*(Ftrans.row(J)*fluid_dphi[i][0])*solid_dphi[j][qp](L);
+                              Kvf_us(i,j) -= F(1,I)*C(I,J,K,L)*F(0,K)*(Ftrans.row(J)*fluid_dphi[i][0])*solid_dphi[j][qp](L);
 
                               if(this->_flow_vars.dim() == 3)
-                                Kwf_us(i,j) -= F(2,I)*C(I,J,K,L)*F(0,K)*(Ftrans.row(J)*fluid_dphi[i][0])*solid_phi[j][qp](L);
+                                Kwf_us(i,j) -= F(2,I)*C(I,J,K,L)*F(0,K)*(Ftrans.row(J)*fluid_dphi[i][0])*solid_dphi[j][qp](L);
 
                               if( this->_disp_vars.dim() >= 2 )
                                 {
-                                  Kuf_vs(i,j) -= F(0,I)*C(I,J,K,L)*F(1,K)*(Ftrans.row(J)*fluid_dphi[i][0])*solid_phi[j][qp](L);
-                                  Kvf_vs(i,j) -= F(1,I)*C(I,J,K,L)*F(1,K)*(Ftrans.row(J)*fluid_dphi[i][0])*solid_phi[j][qp](L);
+                                  Kuf_vs(i,j) -= F(0,I)*C(I,J,K,L)*F(1,K)*(Ftrans.row(J)*fluid_dphi[i][0])*solid_dphi[j][qp](L);
+                                  Kvf_vs(i,j) -= F(1,I)*C(I,J,K,L)*F(1,K)*(Ftrans.row(J)*fluid_dphi[i][0])*solid_dphi[j][qp](L);
 
                                   if(this->_flow_vars.dim() == 3)
-                                    Kwf_vs(i,j) -= F(2,I)*C(I,J,K,L)*F(1,K)*(Ftrans.row(J)*fluid_dphi[i][0])*solid_phi[j][qp](L);
+                                    Kwf_vs(i,j) -= F(2,I)*C(I,J,K,L)*F(1,K)*(Ftrans.row(J)*fluid_dphi[i][0])*solid_dphi[j][qp](L);
                                 }
 
                               if( this->_disp_vars.dim() == 3 )
                                 {
-                                  Kuf_ws(i,j) -= F(0,I)*C(I,J,K,L)*F(2,K)*(Ftrans.row(J)*fluid_dphi[i][0])*solid_phi[j][qp](L);
-                                  Kvf_ws(i,j) -= F(1,I)*C(I,J,K,L)*F(2,K)*(Ftrans.row(J)*fluid_dphi[i][0])*solid_phi[j][qp](L);
+                                  Kuf_ws(i,j) -= F(0,I)*C(I,J,K,L)*F(2,K)*(Ftrans.row(J)*fluid_dphi[i][0])*solid_dphi[j][qp](L);
+                                  Kvf_ws(i,j) -= F(1,I)*C(I,J,K,L)*F(2,K)*(Ftrans.row(J)*fluid_dphi[i][0])*solid_dphi[j][qp](L);
 
                                   if(this->_flow_vars.dim() == 3)
-                                    Kwf_ws(i,j) -= F(2,I)*C(I,J,K,L)*F(2,K)*(Ftrans.row(J)*fluid_dphi[i][0])*solid_phi[j][qp](L);
+                                    Kwf_ws(i,j) -= F(2,I)*C(I,J,K,L)*F(2,K)*(Ftrans.row(J)*fluid_dphi[i][0])*solid_dphi[j][qp](L);
                                 }
                             }
 
@@ -782,11 +794,11 @@ namespace GRINS
     if( compute_jacobian )
       {
         system.get_dof_map().constrain_element_matrix_and_vector
-          ( K,
+          ( Kmat,
             fluid_context.get_elem_residual(),
             fluid_context.get_dof_indices(), false );
 
-        system.matrix->add_matrix( K,
+        system.matrix->add_matrix( Kmat,
                                    fluid_context.get_dof_indices(),
                                    solid_context.get_dof_indices() );
       }
