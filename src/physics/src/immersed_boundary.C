@@ -352,15 +352,13 @@ namespace GRINS
                                    n_solid_dofs, n_fluid_dofs );
 
                 if( this->_disp_vars.dim() >= 2 )
-                  {
-                    Kvs_vf.reposition( this->_disp_vars.v()*n_solid_dofs, this->_flow_vars.v()*n_fluid_dofs,
-                                       n_solid_dofs, n_fluid_dofs );
-                  }
+                  Kvs_vf.reposition( this->_disp_vars.v()*n_solid_dofs, this->_flow_vars.v()*n_fluid_dofs,
+                                     n_solid_dofs, n_fluid_dofs );
+
                 if( this->_disp_vars.dim() == 3 )
-                  {
+                  if( this->_flow_vars.dim() == 3 )
                     Kws_wf.reposition( this->_disp_vars.w()*n_solid_dofs, this->_flow_vars.w()*n_fluid_dofs,
                                        n_solid_dofs, n_fluid_dofs );
-                  }
               }
 
             unsigned int n_qpoints = solid_qpoints.size();
@@ -631,14 +629,14 @@ namespace GRINS
 
             if( this->_disp_vars.dim() == 3 )
               {
-                Kuf_ws.reposition( this->_flow_vars.u()*n_fluid_dofs, this->_flow_vars.w()*n_solid_dofs,
+                Kuf_ws.reposition( this->_flow_vars.u()*n_fluid_dofs, this->_disp_vars.w()*n_solid_dofs,
                                    n_fluid_dofs, n_solid_dofs );
 
-                Kvf_ws.reposition( this->_flow_vars.v()*n_fluid_dofs, this->_flow_vars.w()*n_solid_dofs,
+                Kvf_ws.reposition( this->_flow_vars.v()*n_fluid_dofs, this->_disp_vars.w()*n_solid_dofs,
                                    n_fluid_dofs, n_solid_dofs );
 
                 if( _flow_vars.dim() == 3 )
-                  Kwf_ws.reposition( this->_flow_vars.w()*n_fluid_dofs, this->_flow_vars.w()*n_solid_dofs,
+                  Kwf_ws.reposition( this->_flow_vars.w()*n_fluid_dofs, this->_disp_vars.w()*n_solid_dofs,
                                      n_fluid_dofs, n_solid_dofs );
               }
           }
