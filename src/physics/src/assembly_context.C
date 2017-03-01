@@ -25,6 +25,9 @@
 // This class
 #include "grins/assembly_context.h"
 
+// GRINS
+#include "grins/multiphysics_sys.h"
+
 namespace GRINS
 {
   AssemblyContext::AssemblyContext( const libMesh::System& system )
@@ -32,10 +35,18 @@ namespace GRINS
   {
     return;
   }
-    
+
   AssemblyContext::~AssemblyContext()
   {
     return;
+  }
+
+  const MultiphysicsSystem & AssemblyContext::get_multiphysics_system() const
+  {
+    const MultiphysicsSystem & multiphysics_system =
+      libMesh::cast_ref<const MultiphysicsSystem &>( this->get_system() );
+
+    return multiphysics_system;
   }
 
 } // end namespace GRINS
