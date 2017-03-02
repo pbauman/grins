@@ -490,21 +490,20 @@ namespace GRINS
               assembled and homogeneous constraints. */
             if( compute_jacobian )
               {
-                system.get_dof_map().constrain_element_matrix_and_vector
+                system.get_dof_map().constrain_element_matrix
                   ( K,
-                    solid_context.get_elem_residual(),
-                    solid_context.get_dof_indices(), false );
+                    solid_dof_indices,
+                    velocity_dof_indices,
+                    false );
 
                 system.matrix->add_matrix( K,
                                            solid_dof_indices,
                                            velocity_dof_indices );
               }
-            else
-              {
-                system.get_dof_map().constrain_element_vector
+
+            system.get_dof_map().constrain_element_vector
                   ( solid_context.get_elem_residual(),
-                    solid_context.get_dof_indices(), false );
-              }
+                    solid_dof_indices, false );
 
             system.rhs->add_vector( solid_context.get_elem_residual(),
                                     solid_dof_indices );
