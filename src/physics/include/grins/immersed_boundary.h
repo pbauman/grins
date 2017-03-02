@@ -60,8 +60,8 @@ namespace GRINS
     //! Sets velocity variables to be time-evolving
     virtual void set_time_evolving_vars( libMesh::FEMSystem* system );
 
-    //! Init variables and stuff we need
-    virtual void init_variables( libMesh::FEMSystem* system);
+    //! Init point locator and local FEMContext
+    virtual void auxiliary_init( MultiphysicsSystem & system );
 
     //! Context initialization
     virtual void init_context( AssemblyContext& context );

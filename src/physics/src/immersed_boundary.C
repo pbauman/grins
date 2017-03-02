@@ -96,23 +96,22 @@ namespace GRINS
   }
 
   template<typename SolidMech>
-  void ImmersedBoundary<SolidMech>::init_variables( libMesh::FEMSystem* system )
+  void ImmersedBoundary<SolidMech>::auxiliary_init( MultiphysicsSystem & system )
   {
     // Get the point locator object that will find the right fluid element
-    // TODO: move this to somewhere not so hackish
-    _point_locator = system->get_mesh().sub_point_locator();
+    _point_locator = system.get_mesh().sub_point_locator();
 
     // Build helper FEMContexts. We'll use this to handle
     // supplemental finite element data for variables that
     // we need, but are not defined on the "current" subdomain.
     {
-      libMesh::UniquePtr<libMesh::DiffContext> raw_context = system->build_context();
+      libMesh::UniquePtr<libMesh::DiffContext> raw_context = system.build_context();
       libMesh::FEMContext * context = libMesh::cast_ptr<libMesh::FEMContext *>(raw_context.release());
       _solid_context.reset(context);
     }
 
     {
-      libMesh::UniquePtr<libMesh::DiffContext> raw_context = system->build_context();
+      libMesh::UniquePtr<libMesh::DiffContext> raw_context = system.build_context();
       libMesh::FEMContext * context = libMesh::cast_ptr<libMesh::FEMContext *>(raw_context.release());
       _fluid_context.reset(context);
     }
