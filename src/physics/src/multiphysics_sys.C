@@ -31,6 +31,8 @@
 #include "grins/fe_variables_base.h"
 #include "grins/variable_warehouse.h"
 #include "grins/bc_builder.h"
+#include "grins/constraint_builder.h"
+#include "grins/composite_qoi.h"
 
 // libMesh
 #include "libmesh/composite_function.h"
@@ -133,6 +135,11 @@ namespace GRINS
 
     libmesh_assert(_input);
     BCBuilder::build_boundary_conditions(*_input,*this,_neumann_bcs);
+
+    this->_constraint =
+      ConstraintBuilder::build_constraint_object(*_input,*this);
+
+    this->attach_constraint_object(*this->_constraint);
 
     // If any variables need custom numerical_jacobian_h, we can set those
     // values now that variable names are all registered with the System
@@ -243,7 +250,7 @@ namespace GRINS
 
   void MultiphysicsSystem::init_context( libMesh::DiffContext& context )
   {
-    AssemblyContext& c = libMesh::libmesh_cast_ref<AssemblyContext&>(context);
+    AssemblyContext& c = libMesh::cast_ref<AssemblyContext&>(context);
 
     //Loop over each physics to initialize relevant variable structures for assembling system
     for( PhysicsListIter physics_iter = _physics_list.begin();
@@ -270,12 +277,32 @@ namespace GRINS
     libMesh::FEMSystem::assembly(get_residual,get_jacobian,apply_heterogeneous_constraints);
   }
 
+  void MultiphysicsSystem::reinit()
+  {
+    // First call Parent
+    FEMSystem::reinit();
+
+    // Now do per Physics reinit (which by default is none)
+    for( PhysicsListIter physics_iter = _physics_list.begin();
+         physics_iter != _physics_list.end();
+         physics_iter++ )
+      (physics_iter->second)->reinit(*this);
+
+    // And now reinit the QoI
+    if (this->qoi.size() > 0)
+      {
+        libMesh::DifferentiableQoI* diff_qoi = this->get_qoi();
+        CompositeQoI* qoi = libMesh::cast_ptr<CompositeQoI*>(diff_qoi);
+        qoi->reinit(*this);
+      }
+  }
+
   bool MultiphysicsSystem::_general_residual( bool request_jacobian,
 					      libMesh::DiffContext& context,
                                               ResFuncType resfunc,
                                               CacheFuncType cachefunc)
   {
-    AssemblyContext& c = libMesh::libmesh_cast_ref<AssemblyContext&>(context);
+    AssemblyContext& c = libMesh::cast_ref<AssemblyContext&>(context);
 
     bool compute_jacobian = true;
     if( !request_jacobian || _use_numerical_jacobians_only ) compute_jacobian = false;
@@ -464,7 +491,7 @@ namespace GRINS
                                               libMesh::DiffContext& context )
   {
     AssemblyContext& assembly_context =
-      libMesh::libmesh_cast_ref<AssemblyContext&>( context );
+      libMesh::cast_ref<AssemblyContext&>( context );
 
     std::vector<BoundaryID> ids = assembly_context.side_boundary_ids();
 

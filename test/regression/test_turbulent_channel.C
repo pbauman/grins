@@ -53,7 +53,9 @@
 
 // GRVY
 #ifdef GRINS_HAVE_GRVY
+#include "libmesh/ignore_warnings.h" // avoid auto_ptr deprecated warnings
 #include "grvy.h"
+#include "libmesh/restore_warnings.h"
 #endif
 
 namespace GRINS
@@ -259,6 +261,17 @@ int main(int argc, char* argv[])
 
   // Create our GetPot object.
   GetPot libMesh_inputfile( libMesh_input_filename );
+
+  // But allow command line options to override the file
+  libMesh_inputfile.parse_command_line(argc, argv);
+
+  // Don't flag our command-line-specific variables as UFOs later
+  libMesh_inputfile.have_variable("mesh-1d");
+  libMesh_inputfile.have_variable("data-1d");
+  libMesh_inputfile.have_variable("soln-data");
+  libMesh_inputfile.have_variable("vars");
+  libMesh_inputfile.have_variable("norms");
+  libMesh_inputfile.have_variable("tol");
 
 #ifdef GRINS_USE_GRVY_TIMERS
   grvy_timer.BeginTimer("Initialize Solver");

@@ -34,7 +34,7 @@
 #include "grins/constant_source_term.h"
 #include "grins/parsed_source_term.h"
 #include "grins/convection_diffusion.h"
-#include "grins/elastic_cable_constant_gravity.h"
+#include "grins/variable_pinning.h"
 
 namespace GRINS
 {
@@ -52,10 +52,10 @@ namespace GRINS
   // This one needs to die. Regular Boussinesq should handle the axisymmetry
   PhysicsFactoryBasic<AxisymmetricBoussinesqBuoyancy> grins_factory_axi_boussinesq(PhysicsNaming::axisymmetric_boussinesq_buoyancy());
   PhysicsFactoryBasic<ElasticMembraneConstantPressure> grins_factory_elastic_membrane_pressure(PhysicsNaming::elastic_membrane_constant_pressure());
-  PhysicsFactoryBasic<ElasticCableConstantGravity> grins_factory_elastic_cable_gravity(PhysicsNaming::elastic_cable_constant_gravity());
   // This one needs to die and just have the parsed version
   PhysicsFactoryBasic<ConstantSourceTerm> grins_factory_constant_source_term(PhysicsNaming::constant_source_term());
   PhysicsFactoryBasic<ParsedSourceTerm> grins_factory_parsed_source_term(PhysicsNaming::parsed_source_term());
   PhysicsFactoryBasic<ConvectionDiffusion> grins_factory_convection_difffusion(PhysicsNaming::convection_diffusion());
+  PhysicsFactoryBasic<VariablePinning> grins_factory_variable_pinning(PhysicsNaming::variable_pinning());
 
 } // end namespace GRINS

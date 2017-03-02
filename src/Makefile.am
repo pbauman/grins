@@ -67,6 +67,10 @@ libgrins_la_SOURCES += boundary_conditions/src/gas_catalytic_wall_neumann_bc_old
 # src/common
 libgrins_la_SOURCES += common/src/builder_helper.C
 
+# src/constraints
+libgrins_la_SOURCES += constraints/src/constraint_builder.C
+libgrins_la_SOURCES += constraints/src/constrained_points.C
+
 # src/ic_handling files
 libgrins_la_SOURCES += ic_handling/src/ic_handling_base.C
 libgrins_la_SOURCES += ic_handling/src/generic_ic_handler.C
@@ -140,7 +144,6 @@ libgrins_la_SOURCES += physics/src/elastic_cable_abstract.C
 libgrins_la_SOURCES += physics/src/elastic_cable_base.C
 libgrins_la_SOURCES += physics/src/elastic_cable.C
 libgrins_la_SOURCES += physics/src/elastic_cable_rayleigh_damping.C
-libgrins_la_SOURCES += physics/src/elastic_cable_constant_gravity.C
 libgrins_la_SOURCES += physics/src/nonlinear_elasticity_instantiate.C
 libgrins_la_SOURCES += physics/src/source_term_base.C
 libgrins_la_SOURCES += physics/src/constant_source_term.C
@@ -159,6 +162,7 @@ libgrins_la_SOURCES += physics/src/physics_factory_one_d_stress_solids.C
 libgrins_la_SOURCES += physics/src/physics_factory_immersed_boundary.C
 libgrins_la_SOURCES += physics/src/physics_factory_reacting_flows.C
 libgrins_la_SOURCES += physics/src/physics_builder.C
+libgrins_la_SOURCES += physics/src/variable_pinning.C
 
 
 # src/properties files
@@ -202,6 +206,11 @@ libgrins_la_SOURCES += qoi/src/parsed_boundary_qoi.C
 libgrins_la_SOURCES += qoi/src/parsed_interior_qoi.C
 libgrins_la_SOURCES += qoi/src/weighted_flux_qoi.C
 libgrins_la_SOURCES += qoi/src/rayfire_mesh.C
+libgrins_la_SOURCES += qoi/src/integrated_function.C
+libgrins_la_SOURCES += qoi/src/qoi_output.C
+libgrins_la_SOURCES += qoi/src/hitran.C
+libgrins_la_SOURCES += qoi/src/absorption_coeff.C
+libgrins_la_SOURCES += qoi/src/spectroscopic_absorption.C
 
 # src/solver files
 libgrins_la_SOURCES += solver/src/grins_solver.C
@@ -328,6 +337,10 @@ include_HEADERS += common/include/grins/factory_abstract.h
 include_HEADERS += common/include/grins/factory_with_getpot.h
 include_HEADERS += common/include/grins/factory_with_getpot_physics_name.h
 
+# src/constraints headers
+include_HEADERS += constraints/include/grins/constrained_points.h
+include_HEADERS += constraints/include/grins/constraint_builder.h
+
 # src/ic_handling headers
 include_HEADERS += ic_handling/include/grins/ic_handling_base.h
 include_HEADERS += ic_handling/include/grins/generic_ic_handler.h
@@ -411,7 +424,6 @@ include_HEADERS += physics/include/grins/elastic_cable.h
 include_HEADERS += physics/include/grins/elastic_cable_rayleigh_damping.h
 include_HEADERS += physics/include/grins/elastic_membrane_rayleigh_damping.h
 include_HEADERS += physics/include/grins/elastic_membrane_constant_pressure.h
-include_HEADERS += physics/include/grins/elastic_cable_constant_gravity.h
 include_HEADERS += physics/include/grins/source_term_base.h
 include_HEADERS += physics/include/grins/constant_source_term.h
 include_HEADERS += physics/include/grins/parsed_source_term.h
@@ -429,6 +441,7 @@ include_HEADERS += physics/include/grins/physics_factory_plane_stress_solids.h
 include_HEADERS += physics/include/grins/physics_factory_one_d_stress_solids.h
 include_HEADERS += physics/include/grins/physics_factory_reacting_flows.h
 include_HEADERS += physics/include/grins/physics_builder.h
+include_HEADERS += physics/include/grins/variable_pinning.h
 
 # src/properties headers
 include_HEADERS += properties/include/grins/property_types.h
@@ -477,6 +490,12 @@ include_HEADERS += qoi/include/grins/parsed_boundary_qoi.h
 include_HEADERS += qoi/include/grins/parsed_interior_qoi.h
 include_HEADERS += qoi/include/grins/weighted_flux_qoi.h
 include_HEADERS += qoi/include/grins/rayfire_mesh.h
+include_HEADERS += qoi/include/grins/integrated_function.h
+include_HEADERS += qoi/include/grins/qoi_output.h
+include_HEADERS += qoi/include/grins/qoi_options.h
+include_HEADERS += qoi/include/grins/hitran.h
+include_HEADERS += qoi/include/grins/absorption_coeff.h
+include_HEADERS += qoi/include/grins/spectroscopic_absorption.h
 
 # src/solver headers
 include_HEADERS += solver/include/grins/grins_solver.h
@@ -530,6 +549,7 @@ include_HEADERS += utilities/include/grins/cached_quantities_enum.h
 include_HEADERS += utilities/include/grins/string_utils.h
 include_HEADERS += utilities/include/grins/distance_function.h
 include_HEADERS += utilities/include/grins/parameter_antioch_reset.h
+include_HEADERS += utilities/include/grins/output_parsing.h
 
 # src/visualization headers
 include_HEADERS += visualization/include/grins/steady_visualization.h
@@ -590,6 +610,7 @@ endif
 #--------------------------------------
 AM_CPPFLAGS =
 AM_CPPFLAGS += -I$(top_srcdir)/src/boundary_conditions/include
+AM_CPPFLAGS += -I$(top_srcdir)/src/constraints/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/common/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/ic_handling/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/physics/include

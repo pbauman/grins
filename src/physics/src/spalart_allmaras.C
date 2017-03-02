@@ -116,7 +116,7 @@ namespace GRINS
   {
     // Tell the system to march velocity forward in time, but
     // leave p as a constraint only
-    system->time_evolving(this->_turbulence_vars.nu());
+    system->time_evolving(this->_turbulence_vars.nu(),1);
   }
 
   template<class Mu>
@@ -198,7 +198,7 @@ namespace GRINS
         v = context.interior_value(this->_flow_vars.v(), qp);
 
         libMesh::NumberVectorValue U(u,v);
-        if (this->mesh_dim(context) == 3)
+        if (this->_flow_vars.dim() == 3)
           U(2) = context.interior_value(this->_flow_vars.w(), qp);
 
         //The source term

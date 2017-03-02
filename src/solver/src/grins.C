@@ -33,7 +33,9 @@
 
 // GRVY
 #ifdef GRINS_HAVE_GRVY
+#include "libmesh/ignore_warnings.h" // avoid auto_ptr deprecated warnings
 #include "grvy.h"
+#include "libmesh/restore_warnings.h"
 #endif
 
 // libMesh
@@ -74,9 +76,14 @@ int main(int argc, char* argv[])
   // Initialize libMesh library.
   libMesh::LibMeshInit libmesh_init(argc, argv);
 
-  // Create our GetPot object.
+  // Create our GetPot object from the input file
   GetPot libMesh_inputfile( libMesh_input_filename );
 
+  // But allow command line options to override the file
+  libMesh_inputfile.parse_command_line(argc, argv);
+
+  // And create a command_line only GetPot object for command line
+  // specific arguments
   GetPot command_line(argc,argv);
 
   // GetPot doesn't throw an error for a nonexistent file?

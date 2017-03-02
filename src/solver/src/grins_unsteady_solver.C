@@ -40,8 +40,10 @@
 #include "libmesh/getpot.h"
 #include "libmesh/euler_solver.h"
 #include "libmesh/euler2_solver.h"
+#include "libmesh/function_base.h"
 #include "libmesh/twostep_time_solver.h"
 #include "libmesh/newmark_solver.h"
+#include "libmesh/function_base.h"
 
 // C++
 #include <ctime>
@@ -228,7 +230,7 @@ namespace GRINS
     // Right now, only Newmark is available so we cast directly to that
     libMesh::TimeSolver& base_time_solver = context.system->get_time_solver();
 
-    libMesh::NewmarkSolver& time_solver = libMesh::libmesh_cast_ref<libMesh::NewmarkSolver&>(base_time_solver);
+    libMesh::NewmarkSolver& time_solver = libMesh::cast_ref<libMesh::NewmarkSolver&>(base_time_solver);
 
     // If there's a restart, the acceleration should already be there
     if( context.have_restart )

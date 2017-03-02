@@ -34,6 +34,21 @@
 #include "grins/parsed_boundary_qoi.h"
 #include "grins/parsed_interior_qoi.h"
 #include "grins/weighted_flux_qoi.h"
+#include "grins/integrated_function.h"
+#include "grins/hitran.h"
+#include "grins/absorption_coeff.h"
+#include "grins/spectroscopic_absorption.h"
+
+#if GRINS_HAVE_ANTIOCH
+#include "grins/antioch_chemistry.h"
+#endif
+
+#if GRINS_HAVE_CANTERA
+#include "grins/cantera_mixture.h"
+#endif
+
+// libMesh
+#include "libmesh/parsed_function.h"
 
 namespace GRINS
 {
@@ -41,7 +56,7 @@ namespace GRINS
   {
     return;
   }
-  
+
   QoIFactory::~QoIFactory()
   {
     return;
@@ -59,7 +74,7 @@ namespace GRINS
       }
 
     SharedPtr<CompositeQoI> qois( new CompositeQoI );
-    
+
     if( !qoi_names.empty() )
       {
         for( std::vector<std::string>::const_iterator name = qoi_names.begin();
@@ -79,7 +94,7 @@ namespace GRINS
     return qois;
   }
 
-  void QoIFactory::add_qoi( const GetPot& /*input*/, const std::string& qoi_name, SharedPtr<CompositeQoI>& qois )
+  void QoIFactory::add_qoi( const GetPot& input, const std::string& qoi_name, SharedPtr<CompositeQoI>& qois )
   {
     QoIBase* qoi = NULL;
 
@@ -108,6 +123,81 @@ namespace GRINS
         qoi =  new WeightedFluxQoI( weighted_flux );
       }
 
+    else if( qoi_name == integrated_function )
+      {
+        SharedPtr<RayfireMesh> rayfire = this->construct_rayfire(input,"IntegratedFunction");
+
+        std::string function;
+        if (input.have_variable("QoI/IntegratedFunction/function"))
+          function = input("QoI/IntegratedFunction/function", "");
+        else
+          libmesh_error_msg("ERROR: Could not find function to integrate");
+
+        unsigned int p_level = input("QoI/IntegratedFunction/quadrature_level", 2);
+
+        SharedPtr<libMesh::FunctionBase<libMesh::Real> > f = new libMesh::ParsedFunction<libMesh::Real>(function);
+
+        qoi =  new IntegratedFunction<libMesh::FunctionBase<libMesh::Real> >(p_level,f,rayfire,integrated_function);
+      }
+
+    else if ( qoi_name == spectroscopic_absorption )
+      {
+        std::string material;
+        this->get_var_value<std::string>(input,material,"QoI/SpectroscopicAbsorption/material","NoMaterial!");
+
+        std::string hitran_data;
+        this->get_var_value<std::string>(input,hitran_data,"QoI/SpectroscopicAbsorption/hitran_data_file","");
+
+        std::string hitran_partition;
+        this->get_var_value<std::string>(input,hitran_partition,"QoI/SpectroscopicAbsorption/hitran_partition_function_file","");
+          
+        libMesh::Real T_min,T_max,T_step;
+        std::string partition_temp_var = "QoI/SpectroscopicAbsorption/partition_temperatures";
+        if (input.have_variable(partition_temp_var))
+          {
+            T_min = input(partition_temp_var, 0.0, 0);
+            T_max = input(partition_temp_var, 0.0, 1);
+            T_step = input(partition_temp_var, 0.0, 2);
+          }
+        else
+          libmesh_error_msg("ERROR: Could not find tenmperature range specification for partition functions: "+partition_temp_var+" 'T_min T_max T_step'");
+
+        SharedPtr<HITRAN> hitran( new HITRAN(hitran_data,hitran_partition,T_min,T_max,T_step) );
+
+        std::string species;
+        this->get_var_value<std::string>(input,species,"QoI/SpectroscopicAbsorption/species_of_interest","");
+
+        SharedPtr<libMesh::FEMFunctionBase<libMesh::Real> > absorb;
+
+        libMesh::Real thermo_pressure = -1.0;
+        bool calc_thermo_pressure = input("QoI/SpectroscopicAbsorption/calc_thermo_pressure", false );
+        if (!calc_thermo_pressure)
+          thermo_pressure = input("Materials/"+material+"/ThermodynamicPressure/value", 0.0 );
+
+        libMesh::Real nu_desired;
+        this->get_var_value<libMesh::Real>(input,nu_desired,"QoI/SpectroscopicAbsorption/desired_wavenumber",0.0);
+
+        libMesh::Real nu_min;
+        this->get_var_value<libMesh::Real>(input,nu_min,"QoI/SpectroscopicAbsorption/min_wavenumber",0.0);
+
+        libMesh::Real nu_max;
+        this->get_var_value<libMesh::Real>(input,nu_max,"QoI/SpectroscopicAbsorption/max_wavenumber",0.0);
+
+#if GRINS_HAVE_ANTIOCH
+        SharedPtr<AntiochChemistry> chem( new AntiochChemistry(input,material) );
+        absorb = new AbsorptionCoeff<AntiochChemistry>(chem,hitran,nu_min,nu_max,nu_desired,species,thermo_pressure);
+#elif GRINS_HAVE_CANTERA
+        SharedPtr<CanteraMixture> chem( new CanteraMixture(input,material) );
+        absorb = new AbsorptionCoeff<CanteraMixture>(chem,hitran,nu_min,nu_max,nu_desired,species,thermo_pressure);
+#else
+        libmesh_error_msg("ERROR: GRINS must be built with either Antioch or Cantera to use the SpectroscopicAbsorption QoI");
+#endif
+
+        SharedPtr<RayfireMesh> rayfire( this->construct_rayfire(input,"SpectroscopicAbsorption") );
+
+        qoi = new SpectroscopicAbsorption(qoi_name,absorb,rayfire);
+      }
+
     else
       {
 	 libMesh::err << "Error: Invalid QoI name " << qoi_name << std::endl;
@@ -121,14 +211,14 @@ namespace GRINS
     return;
   }
 
-  void QoIFactory::check_qoi_physics_consistency( const GetPot& input, 
+  void QoIFactory::check_qoi_physics_consistency( const GetPot& input,
 						  const std::string& qoi_name )
   {
     int num_physics =  input.vector_variable_size("Physics/enabled_physics");
 
     // This should be checked other places, but let's be double sure.
     libmesh_assert(num_physics > 0);
-  
+
     std::set<std::string> requested_physics;
     std::set<std::string> required_physics;
 
@@ -137,8 +227,8 @@ namespace GRINS
       {
 	requested_physics.insert( input("Physics/enabled_physics", "NULL", i ) );
       }
-  
-    /* If it's Nusselt, we'd better have HeatTransfer or LowMachNavierStokes. 
+
+    /* If it's Nusselt, we'd better have HeatTransfer or LowMachNavierStokes.
        HeatTransfer implicitly requires fluids, so no need to check for those. `*/
     if( qoi_name == avg_nusselt )
       {
@@ -146,7 +236,7 @@ namespace GRINS
 	required_physics.insert(PhysicsNaming::low_mach_navier_stokes());
 	this->consistency_helper( requested_physics, required_physics, qoi_name );
       }
-      
+
     return;
   }
 
@@ -155,10 +245,10 @@ namespace GRINS
     /*! \todo Generalize to multiple QoI case when CompositeQoI is implemented in libMesh */
     std::cout << "==========================================================" << std::endl
 	      << "List of Enabled QoIs:" << std::endl;
-    
+
     for( unsigned int q = 0; q < qois->n_qois(); q++ )
       {
-        std::cout << qois->get_qoi(q).name() << std::endl;      
+        std::cout << qois->get_qoi(q).name() << std::endl;
       }
 
     std::cout <<  "==========================================================" << std::endl;
@@ -167,7 +257,7 @@ namespace GRINS
   }
 
   void QoIFactory::consistency_helper( const std::set<std::string>& requested_physics,
-				       const std::set<std::string>& required_physics, 
+				       const std::set<std::string>& required_physics,
 				       const std::string& qoi_name )
   {
     bool physics_found = false;
@@ -185,23 +275,66 @@ namespace GRINS
     return;
   }
 
-  void QoIFactory::consistency_error_msg( const std::string& qoi_name, 
+  void QoIFactory::consistency_error_msg( const std::string& qoi_name,
 					  const std::set<std::string>& required_physics )
   {
     libMesh::err << "================================================================" << std::endl
 		 << "QoI " << qoi_name << std::endl
 		 << "requires one of the following physics which were not found:" <<std::endl;
-    
+
     for( std::set<std::string>::const_iterator name = required_physics.begin();
 	 name != required_physics.end();
 	 name++ )
       {
 	libMesh::err << *name << std::endl;
       }
-  
+
     libMesh::err << "================================================================" << std::endl;
 
     libmesh_error();
   }
+
+  SharedPtr<RayfireMesh> QoIFactory::construct_rayfire( const GetPot& input, const std::string qoi_string )
+  {
+    unsigned int rayfire_dim = input.vector_variable_size("QoI/"+qoi_string+"/Rayfire/origin");
+
+    if (rayfire_dim != 2)
+      libmesh_error_msg("ERROR: Only 2D Rayfires are currently supported");
+
+    if (!input.have_variable("QoI/"+qoi_string+"/Rayfire/origin"))
+      libmesh_error_msg("ERROR: No origin specified for Rayfire");
+
+    if (input.vector_variable_size("QoI/"+qoi_string+"/Rayfire/origin") != 2)
+      libmesh_error_msg("ERROR: Please specify a 2D point (x,y) for the rayfire origin");
+
+    libMesh::Point origin;
+    origin(0) = input("QoI/"+qoi_string+"/Rayfire/origin", 0.0, 0);
+    origin(1) = input("QoI/"+qoi_string+"/Rayfire/origin", 0.0, 1);
+
+    libMesh::Real theta;
+
+    if (input.have_variable("QoI/"+qoi_string+"/Rayfire/theta"))
+        theta = input("QoI/"+qoi_string+"/Rayfire/theta", -7.0);
+    else
+        libmesh_error_msg("ERROR: Spherical polar angle theta must be given for Rayfire");
+
+
+    if (input.have_variable("QoI/"+qoi_string+"/Rayfire/phi"))
+      libmesh_error_msg("ERROR: cannot specify spherical azimuthal angle phi for Rayfire, only 2D is currently supported");
+
+    return new RayfireMesh(origin,theta);
+  }
+  
+  template<typename T>
+  void QoIFactory::get_var_value( const GetPot & input, T & value, std::string input_var, T default_value )
+  {
+    if (input.have_variable(input_var))
+      value = input(input_var, default_value);
+    else
+      libmesh_error_msg("ERROR: Could not find required input parameter: "+input_var);
+  }
+
+template void QoIFactory::get_var_value<std::string>( const GetPot &, std::string &, std::string, std::string);
+template void QoIFactory::get_var_value<libMesh::Real>( const GetPot &, libMesh::Real &, std::string, libMesh::Real);
 
 } //namespace GRINS

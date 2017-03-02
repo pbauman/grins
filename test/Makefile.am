@@ -97,9 +97,8 @@ check_PROGRAMS += elastic_sheet_regression
 check_PROGRAMS += 3d_low_mach_jacobians_xy
 check_PROGRAMS += 3d_low_mach_jacobians_xz
 check_PROGRAMS += 3d_low_mach_jacobians_yz
-check_PROGRAMS += suspended_cable_regression
 check_PROGRAMS += generic_solution_regression
-
+check_PROGRAMS += regression_testing_app
 
 # AMR Tests
 check_PROGRAMS += generic_amr_testing_app
@@ -111,7 +110,11 @@ unit_driver_SOURCES = unit/unit_driver.C \
                       unit/variables.C \
                       unit/builder_helper.C \
                       unit/default_bc_builder.C \
-                      unit/rayfire_test.C
+                      unit/rayfire_test.C \
+                      unit/rayfireAMR_test.C \
+                      unit/integrated_function_test.C \
+                      unit/hitran_test.C \
+                      unit/spectroscopic_absorption_test.C
 
 antioch_mixture_SOURCES = unit/antioch_mixture.C
 arrhenius_catalycity_SOURCES = unit/arrhenius_catalycity.C
@@ -154,8 +157,8 @@ elastic_sheet_regression_SOURCES = regression/elastic_sheet_regression.C
 3d_low_mach_jacobians_xy_SOURCES = regression/3d_low_mach_jacobians.C
 3d_low_mach_jacobians_xz_SOURCES = regression/3d_low_mach_jacobians.C
 3d_low_mach_jacobians_yz_SOURCES = regression/3d_low_mach_jacobians.C
-suspended_cable_regression_SOURCES = regression/suspended_cable_regression.C
 generic_solution_regression_SOURCES = regression/generic_solution_regression.C
+regression_testing_app_SOURCES = regression/regression_testing_app.C
 
 # AMR test source files
 generic_amr_testing_app_SOURCES = amr/generic_amr_testing_app.C
@@ -208,6 +211,10 @@ TESTS += exact_soln/poisson_periodic_2d_y.sh
 TESTS += exact_soln/poisson_periodic_3d_xy.sh
 TESTS += exact_soln/poisson_periodic_3d_xz.sh
 TESTS += exact_soln/poisson_periodic_3d_yz.sh
+TESTS += exact_soln/elastic_cable_oned_displacement.sh
+TESTS += exact_soln/elastic_cable_twod_displacement.sh
+TESTS += exact_soln/elastic_cable_oned_newmark_rayleigh_damping.sh
+TESTS += exact_soln/elastic_cable_twod_newmark_rayleigh_damping.sh
 
 # Error/xfail TESTS
 TESTS += error_xfail/error_ufo.sh
@@ -255,6 +262,8 @@ TESTS += regression/backward_facing_step.sh
 TESTS += regression/locally_refine.sh
 TESTS += regression/penalty_poiseuille.sh
 TESTS += regression/penalty_poiseuille_stab.sh
+TESTS += regression/poisson_user_constraint.sh
+TESTS += regression/velocity_penalty_drag.sh
 TESTS += regression/redistribute.sh
 TESTS += regression/coupled_stokes_ns.sh
 TESTS += regression/hot_cylinder.sh
@@ -290,6 +299,10 @@ TESTS += regression/elastic_mooney_rivlin_square_hookean_stiffeners.sh
 TESTS += regression/elastic_mooney_rivlin_square_hookean_stiffeners_unifref.sh
 TESTS += regression/elastic_mooney_rivlin_square_hookean_stiffeners_newmark.sh
 TESTS += regression/elastic_mooney_rivlin_square_hookean_stiffeners_rayleigh_damping_newmark.sh
+TESTS += regression/elastic_mooney_rivlin_membrane_cantilever_unsteady_rayleigh_damping.sh
+TESTS += regression/elastic_mooney_rivlin_membrane_cantilever_unsteady_newmark_regression.sh
+TESTS += regression/elastic_mooney_rivlin_membrane_cantilever_unsteady_euler_regression.sh
+
 TESTS += regression/extra_quadrature_order_laplace_arefee_amr.sh
 
 

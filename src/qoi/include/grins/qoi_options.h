@@ -22,32 +22,27 @@
 //
 //-----------------------------------------------------------------------el-
 
-#ifndef GRINS_ELASTIC_CABLE_CONSTANT_GRAVITY_H
-#define GRINS_ELASTIC_CABLE_CONSTANT_GRAVITY_H
+#ifndef GRINS_QOI_OPTIONS_H
+#define GRINS_QOI_OPTIONS_H
 
-//GRINS
-#include "grins/elastic_cable_abstract.h"
+// GRINS
+#include "grins/output_parsing.h"
 
 namespace GRINS
 {
-  class ElasticCableConstantGravity : public ElasticCableAbstract
+  class QoIOptions
   {
   public:
-	  ElasticCableConstantGravity( const GRINS::PhysicsName& physics_name, const GetPot& input );
-    virtual ~ElasticCableConstantGravity();
 
-    //! Time dependent part(s) of physics for element interiors
-    virtual void element_time_derivative( bool compute_jacobian,
-                                          AssemblyContext& context,
-                                          CachedValues& cache );
+    static const std::string qoi_section()
+    { return "QoI"; }
 
-  private:
+    static const std::string output_to_display()
+    { return "print_qoi"; }
 
-    ElasticCableConstantGravity();
-
-    libMesh::Point _gravity;
+    static const std::string default_file_prefix()
+    { return "default_file_prefix"; }
   };
-
 } // end namespace GRINS
 
-#endif /* GRINS_ELASTIC_CABLE_CONSTANT_GRAVITY_H */
+#endif // GRINS_QOI_OPTIONS_H

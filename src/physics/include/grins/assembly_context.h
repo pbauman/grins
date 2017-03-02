@@ -31,12 +31,17 @@
 
 namespace GRINS
 {
+  // Forward declarations
+  class MultiphysicsSystem;
+
   class AssemblyContext : public libMesh::FEMContext
   {
   public:
 
     AssemblyContext( const libMesh::System& system );
     ~AssemblyContext();
+
+    const MultiphysicsSystem & get_multiphysics_system() const;
 
   protected:
 

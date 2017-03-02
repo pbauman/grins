@@ -99,7 +99,7 @@ namespace GRINS
 
   void CompositeQoI::init_context( libMesh::DiffContext& context )
   {
-    AssemblyContext& c = libMesh::libmesh_cast_ref<AssemblyContext&>(context);
+    AssemblyContext& c = libMesh::cast_ref<AssemblyContext&>(context);
 
     for( std::vector<QoIBase*>::iterator qoi = _qois.begin();
          qoi != _qois.end(); ++qoi )
@@ -119,10 +119,17 @@ namespace GRINS
       (*_qois[q]).register_parameter(param_name, param_pointer);
   }
 
+  void CompositeQoI::reinit(MultiphysicsSystem & system)
+  {
+    // call reinit() on each qoi
+    for (unsigned int i=0; i<this->n_qois(); i++)
+      (this->get_qoi(i)).reinit(system);
+  }
+
   void CompositeQoI::element_qoi( libMesh::DiffContext& context,
                                   const libMesh::QoISet& /*qoi_indices*/ )
   {
-    AssemblyContext& c = libMesh::libmesh_cast_ref<AssemblyContext&>(context);
+    AssemblyContext& c = libMesh::cast_ref<AssemblyContext&>(context);
 
     for( unsigned int q = 0; q < _qois.size(); q++ )
       {
@@ -135,7 +142,7 @@ namespace GRINS
   void CompositeQoI::element_qoi_derivative( libMesh::DiffContext& context,
                                              const libMesh::QoISet& /*qoi_indices*/ )
   {
-    AssemblyContext& c = libMesh::libmesh_cast_ref<AssemblyContext&>(context);
+    AssemblyContext& c = libMesh::cast_ref<AssemblyContext&>(context);
 
     for( unsigned int q = 0; q < _qois.size(); q++ )
       {
@@ -148,7 +155,7 @@ namespace GRINS
   void CompositeQoI::side_qoi( libMesh::DiffContext& context,
                                const libMesh::QoISet& /*qoi_indices*/ )
   {
-    AssemblyContext& c = libMesh::libmesh_cast_ref<AssemblyContext&>(context);
+    AssemblyContext& c = libMesh::cast_ref<AssemblyContext&>(context);
 
     for( unsigned int q = 0; q < _qois.size(); q++ )
       {
@@ -161,7 +168,7 @@ namespace GRINS
   void CompositeQoI::side_qoi_derivative( libMesh::DiffContext& context,
                                           const libMesh::QoISet& /*qoi_indices*/ )
   {
-    AssemblyContext& c = libMesh::libmesh_cast_ref<AssemblyContext&>(context);
+    AssemblyContext& c = libMesh::cast_ref<AssemblyContext&>(context);
 
     for( unsigned int q = 0; q < _qois.size(); q++ )
       {

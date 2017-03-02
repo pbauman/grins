@@ -47,7 +47,9 @@
 
 // GRVY
 #ifdef GRINS_HAVE_GRVY
+#include "libmesh/ignore_warnings.h" // avoid auto_ptr deprecated warnings
 #include "grvy.h" // GRVY timers
+#include "libmesh/restore_warnings.h"
 #endif
 
 // libMesh forward declarations
@@ -165,6 +167,12 @@ namespace GRINS
     //! Perform any necessary setup before element assembly begins
     virtual void preassembly( MultiphysicsSystem & /*system*/ ){};
 
+    //! Any reinitialization that needs to be done
+    /*! This is called through libMesh::FEMSystem::reinit, which is called e.g.
+        after adaptive mesh refinement/coarsening. So, for Physics that need to
+        reinit internally, then this method should be overridden. */
+    virtual void reinit( MultiphysicsSystem & /*system*/ ){};
+
     // residual and jacobian calculations
     // element_*, side_* as *time_derivative, *constraint, *mass_residual
 
@@ -263,9 +271,6 @@ namespace GRINS
 
     void parse_enabled_subdomains( const GetPot& input,
                                    const std::string& physics_name );
-
-    unsigned int mesh_dim( const AssemblyContext& context ) const
-    { return context.get_system().get_mesh().mesh_dimension(); }
 
     //! Check that var is enabled on at least the subdomains this Physics is
     void check_var_subdomain_consistency( const FEVariablesBase& var ) const;

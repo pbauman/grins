@@ -9,25 +9,35 @@
 
 []
 
-# Options for time solvers
-
-
 
 #Linear and nonlinear solver options
 [linear-nonlinear-solver]
 max_nonlinear_iterations = 10
 max_linear_iterations = 2500
 
-initial_linear_tolerance = 1.0e-12
+minimum_linear_tolerance = 1.0e-12
+relative_residual_tolerance = 1.e-11
+relative_step_tolerance = 1.e-11
 
 verify_analytic_jacobians = 1.e-6
+[]
 
 # Visualization options
 [vis-options]
-output_vis = 'false'
-output_solution_sensitivities = 'false'
-vis_output_file_prefix = 'parsed_qoi_vis'
-output_format = 'ExodusII'
+   output_vis = 'true'
+   vis_output_file_prefix = 'parsed_qoi'
+   output_format = 'xdr xda'
+[]
+
+[Output]
+   [./Display]
+      print_qoi = 'true'
+   [../]
+
+   [./QoI]
+      default_file_prefix = 'parsed_qoi.qoi'
+   [../]
+[]
 
 # Options for print info to the screen
 [screen-options]
@@ -39,7 +49,7 @@ solver_quiet = 'true'
 
 echo_physics = 'true'
 echo_qoi = 'true' # which QoIs activated
-print_qoi = 'true' # print numerical values of QoIs
+system_name = 'GRINS-TEST'
 
 [Materials]
    [./TestMaterial]

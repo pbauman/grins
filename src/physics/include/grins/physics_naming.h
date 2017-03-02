@@ -193,8 +193,10 @@ namespace GRINS
 
     static PhysicsName immersed_boundary()
     { return "ImmersedBoundary"+suffix(); }
-
     
+    static PhysicsName variable_pinning()
+    { return "VariablePinning"+suffix(); }
+
   private:
 
     static std::string physics_name_delimiter()

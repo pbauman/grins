@@ -105,6 +105,8 @@
            mass_diffusivity_model = 'constant_lewis'
            cea_data = './input_files/ozone_cea_data.dat'
            species_data = './input_files/ozone_species_data.dat'
+           minimum_T = 10
+           clip_negative_rho = true
 
      [../../Viscosity]
         value = '1.0e-5'
@@ -151,13 +153,13 @@
    use_numerical_jacobians_only = 'true'
 
    relative_residual_tolerance = '1.0e-10'
-   relative_step_tolerance = '1.0e-6'
+   relative_step_tolerance = '1.0e-8'
 []
 
 # Visualization options
 [vis-options]
    output_vis = 'true'
-   vis_output_file_prefix = 'output'
+   vis_output_file_prefix = 'output_ozone_constant'
    output_residual = 'false'
    output_format = 'ExodusII xdr'
 []

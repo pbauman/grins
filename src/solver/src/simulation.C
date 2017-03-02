@@ -59,8 +59,9 @@ namespace GRINS
        _print_mesh_info( input("screen-options/print_mesh_info", false ) ),
        _print_log_info( input("screen-options/print_log_info", false ) ),
        _print_equation_system_info( input("screen-options/print_equation_system_info", false ) ),
-       _print_qoi( input("screen-options/print_qoi", false ) ),
+       _print_constraint_info( input("screen-options/print_constraint_info", false ) ),
        _print_scalars( input("screen-options/print_scalars", false ) ),
+       _qoi_output( new QoIOutput(input) ),
        _output_vis( input("vis-options/output_vis", false ) ),
        _output_adjoint( input("vis-options/output_adjoint", false ) ),
        _output_residual( input( "vis-options/output_residual", false ) ),
@@ -107,8 +108,9 @@ namespace GRINS
        _print_mesh_info( input("screen-options/print_mesh_info", false ) ),
        _print_log_info( input("screen-options/print_log_info", false ) ),
        _print_equation_system_info( input("screen-options/print_equation_system_info", false ) ),
-       _print_qoi( input("screen-options/print_qoi", false ) ),
+       _print_constraint_info( input("screen-options/print_constraint_info", false ) ),
        _print_scalars( input("screen-options/print_scalars", false ) ),
+       _qoi_output( new QoIOutput(input) ),
        _output_vis( input("vis-options/output_vis", false ) ),
        _output_adjoint( input("vis-options/output_adjoint", false ) ),
        _output_residual( input( "vis-options/output_residual", false ) ),
@@ -171,6 +173,9 @@ namespace GRINS
     // This *must* be done after equation_system->init in order to get variable indices
     // Set any extra quadrature order the user requested. By default, is 0.
     _multiphysics_system->extra_quadrature_order = StrategiesParsing::extra_quadrature_order(input);
+
+    if (input("Strategies/MeshAdaptivity/disable_two_step_refinement",false))
+      _equation_system->disable_refine_in_reinit();
   }
 
   void Simulation::init_qois( const GetPot& input, SimulationBuilder& sim_builder )
@@ -186,7 +191,7 @@ namespace GRINS
            it will be cloned in _multiphysics_system and all the calculations are done there. */
         _multiphysics_system->attach_qoi( qois.get() );
       }
-    else if (_print_qoi)
+    else if (_qoi_output->output_qoi_set())
       {
         std::cout << "Error: print_qoi is specified but\n" <<
           "no QoIs have been specified.\n" << std::endl;
@@ -341,7 +346,7 @@ namespace GRINS
     context.print_perflog = _print_log_info;
     context.postprocessing = _postprocessing;
     context.error_estimator = _error_estimator;
-    context.print_qoi = _print_qoi;
+    context.qoi_output = _qoi_output;
     context.do_adjoint_solve = _do_adjoint_solve;
     context.have_restart = _have_restart;
 
@@ -367,11 +372,11 @@ namespace GRINS
 
     _solver->solve( context );
 
-    if ( this->_print_qoi )
+    if (_qoi_output->output_qoi_set())
       {
         _multiphysics_system->assemble_qoi();
-        const CompositeQoI* my_qoi = libMesh::libmesh_cast_ptr<const CompositeQoI*>(this->_multiphysics_system->get_qoi());
-        my_qoi->output_qoi( std::cout );
+        const CompositeQoI * my_qoi = libMesh::cast_ptr<const CompositeQoI*>(this->_multiphysics_system->get_qoi());
+        _qoi_output->output_qois(*my_qoi, this->_multiphysics_system->comm() );
       }
 
     if ( _adjoint_parameters.parameter_vector.size() )
@@ -434,10 +439,16 @@ namespace GRINS
   void Simulation::print_sim_info()
   {
     // Print mesh info if the user wants it
-    if( this->_print_mesh_info ) this->_mesh->print_info();
+    if( this->_print_mesh_info )
+      this->_mesh->print_info();
 
-    // Print info if requested
-    if( this->_print_equation_system_info ) this->_equation_system->print_info();
+    // Print EquationSystems info if requested
+    if( this->_print_equation_system_info )
+      this->_equation_system->print_info();
+
+    // Print DofMap constraint info if requested
+    if( this->_print_constraint_info )
+      this->_multiphysics_system->get_dof_map().print_dof_constraints();
 
     return;
   }
@@ -449,7 +460,7 @@ namespace GRINS
 
   libMesh::Number Simulation::get_qoi_value( unsigned int qoi_index ) const
   {
-    const CompositeQoI* qoi = libMesh::libmesh_cast_ptr<const CompositeQoI*>(this->_multiphysics_system->get_qoi());
+    const CompositeQoI* qoi = libMesh::cast_ptr<const CompositeQoI*>(this->_multiphysics_system->get_qoi());
     return qoi->get_qoi_value(qoi_index);
   }
 
