@@ -289,9 +289,7 @@ namespace GRINS
         Kww = &context.get_elem_jacobian(w_dot_var,w_var);
       }
 
-    const unsigned int n_u_dofs = context.get_dof_indices(this->_disp_vars.u()).size();
     unsigned int n_qpoints = context.get_element_qrule().n_points();
-    const std::vector<libMesh::Real> &JxW = this->get_fe(context)->get_JxW();
 
     // All shape function gradients are w.r.t. master element coordinates
     const std::vector<std::vector<libMesh::Real> >& dphi_dxi = this->get_fe(context)->get_dphidxi();
