@@ -354,7 +354,9 @@ namespace GRINS
             if( us_var != u_dot_var )
               sshift = 2;
 
-            std::vector<libMesh::dof_id_type> solid_dof_indices(_disp_vars.dim()*sshift*n_solid_dofs);
+            std::vector<libMesh::dof_id_type> solid_dof_indices;
+            solid_dof_indices.reserve(_disp_vars.dim()*sshift*n_solid_dofs);
+
             std::vector<libMesh::dof_id_type>::iterator sdof_start = solid_dof_indices.begin();
             solid_dof_indices.insert( sdof_start,
                                       solid_context.get_dof_indices(us_var).begin(),
@@ -377,7 +379,9 @@ namespace GRINS
 
             unsigned int n_fluid_dofs = fluid_context.get_dof_indices(this->_flow_vars.u()).size();
 
-            std::vector<libMesh::dof_id_type> velocity_dof_indices(_flow_vars.dim()*n_fluid_dofs);
+            std::vector<libMesh::dof_id_type> velocity_dof_indices;
+            velocity_dof_indices.reserve(_flow_vars.dim()*n_fluid_dofs);
+
             std::vector<libMesh::dof_id_type>::iterator vdof_start = velocity_dof_indices.begin();
             velocity_dof_indices.insert( vdof_start,
                                          fluid_context.get_dof_indices(this->_flow_vars.u()).begin(),
