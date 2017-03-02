@@ -1,5 +1,14 @@
 #Input file for the immersed boundary benchmark example
 
+[SolverOptions]
+   [./TimeStepping]
+      solver_type = 'libmesh_euler_solver'
+      theta='0.5'
+      delta_t = '0.1'
+      n_timesteps = '100'
+   [../]
+[]
+
 # Mesh related options
 [Mesh]
   [./Read]
