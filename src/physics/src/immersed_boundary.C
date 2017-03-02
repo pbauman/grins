@@ -121,12 +121,22 @@ namespace GRINS
   template<typename SolidMech>
   void ImmersedBoundary<SolidMech>::set_time_evolving_vars( libMesh::FEMSystem* system )
   {
-    // Tell the system to march velocity and displacements forward in time
-    system->time_evolving(_flow_vars.u());
-    system->time_evolving(_flow_vars.v());
+    // Velocity are first order in time
+    system->time_evolving(_flow_vars.u(),1);
+    system->time_evolving(_flow_vars.v(),1);
 
     if ( _flow_vars.dim() == 3 )
-      system->time_evolving(_flow_vars.w());
+      system->time_evolving(_flow_vars.w(),1);
+
+
+    // Displacements are second order in time
+    system->time_evolving(_disp_vars.u(),2);
+
+    if( _disp_vars.dim() >= 2 )
+      system->time_evolving(_disp_vars.v(),2);
+
+    if ( _disp_vars.dim() == 3 )
+      system->time_evolving(_disp_vars.w(),2);
   }
 
   template<typename SolidMech>
@@ -300,6 +310,7 @@ namespace GRINS
             // Now construct a fluid finite element using the
             // solid element quadrature points and
             libMesh::FEType fluid_fe_type = fluid_context.get_element_fe(_flow_vars.u())->get_fe_type();
+
             const libMesh::Elem & fluid_elem = fluid_context.get_elem();
 
             libMesh::UniquePtr<libMesh::FEGenericBase<libMesh::Real> > fluid_fe =
