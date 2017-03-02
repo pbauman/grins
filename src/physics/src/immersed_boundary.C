@@ -422,7 +422,7 @@ namespace GRINS
 
             unsigned int n_qpoints = solid_qpoints.size();
 
-            std::cout << "computing fluid part" << std::endl;
+            //std::cout << "computing fluid part" << std::endl;
 
             for( unsigned int qp = 0; qp < n_qpoints; qp++ )
               {
@@ -509,11 +509,11 @@ namespace GRINS
             system.rhs->add_vector( solid_context.get_elem_residual(),
                                     solid_dof_indices );
 
-            if( solid_context.get_elem_residual().l2_norm() > 0.0 )
-              std::cout << "elem " << context.get_elem().id()
-                        << ", solid residual = "
-                        << solid_context.get_elem_residual()
-                        << std::endl;
+            //if( solid_context.get_elem_residual().l2_norm() > 0.0 )
+              //std::cout << "elem " << context.get_elem().id()
+              //          << ", solid residual = "
+              //          << solid_context.get_elem_residual()
+              //          << std::endl;
 
         } // end loop over solid elem map
       } // end if fluid element has overlapping solid elem
@@ -532,7 +532,7 @@ namespace GRINS
 
     const unsigned int n_solid_dofs = solid_context.get_dof_indices(u_var).size();
 
-    std::cout << "n_solid_dofs = " << n_solid_dofs << std::endl;
+    //std::cout << "n_solid_dofs = " << n_solid_dofs << std::endl;
 
     // Global coordinates of the solid qp points
     const std::vector<libMesh::Point> & solid_qpoints =
@@ -599,7 +599,7 @@ namespace GRINS
 
     std::vector<libMesh::dof_id_type> velocity_dof_indices;
 
-    std::cout << "computing solid  part" << std::endl;
+    //std::cout << "computing solid  part" << std::endl;
 
     for(unsigned int qp=0; qp != n_qpoints; qp++)
       {
@@ -673,16 +673,16 @@ namespace GRINS
 
         unsigned int n_fluid_dofs = fluid_context.get_dof_indices(this->_flow_vars.u()).size();
 
-        std::cout << "fluid_dim = " << _flow_vars.dim() << std::endl;
-        std::cout << "n_fluid_dofs = " << n_fluid_dofs << std::endl;
+        //std::cout << "fluid_dim = " << _flow_vars.dim() << std::endl;
+        //std::cout << "n_fluid_dofs = " << n_fluid_dofs << std::endl;
 
-        std::cout << "n_ufluid_dofs = " << fluid_context.get_dof_indices(this->_flow_vars.u()).size() << std::endl;
-        std::cout << "n_vfluid_dofs = " << fluid_context.get_dof_indices(this->_flow_vars.v()).size() << std::endl;
+        //std::cout << "n_ufluid_dofs = " << fluid_context.get_dof_indices(this->_flow_vars.u()).size() << std::endl;
+        //std::cout << "n_vfluid_dofs = " << fluid_context.get_dof_indices(this->_flow_vars.v()).size() << std::endl;
 
         velocity_dof_indices.clear();
         velocity_dof_indices.resize(_flow_vars.dim()*n_fluid_dofs);
 
-        std::cout << "vdof size = " << velocity_dof_indices.size() << std::endl;
+        //std::cout << "vdof size = " << velocity_dof_indices.size() << std::endl;
 
         std::vector<libMesh::dof_id_type>::iterator vdof_start = velocity_dof_indices.begin();
         const std::vector<libMesh::dof_id_type>& u_dof_indices = fluid_context.get_dof_indices(this->_flow_vars.u());
@@ -705,7 +705,7 @@ namespace GRINS
 
         if( compute_jacobian)
           {
-            std::cout << "flow dim = " << this->_flow_vars.dim() << ", solid_dim = " << this->_disp_vars.dim() << std::endl;
+            //std::cout << "flow dim = " << this->_flow_vars.dim() << ", solid_dim = " << this->_disp_vars.dim() << std::endl;
 
             Kmat.resize( this->_flow_vars.dim()*n_fluid_dofs, this->_disp_vars.dim()*n_solid_dofs );
 
@@ -762,8 +762,8 @@ namespace GRINS
         E(1,1) -= 1;
         E *= 0.5;
 
-        if( E.norm() > 1.0e-5 )
-          std::cout << "E = " << E << std::endl;
+        //if( E.norm() > 1.0e-5 )
+        //  std::cout << "E = " << E << std::endl;
 
         libMesh::Real Em = 1000000000;
         libMesh::Real nu = 0.3;
@@ -904,11 +904,11 @@ namespace GRINS
         system.rhs->add_vector( fluid_context.get_elem_residual(),
                                 fluid_context.get_dof_indices() );
 
-        if( fluid_context.get_elem_residual().l2_norm() > 0.0 )
-          std::cout << "elem " << solid_context.get_elem().id()
-                << ", fluid residual = "
-                    << fluid_context.get_elem_residual()
-                    << std::endl;
+        //if( fluid_context.get_elem_residual().l2_norm() > 0.0 )
+          //std::cout << "elem " << solid_context.get_elem().id()
+          //      << ", fluid residual = "
+          //          << fluid_context.get_elem_residual()
+          //          << std::endl;
 
       } // end quadrature point loop
 
