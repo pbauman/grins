@@ -41,6 +41,8 @@ namespace GRINS
     AssemblyContext( const libMesh::System& system );
     ~AssemblyContext();
 
+    MultiphysicsSystem & get_multiphysics_system();
+
     const MultiphysicsSystem & get_multiphysics_system() const;
 
   protected:
