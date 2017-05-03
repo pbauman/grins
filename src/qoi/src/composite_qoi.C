@@ -44,51 +44,32 @@ namespace GRINS
     return;
   }
 
-  CompositeQoI::~CompositeQoI()
-  {
-    for( std::vector<QoIBase*>::iterator qoi = _qois.begin();
-         qoi != _qois.end(); ++qoi )
-      {
-        delete (*qoi);
-      }
-
-    return;
-  }
-
   libMesh::UniquePtr<libMesh::DifferentiableQoI> CompositeQoI::clone()
   {
     CompositeQoI* clone = new CompositeQoI;
 
     for( unsigned int q = 0; q < this->n_qois(); q++ )
-      {
-        clone->add_qoi( this->get_qoi(q) );
-      }
+      clone->add_qoi( this->get_qoi(q) );
 
     return libMesh::UniquePtr<libMesh::DifferentiableQoI>(clone);
   }
 
-  void CompositeQoI::add_qoi( const QoIBase& qoi )
+  void CompositeQoI::add_qoi( const QoIBase & qoi )
   {
-    _qois.push_back( qoi.clone() );
+    libmesh_deprecated();
+
+    _qois.push_back( libMesh::UniquePtr<QoIBase>(qoi.clone()) );
 
     if( qoi.assemble_on_interior() )
-      {
-        this->assemble_qoi_elements = true;
-      }
+      this->assemble_qoi_elements = true;
 
     if( qoi.assemble_on_sides() )
-      {
-        this->assemble_qoi_sides = true;
-      }
-
-    return;
+      this->assemble_qoi_sides = true;
   }
 
   void CompositeQoI::init_qoi( std::vector<libMesh::Number>& sys_qoi )
   {
     sys_qoi.resize(_qois.size(), 0.0);
-
-    return;
   }
 
   void CompositeQoI::init( const GetPot& input, const MultiphysicsSystem& system )
@@ -101,18 +82,14 @@ namespace GRINS
   {
     AssemblyContext& c = libMesh::cast_ref<AssemblyContext&>(context);
 
-    for( std::vector<QoIBase*>::iterator qoi = _qois.begin();
+    for( std::vector<libMesh::UniquePtr<QoIBase> >::iterator qoi = _qois.begin();
          qoi != _qois.end(); ++qoi )
-      {
-        (*qoi)->init_context(c);
-      }
-
-    return;
+      (*qoi)->init_context(c);
   }
 
   void CompositeQoI::register_parameter
   ( const std::string & param_name,
-    libMesh::ParameterMultiAccessor<libMesh::Number>& param_pointer )
+    libMesh::ParameterMultiAccessor<libMesh::Number> & param_pointer )
     const
   {
     for( unsigned int q = 0; q < _qois.size(); q++ )
@@ -126,43 +103,31 @@ namespace GRINS
       (this->get_qoi(i)).reinit(system);
   }
 
-  void CompositeQoI::element_qoi( libMesh::DiffContext& context,
-                                  const libMesh::QoISet& /*qoi_indices*/ )
+  void CompositeQoI::element_qoi( libMesh::DiffContext & context,
+                                  const libMesh::QoISet & /*qoi_indices*/ )
   {
-    AssemblyContext& c = libMesh::cast_ref<AssemblyContext&>(context);
+    AssemblyContext & c = libMesh::cast_ref<AssemblyContext&>(context);
 
     for( unsigned int q = 0; q < _qois.size(); q++ )
-      {
-        (*_qois[q]).element_qoi(c,q);
-      }
-
-    return;
+      (*_qois[q]).element_qoi(c,q);
   }
 
   void CompositeQoI::element_qoi_derivative( libMesh::DiffContext& context,
                                              const libMesh::QoISet& /*qoi_indices*/ )
   {
-    AssemblyContext& c = libMesh::cast_ref<AssemblyContext&>(context);
+    AssemblyContext & c = libMesh::cast_ref<AssemblyContext&>(context);
 
     for( unsigned int q = 0; q < _qois.size(); q++ )
-      {
-        (*_qois[q]).element_qoi_derivative(c,q);
-      }
-
-    return;
+      (*_qois[q]).element_qoi_derivative(c,q);
   }
 
   void CompositeQoI::side_qoi( libMesh::DiffContext& context,
                                const libMesh::QoISet& /*qoi_indices*/ )
   {
-    AssemblyContext& c = libMesh::cast_ref<AssemblyContext&>(context);
+    AssemblyContext & c = libMesh::cast_ref<AssemblyContext&>(context);
 
     for( unsigned int q = 0; q < _qois.size(); q++ )
-      {
-        (*_qois[q]).side_qoi(c,q);
-      }
-
-    return;
+      (*_qois[q]).side_qoi(c,q);
   }
 
   void CompositeQoI::side_qoi_derivative( libMesh::DiffContext& context,
@@ -171,11 +136,7 @@ namespace GRINS
     AssemblyContext& c = libMesh::cast_ref<AssemblyContext&>(context);
 
     for( unsigned int q = 0; q < _qois.size(); q++ )
-      {
-        (*_qois[q]).side_qoi_derivative(c,q);
-      }
-
-    return;
+      (*_qois[q]).side_qoi_derivative(c,q);
   }
 
   void CompositeQoI::parallel_op( const libMesh::Parallel::Communicator& communicator,
@@ -184,11 +145,7 @@ namespace GRINS
                                   const libMesh::QoISet& /*qoi_indices*/ )
   {
     for( unsigned int q = 0; q < _qois.size(); q++ )
-      {
-        (*_qois[q]).parallel_op( communicator, sys_qoi[q], local_qoi[q] );
-      }
-
-    return;
+      (*_qois[q]).parallel_op( communicator, sys_qoi[q], local_qoi[q] );
   }
 
   void CompositeQoI::thread_join( std::vector<libMesh::Number>& qoi,
@@ -196,22 +153,14 @@ namespace GRINS
                                   const libMesh::QoISet& /*qoi_indices*/ )
   {
     for( unsigned int q = 0; q < _qois.size(); q++ )
-      {
-        (*_qois[q]).thread_join( qoi[q], other_qoi[q] );
-      }
-
-    return;
+      (*_qois[q]).thread_join( qoi[q], other_qoi[q] );
   }
 
   void CompositeQoI::output_qoi( std::ostream& out ) const
   {
-    for( std::vector<QoIBase*>::const_iterator qoi = _qois.begin();
+    for( std::vector<libMesh::UniquePtr<QoIBase> >::const_iterator qoi = _qois.begin();
          qoi != _qois.end(); ++qoi )
-      {
-        (*qoi)->output_qoi(out);
-      }
-
-    return;
+      (*qoi)->output_qoi(out);
   }
 
   libMesh::Number CompositeQoI::get_qoi_value( unsigned int qoi_index ) const
