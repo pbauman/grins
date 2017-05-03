@@ -52,6 +52,38 @@ namespace GRINS
     return;
   }
 
+  AverageNusseltNumber::AverageNusseltNumber( const std::string & qoi_name, const GetPot & input )
+    : QoIBase(qoi_name)
+  {
+    this->parse_thermal_conductivity(input);
+
+    this->set_parameter
+      ( _scaling, input, "QoI/NusseltNumber/scaling", 1.0 );
+
+    if( this->_k < 0.0 )
+      {
+        std::stringstream ss;
+        ss << "Error: thermal conductivity for AverageNusseltNumber must be positive." << std::endl
+           << "Found k = " << _k << std::endl;
+        libmesh_error_msg(ss.str());
+      }
+
+    // Read boundary ids for which we want to compute
+    int num_bcs =  input.vector_variable_size("QoI/NusseltNumber/bc_ids");
+
+    if( num_bcs <= 0 )
+      {
+        std::stringstream ss;
+        ss << "Error: Must specify at least one boundary id to compute"
+           << " average Nusselt number." << std::endl
+           << "Found: " << num_bcs << std::endl;
+        libmesh_error_msg(ss.str());
+      }
+
+    for( int i = 0; i < num_bcs; i++ )
+      _bc_ids.insert( input("QoI/NusseltNumber/bc_ids", -1, i ) );
+  }
+
   QoIBase* AverageNusseltNumber::clone() const
   {
     AverageNusseltNumber *returnval = new AverageNusseltNumber( *this );
