@@ -57,8 +57,9 @@ namespace GRINS
     virtual void side_qoi_derivative( AssemblyContext& context,
                                       const unsigned int qoi_index );
 
-    virtual void init( const GetPot& input,
-                       const MultiphysicsSystem& system,
+    //! Deprecated. Prefer interface without GetPot.
+    virtual void init( const GetPot & input,
+                       const MultiphysicsSystem & system,
                        unsigned int qoi_num );
 
     virtual void init_context( AssemblyContext& context );
@@ -70,6 +71,7 @@ namespace GRINS
     //! Thermal conductivity
     libMesh::Real _k;
 
+    /*! \todo Make this a const & when we drop the deprecated init() interface. */
     const PrimitiveTempFEVariables * _temp_vars;
 
     //! List of boundary ids for which we want to compute this QoI

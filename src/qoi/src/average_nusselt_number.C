@@ -53,7 +53,8 @@ namespace GRINS
   }
 
   AverageNusseltNumber::AverageNusseltNumber( const std::string & qoi_name, const GetPot & input )
-    : QoIBase(qoi_name)
+    : QoIBase(qoi_name),
+      _temp_vars(&GRINSPrivate::VariableWarehouse::get_variable_subclass<PrimitiveTempFEVariables>(VariablesParsing::temp_variable_name(input,std::string("NusseltNumber"),VariablesParsing::QOI)))
   {
     this->parse_thermal_conductivity(input);
 
@@ -97,6 +98,8 @@ namespace GRINS
    const MultiphysicsSystem& /*system*/,
    unsigned int /*qoi_num*/ )
   {
+    libmesh_deprecated();
+
     this->parse_thermal_conductivity(input);
 
     this->set_parameter
