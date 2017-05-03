@@ -70,10 +70,18 @@ namespace GRINS
 
     /*!
      * Method to allow QoI to cache any system information needed for QoI calculation,
+     * for example, solution variable indices. This interface is deprecated. Instead,
+     * override the method without GetPot and use a constructor with the GetPot object.
+     */
+    virtual void init( const GetPot & /*input*/,
+                       const MultiphysicsSystem & /*system*/,
+                       unsigned int /*qoi_num*/ ){}
+
+    /*!
+     * Method to allow QoI to cache any system information needed for QoI calculation,
      * for example, solution variable indices.
      */
-    virtual void init( const GetPot& /*input*/,
-                       const MultiphysicsSystem & /*system*/,
+    virtual void init( const MultiphysicsSystem & /*system*/,
                        unsigned int /*qoi_num*/ ){}
 
     virtual void init_context( AssemblyContext& /*context*/ ){}
