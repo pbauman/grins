@@ -472,6 +472,7 @@ include_HEADERS += qoi/include/grins/average_nusselt_number.h
 include_HEADERS += qoi/include/grins/qoi_base.h
 include_HEADERS += qoi/include/grins/qoi_factory.h
 include_HEADERS += qoi/include/grins/qoi_factory_abstract.h
+include_HEADERS += qoi/include/grins/qoi_factory_basic.h
 include_HEADERS += qoi/include/grins/qoi_names.h
 include_HEADERS += qoi/include/grins/vorticity.h
 include_HEADERS += qoi/include/grins/composite_qoi.h
