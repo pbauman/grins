@@ -41,17 +41,6 @@
 
 namespace GRINS
 {
-  AverageNusseltNumber::AverageNusseltNumber( const std::string& qoi_name )
-    : QoIBase(qoi_name)
-  {
-    return;
-  }
-
-  AverageNusseltNumber::~AverageNusseltNumber()
-  {
-    return;
-  }
-
   AverageNusseltNumber::AverageNusseltNumber( const std::string & qoi_name, const GetPot & input )
     : QoIBase(qoi_name),
       _temp_vars(&GRINSPrivate::VariableWarehouse::get_variable_subclass<PrimitiveTempFEVariables>(VariablesParsing::temp_variable_name(input,std::string("NusseltNumber"),VariablesParsing::QOI)))
@@ -94,8 +83,7 @@ namespace GRINS
   }
 
   void AverageNusseltNumber::init
-  (const GetPot& input,
-   const MultiphysicsSystem& /*system*/,
+  (const GetPot & input, const MultiphysicsSystem & /*system*/,
    unsigned int /*qoi_num*/ )
   {
     libmesh_deprecated();
@@ -107,9 +95,10 @@ namespace GRINS
 
     if( this->_k < 0.0 )
       {
-        std::cerr << "Error: thermal conductivity for AverageNusseltNumber must be positive." << std::endl
-                  << "Found k = " << _k << std::endl;
-        libmesh_error();
+        std::stringstream ss;
+        ss << "Error: thermal conductivity for AverageNusseltNumber must be positive." << std::endl
+           << "Found k = " << _k << std::endl;
+        libmesh_error_msg(ss.str());
       }
 
     // Read boundary ids for which we want to compute
@@ -117,16 +106,15 @@ namespace GRINS
 
     if( num_bcs <= 0 )
       {
-        std::cerr << "Error: Must specify at least one boundary id to compute"
-                  << " average Nusselt number." << std::endl
-                  << "Found: " << num_bcs << std::endl;
-        libmesh_error();
+        std::stringstream ss;
+        ss << "Error: Must specify at least one boundary id to compute"
+           << " average Nusselt number." << std::endl
+           << "Found: " << num_bcs << std::endl;
+        libmesh_error_msg(ss.str());
       }
 
     for( int i = 0; i < num_bcs; i++ )
-      {
-        _bc_ids.insert( input("QoI/NusseltNumber/bc_ids", -1, i ) );
-      }
+      _bc_ids.insert( input("QoI/NusseltNumber/bc_ids", -1, i ) );
 
     _temp_vars = &GRINSPrivate::VariableWarehouse::get_variable_subclass<PrimitiveTempFEVariables>(VariablesParsing::temp_variable_name(input,std::string("NusseltNumber"),VariablesParsing::QOI));
   }
@@ -139,8 +127,6 @@ namespace GRINS
 
     T_fe->get_dphi();
     T_fe->get_JxW();
-
-    return;
   }
 
   void AverageNusseltNumber::side_qoi( AssemblyContext& context,
@@ -229,8 +215,6 @@ namespace GRINS
           } // end check on boundary id
 
       }
-
-    return;
   }
 
   void AverageNusseltNumber::parse_thermal_conductivity( const GetPot& input )

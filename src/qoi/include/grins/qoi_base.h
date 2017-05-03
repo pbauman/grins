@@ -49,7 +49,7 @@ namespace GRINS
   {
   public:
 
-    QoIBase( const std::string& qoi_name );
+    QoIBase( const std::string & qoi_name );
 
     virtual ~QoIBase(){}
 

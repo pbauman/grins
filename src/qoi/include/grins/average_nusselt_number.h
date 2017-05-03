@@ -39,11 +39,13 @@ namespace GRINS
   public:
 
     //! Deprecated. Prefer constructor with GetPot.
-    AverageNusseltNumber( const std::string & qoi_name );
+    AverageNusseltNumber( const std::string & qoi_name )
+      : QoIBase(qoi_name)
+    {}
 
     AverageNusseltNumber( const std::string & qoi_name, const GetPot & input );
 
-    virtual ~AverageNusseltNumber();
+    virtual ~AverageNusseltNumber(){}
 
     virtual QoIBase* clone() const;
 
