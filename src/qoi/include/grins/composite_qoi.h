@@ -66,8 +66,13 @@ namespace GRINS
     virtual libMesh::UniquePtr<libMesh::DifferentiableQoI> clone();
 
     //! Add QoIBase object to CompositeQoI
-    /*! CompositeQoI takes ownership of the memory. */
+    /*! CompositeQoI takes ownership of the memory.
+        This interface is deprecated. */
     virtual void add_qoi( const QoIBase & qoi );
+
+    //! Add QoIBase object to CompositeQoI
+    /*! CompositeQoI takes ownership of the memory. */
+    virtual void add_qoi( libMesh::UniquePtr<QoIBase> & qoi );
 
     unsigned int n_qois() const;
 

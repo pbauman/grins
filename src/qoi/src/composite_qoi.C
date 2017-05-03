@@ -67,6 +67,18 @@ namespace GRINS
       this->assemble_qoi_sides = true;
   }
 
+  void CompositeQoI::add_qoi( libMesh::UniquePtr<QoIBase> & qoi )
+  {
+    /*! \todo [PB][C++11]: Use std::move here when we have it. */
+    _qois.push_back( libMesh::UniquePtr<QoIBase>(qoi.release()) );
+
+    if( qoi->assemble_on_interior() )
+      this->assemble_qoi_elements = true;
+
+    if( qoi->assemble_on_sides() )
+      this->assemble_qoi_sides = true;
+  }
+
   void CompositeQoI::init_qoi( std::vector<libMesh::Number>& sys_qoi )
   {
     sys_qoi.resize(_qois.size(), 0.0);
