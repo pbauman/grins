@@ -48,6 +48,27 @@ namespace GRINS
 
     virtual ~ThermochemicalMixtureBase(){};
 
+    //! Species molar mass (molecular weight), [kg/mol]
+    libMesh::Real M( unsigned int species ) const
+    { return static_cast<DerivedType*>(this)->M_imp(species); }
+
+    //! Species gas constant, [J/kg-K]
+    /*! R_universal/M(species) */
+    libMesh::Real R( unsigned int species ) const
+    { return static_cast<DerivedType*>(this)->R_imp(species); }
+
+    unsigned int n_species() const
+    { return static_cast<DerivedType*>(this)->n_species_imp(); }
+
+    unsigned int species_index( const std::string & species_name ) const
+    { return static_cast<DerivedType*>(this)->species_index_imp(species_name); }
+
+    std::string species_name( unsigned int species_index ) const
+    { return static_cast<DerivedType*>(this)->species_name_imp(species_index); }
+
+    const DerivedType & mixture() const
+    { return *(static_cast<DerivedType*>(this)); }
+
   };
 
 } // end namespace GRINS
