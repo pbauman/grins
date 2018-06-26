@@ -52,10 +52,25 @@ namespace GRINS
     libMesh::Real M( unsigned int species ) const
     { return static_cast<DerivedType*>(this)->M_imp(species); }
 
+    //! Mixture molar mass (molecular weight), [kg/mol]
+    libMesh::Real M_mix( const std::vector<libMesh::Real> & mass_fractions ) const;
+
     //! Species gas constant, [J/kg-K]
     /*! R_universal/M(species) */
     libMesh::Real R( unsigned int species ) const
     { return static_cast<DerivedType*>(this)->R_imp(species); }
+
+    //! Mixture gas constant, [J/kg-K]
+    libMesh::Real R_mix( const std::vector<libMesh::Real> & mass_fractions ) const;
+
+    //! Species mole fraction, unitless
+    libMesh::Real X( unsigned int species, libMesh::Real M_mix, libMesh::Real mass_fraction ) const
+    { return mass_fraction*M_mix/this->M(species); }
+
+    //! Mole fraction for all species, unitless
+    void X( libMesh::Real M_mix,
+            const std::vector<libMesh::Real> & mass_fractions,
+            std::vector<libMesh::Real> & mole_fractions ) const;
 
     unsigned int n_species() const
     { return static_cast<DerivedType*>(this)->n_species_imp(); }
@@ -70,6 +85,47 @@ namespace GRINS
     { return *(static_cast<DerivedType*>(this)); }
 
   };
+
+  template <typename DerivedType>
+  inline
+  libMesh::Real ThermochemicalMixtureBase<DerivedType>::
+  M_mix( const std::vector<libMesh::Real> & mass_fractions ) const
+  {
+    libmesh_assert_equal_to( mass_fractions.size(), this->n_species() );
+
+    libMesh::Real M = 0;
+    for( unsigned int s = 0; s < mass_fractions.size(); s++ )
+      M += mass_fractions[s]/(this->M(s));
+
+    return 1.0/M;
+  }
+
+  template <typename DerivedType>
+  inline
+  libMesh::Real ThermochemicalMixtureBase<DerivedType>::
+  R_mix( const std::vector<libMesh::Real>& mass_fractions ) const
+  {
+    libmesh_assert_equal_to( mass_fractions.size(), this->n_species() );
+
+    libMesh::Real R = 0.0;
+    for( unsigned int s = 0; s < mass_fractions.size(); s++ )
+      R += mass_fractions[s]*this->R(s);
+
+    return R;
+  }
+
+  template <typename DerivedType>
+  inline
+  void ThermochemicalMixtureBase<DerivedType>::X( libMesh::Real M_mix,
+                                                  const std::vector<libMesh::Real> & mass_fractions,
+                                                  std::vector<libMesh::Real> & mole_fractions ) const
+  {
+    libmesh_assert_equal_to( mass_fractions.size(), this->n_species() );
+    libmesh_assert_equal_to( mole_fractions.size(), mass_fractions.size() );
+
+    for( unsigned int s = 0; s < mass_fractions.size(); s++ )
+      mole_fractions[s] = this->X(s, M_mix, mass_fractions[s]);
+  }
 
 } // end namespace GRINS
 
