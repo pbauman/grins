@@ -5,4 +5,4 @@ GRINS_RUN=${GRINS_RUN:-$LIBMESH_RUN}
 DEFAULT_SOLVER_OPTIONS="-pc_factor_levels 4 -sub_pc_factor_levels 4"
 GRINS_SOLVER_OPTIONS=${GRINS_SOLVER_OPTIONS:-$LIBMESH_OPTIONS:-$DEFAULT_SOLVER_OPTIONS}
 
-$GRINS_RUN @prefix@/bin/grins @prefix@/examples/immersed_boundary_benchmark/immersed_boundary_benchmark.in $GRINS_SOLVER_OPTIONS
+$GRINS_RUN @prefix@/bin/grins @prefix@/examples/immersed_boundary_benchmark/test_block.in $GRINS_SOLVER_OPTIONS
