@@ -1,0 +1,158 @@
+#Input file for the immersed boundary benchmark example
+
+[SolverOptions]
+   [./TimeStepping]
+      solver_type = 'libmesh_euler_solver'
+      theta='0.5'
+      delta_t = '0.1'
+      n_timesteps = '100'
+   [../]
+[]
+
+# Mesh related options
+[Mesh]
+  [./Read]
+    filename = 'ibm_benchmark_mesh.e'
+  [../]
+[]
+
+# Options related to all Physics
+[Physics]
+  enabled_physics = 'IncompressibleNavierStokes
+                     ImmersedBoundary'
+
+  [./IncompressibleNavierStokes]
+    enabled_subdomains = '1'
+    material = 'Fluid'
+  [../]
+
+  [./ImmersedBoundary]
+    enabled_subdomains = '1 2'
+    solid_mechanics = 'ElasticMembrane'
+    fluid_mechanics = 'IncompressibleNavierStokes'
+  [../]
+
+  [./ElasticMembrane]
+    enabled_subdomains = '2'
+    material = 'Membrane'
+  [../]
+
+[]
+
+# Properties related to the fluid and solid parameters
+[Materials]
+  [./Membrane]
+    [./MembraneThickness]
+      value = '0.05'
+    [../]
+    [./Density]
+      value = '1.0'
+    [../]
+    [./StressStrainLaw]
+      model = 'hookes_law'
+      [./HookesLaw]
+        E = '1000000000'  # Youngs modulus
+        nu = '0.3'   # Poisson's ratio
+      [../]
+    [../]
+  [../]
+  [./Fluid]
+    [./Density]
+      value = '1.0'
+    [../]
+    [./Viscosity]
+      model = 'constant'
+      value = '1'
+    [../]
+  [../]
+[]
+
+# Options for chosen Variables
+[Variables]
+  [./Displacement]
+      names = 'Ux Uy'
+      fe_family = 'LAGRANGE'
+      order = 'FIRST'
+      enabled_subdomains = '2'
+  [../]
+  [./Velocity]
+      names = 'Vx Vy'
+      fe_family = 'LAGRANGE'
+      order = 'SECOND'
+      enabled_subdomains = '1'
+  [../]
+  [./Pressure]
+      names = 'p'
+      fe_family = 'LAGRANGE'
+      order = 'FIRST'
+      enabled_subdomains = '1'
+  [../]
+[]
+
+
+[BoundaryConditions]
+
+   bc_ids = '4 1:3 6 5:7:8 2 9'
+   bc_id_name_map = 'Inflow Walls Cylinder Membrane Outflow ContactWall'
+
+   [./Inflow]
+      [./Velocity]
+         type = 'parsed_dirichlet'
+         Vx = '0.5*(y-0.21)*(0.2 + y)'
+      [../]
+   [../]
+   [./Walls]
+      [./Velocity]
+         type = 'no_slip'
+      [../]
+   [../]
+   [./Outflow]
+      [./Velocity]
+         type = 'homogeneous_neumann'
+      [../]
+   [../]
+   [./Cylinder]
+      [./Velocity]
+         type = 'no_slip'
+      [../]
+   [../]
+   [./Membrane]
+      [./Displacement]
+        type = 'homogeneous_neumann'
+      [../]
+   [../]
+   [./ContactWall]
+      [./Velocity]
+        type = 'no_slip'
+      [../]
+      [./Displacement]
+        type = 'pinned'
+      [../]
+   [../]
+[]
+
+# Visualization options #
+[vis-options]
+output_vis = 'true'
+vis_output_file_prefix = 'output_ibm'
+output_residual = 'true'
+output_format = 'ExodusII'
+[]
+
+# Options for print info to the screen
+[screen-options]
+print_equation_system_info = 'true'
+print_mesh_info = 'true'
+print_log_info = 'true'
+solver_verbose = 'true'
+solver_quiet = 'false'
+echo_physics = 'true'
+[]
+
+# Options related to the solver
+[linear-nonlinear-solver]
+   max_nonlinear_iterations = '5'
+   use_numerical_jacobians_only = 'false'
+   continue_after_max_iterations = 'true'
+
+[]
