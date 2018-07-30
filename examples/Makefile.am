@@ -269,6 +269,16 @@ torsionhyperelasticity_DATA += $(top_srcdir)/examples/torsion_hyperelasticity/in
 
 EXTRA_DIST += $(torsionhyperelasticity_DATA)
 
+#=======================================================================
+# Immersed Boundary Example
+#=======================================================================
+ibmdir = $(prefix)/examples/immersed_boundary_benchmark
+ibm_DATA  = $(top_srcdir)/examples/immersed_boundary_benchmark/ibm_benchmark_mesh.e
+ibm_DATA += $(top_srcdir)/examples/immersed_boundary_benchmark/immersed_boundary_benchmark.in
+ibm_SCRIPTS = $(top_builddir)/examples/immersed_boundary_benchmark/run.sh
+
+EXTRA_DIST += $(ibm_DATA)
+
 MAINTAINERCLEANFILES = Makefile.in
 
 MOSTLYCLEANFILES = *.gcno
