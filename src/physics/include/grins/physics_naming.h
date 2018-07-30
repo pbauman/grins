@@ -191,6 +191,9 @@ namespace GRINS
     static PhysicsName parsed_source_term()
     { return "ParsedSourceTerm"+suffix(); }
 
+     static PhysicsName immersed_boundary()
+    { return "ImmersedBoundary"+suffix(); }
+
     static PhysicsName convection_diffusion()
     { return "ConvectionDiffusion"+suffix(); }
 
