@@ -361,27 +361,38 @@ namespace GRINS
               sshift = 2;
 
             std::vector<libMesh::dof_id_type> solid_dof_indices;
-            solid_dof_indices.reserve(_disp_vars.dim()*sshift*n_solid_dofs);
+
+            solid_dof_indices.clear();
+            solid_dof_indices.resize(_disp_vars.dim()*sshift*n_solid_dofs);
 
             std::vector<libMesh::dof_id_type>::iterator sdof_start = solid_dof_indices.begin();
-            solid_dof_indices.insert( sdof_start,
-                                      solid_context.get_dof_indices(us_var).begin(),
-                                      solid_context.get_dof_indices(us_var).end() );
-
-            solid_dof_indices.insert( sdof_start+n_solid_dofs,
-                                      solid_context.get_dof_indices(v_var).begin(),
-                                      solid_context.get_dof_indices(v_var).end() );
+            const std::vector<libMesh::dof_id_type>& us_dof_indices =
+              solid_context.get_dof_indices(us_var);
+     
+            for( unsigned int i = 0; i < us_dof_indices.size(); i++ )
+              solid_dof_indices[i] = us_dof_indices[i];
+      
+            const std::vector<libMesh::dof_id_type>& vs_dof_indices =
+              solid_context.get_dof_indices(v_var);
+    
+            for( unsigned int i = 0; i < vs_dof_indices.size(); i++ )
+              solid_dof_indices[i+n_solid_dofs] = vs_dof_indices[i];            
 
 
             if( us_var != u_dot_var )
               {
-                solid_dof_indices.insert( sdof_start+2*n_solid_dofs,
-                                          solid_context.get_dof_indices(u_dot_var).begin(),
-                                          solid_context.get_dof_indices(u_dot_var).end() );
-
-                solid_dof_indices.insert( sdof_start+3*n_solid_dofs,
-                                          solid_context.get_dof_indices(v_dot_var).begin(),
-                                          solid_context.get_dof_indices(v_dot_var).end() );
+                const std::vector<libMesh::dof_id_type>& udot_dof_indices =
+                  solid_context.get_dof_indices(u_dot_var);
+     
+                for( unsigned int i = 0; i < udot_dof_indices.size(); i++ )
+                  solid_dof_indices[i+2*n_solid_dofs] = udot_dof_indices[i];
+      
+                const std::vector<libMesh::dof_id_type>& vdot_dof_indices =
+                  solid_context.get_dof_indices(v_dot_var);
+     
+                for( unsigned int i = 0; i < vdot_dof_indices.size(); i++ )
+                  solid_dof_indices[i+3*n_solid_dofs] = vdot_dof_indices[i];
+   
               }
 
             unsigned int n_fluid_dofs = fluid_context.get_dof_indices(this->_flow_vars.u()).size();
