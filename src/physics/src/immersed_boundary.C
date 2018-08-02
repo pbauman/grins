@@ -246,8 +246,7 @@ namespace GRINS
 
   template<typename SolidMech>
   void ImmersedBoundary<SolidMech>::element_time_derivative( bool compute_jacobian,
-                                                             AssemblyContext & context,
-                                                             CachedValues & /*cache*/ )
+                                                             AssemblyContext & context )
   {
     if( this->is_fluid_elem( context.get_elem().subdomain_id() ) )
       this->assemble_fluid_var_residual_contributions(compute_jacobian,context);
@@ -372,6 +371,7 @@ namespace GRINS
             solid_dof_indices.insert( sdof_start+n_solid_dofs,
                                       solid_context.get_dof_indices(v_var).begin(),
                                       solid_context.get_dof_indices(v_var).end() );
+
 
             if( us_var != u_dot_var )
               {
@@ -558,7 +558,7 @@ namespace GRINS
     libMesh::DenseSubVector<libMesh::Number> * Fws = NULL;
 
     // Solid Jacobians
-    libMesh::DenseSubMatrix<libMesh::Number> & Kus_us = solid_context.get_elem_jacobian(u_dot_var,u_var);
+    libMesh::DenseSubMatrix<libMesh::Number> & Kus_us = solid_context.get_elem_jacobian(u_dot_var,u_dot_var);
     libMesh::DenseSubMatrix<libMesh::Number> * Kvs_vs = NULL;
     libMesh::DenseSubMatrix<libMesh::Number> * Kws_ws = NULL;
 
@@ -570,7 +570,7 @@ namespace GRINS
         v_dot_var = system.get_second_order_dot_var(v_var);
 
         Fvs = &solid_context.get_elem_residual(v_dot_var);
-        Kvs_vs = &solid_context.get_elem_jacobian(v_dot_var,v_var);
+        Kvs_vs = &solid_context.get_elem_jacobian(v_dot_var,v_dot_var);
       }
 
     unsigned int w_var = libMesh::invalid_uint;
@@ -581,7 +581,7 @@ namespace GRINS
         w_dot_var = system.get_second_order_dot_var(w_var);
 
         Fws = &solid_context.get_elem_residual(w_var);
-        Kws_ws = &solid_context.get_elem_jacobian(w_dot_var,w_var);
+        Kws_ws = &solid_context.get_elem_jacobian(w_dot_var,w_dot_var);
       }
 
     const unsigned int n_qpoints = solid_context.get_element_qrule().n_points();
@@ -700,13 +700,32 @@ namespace GRINS
         for( unsigned int i = 0; i < v_dof_indices.size(); i++ )
           velocity_dof_indices[i+n_fluid_dofs] = v_dof_indices[i];
 
+        //Build up solid dof indices
+        std::vector<libMesh::dof_id_type> solid_dof_indices;
+
+        solid_dof_indices.clear();
+        solid_dof_indices.resize(_disp_vars.dim()*n_solid_dofs);
+
+        std::vector<libMesh::dof_id_type>::iterator sdof_start = solid_dof_indices.begin();
+        const std::vector<libMesh::dof_id_type>& us_dof_indices =
+          solid_context.get_dof_indices(u_var);
+
+        for( unsigned int i = 0; i < us_dof_indices.size(); i++ )
+          solid_dof_indices[i] = us_dof_indices[i];
+
+        const std::vector<libMesh::dof_id_type>& vs_dof_indices =
+          solid_context.get_dof_indices(v_var);
+
+        for( unsigned int i = 0; i < vs_dof_indices.size(); i++ )
+          solid_dof_indices[i+n_solid_dofs] = vs_dof_indices[i];
+
         libMesh::DenseSubVector<libMesh::Number> & Fu = _fluid_context->get_elem_residual(this->_flow_vars.u());
         libMesh::DenseSubVector<libMesh::Number> & Fv = _fluid_context->get_elem_residual(this->_flow_vars.v());
         libMesh::DenseSubVector<libMesh::Number> * Fw = NULL;
 
         if( _flow_vars.dim() == 3 )
           Fw = &_fluid_context->get_elem_residual(this->_flow_vars.w());
-
+ 
         if( compute_jacobian)
           {
             Kmat.resize( this->_flow_vars.dim()*n_fluid_dofs, this->_disp_vars.dim()*n_solid_dofs );
@@ -849,11 +868,11 @@ namespace GRINS
             system.get_dof_map().constrain_element_matrix
               ( Kmat,
                 velocity_dof_indices,
-                solid_context.get_dof_indices(), false );
+                solid_dof_indices, false );
 
             system.matrix->add_matrix( Kmat,
                                        velocity_dof_indices,
-                                       solid_context.get_dof_indices() );
+                                       solid_dof_indices );
           }
 
         system.get_dof_map().constrain_element_vector
