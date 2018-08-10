@@ -802,7 +802,8 @@ namespace GRINS
             libMesh::TensorValue<libMesh::Real> tau(P*Ftrans);
 
             // Gradients w.r.t. the master element coordinates
-            _solid_mech->get_grad_uvw(context, solid_qpoint_indices[qp], grad_u,grad_v,grad_w);
+            _solid_mech->get_grad_disp(context, solid_qpoint_indices[qp],
+                                       grad_u, grad_v, grad_w);
 
             // Piola-kirchoff stress tensor in the reference configuration
             // TODO: tau needs to be scaled basd on mesh dimension
