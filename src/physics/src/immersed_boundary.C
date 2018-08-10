@@ -479,8 +479,8 @@ namespace GRINS
     // the fluid element.
     const libMesh::Elem * fluid_elem = system.get_mesh().elem(fluid_elem_id);
 
-    _fluid_context->pre_fe_reinit(system,fluid_elem);
-    _fluid_context->elem_fe_reinit(&solid_qpoints_subset);
+    fluid_context.pre_fe_reinit(system,fluid_elem);
+    fluid_context.elem_fe_reinit(&solid_qpoints_subset);
   }
 
   template<typename SolidMech>
