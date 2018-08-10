@@ -138,8 +138,6 @@ namespace GRINS
                                             const std::vector<std::vector<libMesh::RealGradient> > & solid_dphi,
                                             const std::vector<std::vector<libMesh::RealGradient> > & fluid_dphi );
 
-    void assemble_fluid_var_residual_contributions( bool compute_jacobian,
-                                                    AssemblyContext & context );
     void add_velocity_coupling_term_to_solid_residual(bool compute_jacobian,
                                                       MultiphysicsSystem & system,
                                                       libMesh::FEMContext & fluid_context,
