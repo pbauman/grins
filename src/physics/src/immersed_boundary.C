@@ -562,7 +562,7 @@ namespace GRINS
         E(1,1) -= 1;
         E *= 0.5;
 
-        libMesh::Real Em = 1000000000;
+        libMesh::Real Em = 100000;
         libMesh::Real nu = 0.3;
         libMesh::Real lambda = Em*nu/(1+nu)*(1-2*nu);
         libMesh::Real mu = Em/(2*(1+nu));
