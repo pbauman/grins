@@ -254,9 +254,120 @@ namespace GRINS
       this->assemble_fluid_var_residual_contributions(compute_jacobian,context);
 
     if( this->is_solid_elem( context.get_elem().subdomain_id() ) )
-      this->assemble_solid_var_residual_contributions(compute_jacobian,context);
+      {
+        this->assemble_accel_term( compute_jacobian, context );
+        this->assemble_solid_var_residual_contributions(compute_jacobian,context);
+      }
   }
-  
+
+  template<typename SolidMech>
+  void ImmersedBoundary<SolidMech>::assemble_accel_term( bool compute_jacobian, AssemblyContext & context )
+  {
+    // For clarity
+    AssemblyContext & solid_context = context;
+
+    MultiphysicsSystem & system = context.get_multiphysics_system();
+
+    const unsigned int n_u_dofs = solid_context.get_dof_indices(_disp_vars.u()).size();
+
+    unsigned int u_var = this->_disp_vars.u();
+    unsigned int v_var = this->_disp_vars.v();
+    unsigned int u_dot_var = system.get_second_order_dot_var(u_var);
+    unsigned int v_dot_var = system.get_second_order_dot_var(v_var);
+
+    const std::vector<libMesh::Real> &JxW =
+      solid_context.get_element_fe(u_var,2)->get_JxW();
+
+    const std::vector<std::vector<libMesh::Real> >& u_phi =
+      solid_context.get_element_fe(u_var,2)->get_phi();
+
+    // Now assemble fluid part of velocity matching term
+    // into solid residual.
+    libMesh::DenseSubVector<libMesh::Number> & Fud = solid_context.get_elem_residual(u_dot_var);
+    libMesh::DenseSubVector<libMesh::Number> & Fvd = solid_context.get_elem_residual(v_dot_var);
+    libMesh::DenseSubVector<libMesh::Number> * Fwd = NULL;
+
+    libMesh::DenseSubMatrix<libMesh::Number> & Kudud = solid_context.get_elem_jacobian(u_dot_var,u_dot_var);
+    libMesh::DenseSubMatrix<libMesh::Number> & Kvdvd = solid_context.get_elem_jacobian(v_dot_var,v_dot_var);
+    libMesh::DenseSubMatrix<libMesh::Number> * Kwdwd = NULL;
+
+    libMesh::DenseSubMatrix<libMesh::Number> & Kudu = solid_context.get_elem_jacobian(u_dot_var,u_var);
+    libMesh::DenseSubMatrix<libMesh::Number> & Kvdv = solid_context.get_elem_jacobian(v_dot_var,v_var);
+    libMesh::DenseSubMatrix<libMesh::Number> * Kwdw = NULL;
+
+    unsigned int w_var = libMesh::invalid_uint;
+    unsigned int w_dot_var = libMesh::invalid_uint;
+    if ( this->_disp_vars.dim() == 3 )
+      {
+        w_var = this->_disp_vars.w();
+        w_dot_var = system.get_second_order_dot_var(w_var);
+
+        Fwd = &solid_context.get_elem_residual(w_dot_var);
+        Kwdwd = &solid_context.get_elem_jacobian(w_dot_var,w_dot_var);
+        Kwdw  = &solid_context.get_elem_jacobian(w_dot_var,w_var);
+      }
+
+    unsigned int n_qpoints = solid_context.get_element_qrule().n_points();
+
+    for( unsigned int qp = 0; qp < n_qpoints; qp++ )
+      {
+        libMesh::Real jac = JxW[qp];
+
+        // Time derivative of auxillary solid velocity variable
+        libMesh::Real u_dot_rate, v_dot_rate;
+        solid_context.interior_rate( u_dot_var, qp, u_dot_rate );
+        solid_context.interior_rate( v_dot_var, qp, v_dot_rate );
+
+        libMesh::Real w_dot_rate = 0.0;
+        if( this->_disp_vars.dim() == 3 )
+          solid_context.interior_rate( w_dot_var, qp, w_dot_rate );
+
+        // Displacement acceleration
+        libMesh::Real u_ddot, v_ddot;
+        solid_context.interior_accel( u_var, qp, u_ddot );
+        solid_context.interior_accel( v_var, qp, v_ddot );
+
+        libMesh::Real w_ddot = 0.0;
+        if( this->_disp_vars.dim() == 3 )
+          solid_context.interior_accel( w_var, qp, w_ddot );
+
+        for (unsigned int i=0; i != n_u_dofs; i++)
+          {
+            libMesh::Real phi_times_jac = u_phi[i][qp]*jac;
+
+            Fud(i) += (u_dot_rate - u_ddot)*phi_times_jac;
+            Fvd(i) += (v_dot_rate - v_ddot)*phi_times_jac;
+
+            if( this->_disp_vars.dim() == 3 )
+              (*Fwd)(i) += (w_dot_rate - w_ddot)*phi_times_jac;
+
+            if( compute_jacobian )
+              {
+                for (unsigned int j=0; j != n_u_dofs; j++)
+                  {
+                    libMesh::Real udterm =
+                      (u_phi[j][qp]*solid_context.get_elem_solution_rate_derivative())*phi_times_jac;
+
+                    Kudud(i,j) += udterm;
+                    Kvdvd(i,j) += udterm;
+
+                    if( this->_disp_vars.dim() == 3 )
+                      (*Kwdwd)(i,j) += udterm;
+
+                    libMesh::Real uterm =
+                      (u_phi[j][qp]*solid_context.get_elem_solution_accel_derivative())*phi_times_jac;
+
+                    Kudu(i,j) -= uterm;
+                    Kvdv(i,j) -= uterm;
+
+                    if( this->_disp_vars.dim() == 3 )
+                      (*Kwdw)(i,j) -= uterm;
+                  }
+              }
+          }
+      }
+  }
+
   template<typename SolidMech>
   void ImmersedBoundary<SolidMech>::assemble_fluid_var_residual_contributions( bool compute_jacobian,
                                                                                AssemblyContext & context )
