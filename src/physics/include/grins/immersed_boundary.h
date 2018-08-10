@@ -140,6 +140,15 @@ namespace GRINS
 
     void assemble_fluid_var_residual_contributions( bool compute_jacobian,
                                                     AssemblyContext & context );
+    void add_velocity_coupling_term_to_solid_residual(bool compute_jacobian,
+                                                      MultiphysicsSystem & system,
+                                                      libMesh::FEMContext & fluid_context,
+                                                      AssemblyContext & solid_context,
+                                                      const std::vector<unsigned int> & solid_qpoint_indices,
+                                                      const std::vector<libMesh::Point> & solid_qpoints_subset,
+                                                      const std::vector<libMesh::Real> & solid_JxW,
+                                                      const std::vector<std::vector<libMesh::Real> > & solid_phi,
+                                                      const std::vector<std::vector<libMesh::Real> > & fluid_phi);
 
     void assemble_solid_var_residual_contributions( bool compute_jacobian,
                                                     AssemblyContext & context );
