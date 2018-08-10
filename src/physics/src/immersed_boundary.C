@@ -192,9 +192,6 @@ namespace GRINS
         std::string err = "ERROR: solid_mechanics not properly specified";
         libmesh_error_msg(err);
       }
-
-    context.get_element_fe(_flow_vars.u())->get_JxW();
-
   }
 
   template<typename SolidMech>
@@ -647,12 +644,16 @@ namespace GRINS
     MultiphysicsSystem & system = context.get_multiphysics_system();
 
     unsigned int u_var = this->_disp_vars.u();
+    unsigned int v_var = this->_disp_vars.v();
+
+    unsigned int u_dot_var = system.get_second_order_dot_var(u_var);
+    unsigned int v_dot_var = system.get_second_order_dot_var(v_var);
 
     const unsigned int n_solid_dofs = solid_context.get_dof_indices(u_var).size();
 
-    std::cout << "n_solid_dofs = " << n_solid_dofs << std::endl;
+    //std::cout << "n_solid_dofs = " << n_solid_dofs << std::endl;
 
-    // Global coordinates of the solid qp points
+    // Prepare solid info needed
     const std::vector<libMesh::Point> & solid_qpoints =
       solid_context.get_element_fe(u_var,2)->get_xyz();
 
@@ -665,31 +666,23 @@ namespace GRINS
     const std::vector<std::vector<libMesh::RealGradient> > & solid_dphi =
       solid_context.get_element_fe(u_var,2)->get_dphi();
 
+    // Prepare fluid info needed
+    const std::vector<std::vector<libMesh::Real> > & fluid_phi =
+      _fluid_context->get_element_fe(this->_flow_vars.u())->get_phi();
+
     const std::vector<std::vector<libMesh::RealGradient> > & fluid_dphi =
       _fluid_context->get_element_fe(this->_flow_vars.u())->get_dphi();
 
-    unsigned int u_dot_var = system.get_second_order_dot_var(u_var);
 
     // Solid residuals
     libMesh::DenseSubVector<libMesh::Number> & Fus = solid_context.get_elem_residual(u_dot_var);
-    libMesh::DenseSubVector<libMesh::Number> * Fvs = NULL;
+    libMesh::DenseSubVector<libMesh::Number> & Fvs = solid_context.get_elem_residual(v_dot_var);
     libMesh::DenseSubVector<libMesh::Number> * Fws = NULL;
 
     // Solid Jacobians
     libMesh::DenseSubMatrix<libMesh::Number> & Kus_us = solid_context.get_elem_jacobian(u_dot_var,u_dot_var);
-    libMesh::DenseSubMatrix<libMesh::Number> * Kvs_vs = NULL;
+    libMesh::DenseSubMatrix<libMesh::Number> & Kvs_vs = solid_context.get_elem_jacobian(v_dot_var,v_dot_var);
     libMesh::DenseSubMatrix<libMesh::Number> * Kws_ws = NULL;
-
-    unsigned int v_var = libMesh::invalid_uint;
-    unsigned int v_dot_var = libMesh::invalid_uint;
-    if ( this->_disp_vars.dim() >= 2 )
-      {
-        v_var = this->_disp_vars.v();
-        v_dot_var = system.get_second_order_dot_var(v_var);
-
-        Fvs = &solid_context.get_elem_residual(v_dot_var);
-        Kvs_vs = &solid_context.get_elem_jacobian(v_dot_var,v_dot_var);
-      }
 
     unsigned int w_var = libMesh::invalid_uint;
     unsigned int w_dot_var = libMesh::invalid_uint;
@@ -702,74 +695,8 @@ namespace GRINS
         Kws_ws = &solid_context.get_elem_jacobian(w_dot_var,w_dot_var);
       }
 
-    const unsigned int n_qpoints = solid_context.get_element_qrule().n_points();
-
-    // First, assemble the velocity coupling into the solid residual
-    // Set "default" values for steady case and augment for unsteady case.
-    // Residual is zero, but Jacobian contributions are important in the steady case.
-    libMesh::Point Udot;
-    libMesh::Real solution_rate_derivative = 1.0;
-    if( !system.get_time_solver().is_steady() )
-      solution_rate_derivative = solid_context.get_elem_solution_rate_derivative();
-
-    for(unsigned int qp=0; qp != n_qpoints; qp++)
-      {
-        // Populate solid velocity for the unsteady case. Otherwise it's zero.
-        if( !system.get_time_solver().is_steady() )
-          {
-            // Velocity of solid at quadrature point.
-            solid_context.interior_rate(this->_disp_vars.u(), qp, Udot(0));
-
-            if ( this->_disp_vars.dim() >= 2 )
-              solid_context.interior_rate(this->_disp_vars.v(), qp, Udot(1));
-
-            if ( this->_disp_vars.dim() == 3 )
-              solid_context.interior_rate(this->_disp_vars.w(), qp, Udot(2));
-          }
-
-        // Velocity matching term, loop over solid dofs. These
-        // are minus since the fluid velocity part was positive.
-        for( unsigned int i = 0; i < n_solid_dofs; i++ )
-          {
-            Fus(i) -= Udot(0)*solid_phi[i][qp]*solid_JxW[qp];
-
-            if ( this->_disp_vars.dim() >= 2 )
-              (*Fvs)(i) -= Udot(1)*solid_phi[i][qp]*solid_JxW[qp];
-
-            if( this->_disp_vars.dim() == 3 )
-              (*Fws)(i) -= Udot(2)*solid_phi[i][qp]*solid_JxW[qp];
-
-            if(compute_jacobian)
-              {
-                for( unsigned int j = 0; j < n_solid_dofs; j++ )
-                  {
-                    libMesh::Real diag_value =
-                      solid_phi[j][qp]*solid_phi[i][qp]*solid_JxW[qp]*solution_rate_derivative;
-
-                    Kus_us(i,j) -= diag_value;
-
-                    if ( this->_disp_vars.dim() >= 2 )
-                      (*Kvs_vs)(i,j) -= diag_value;
-
-                    if ( this->_disp_vars.dim() == 3 )
-                      (*Kws_ws)(i,j) -= diag_value;
-                  }
-              }
-
-          } // end dof loop
-      } // end qp loop
-
-    libMesh::DenseMatrix<libMesh::Number> Kmat;
-
-    libMesh::DenseSubMatrix<libMesh::Number> Kuf_us(Kmat), Kuf_vs(Kmat), Kuf_ws(Kmat);
-    libMesh::DenseSubMatrix<libMesh::Number> Kvf_us(Kmat), Kvf_vs(Kmat), Kvf_ws(Kmat);
-    libMesh::DenseSubMatrix<libMesh::Number> Kwf_us(Kmat), Kwf_vs(Kmat), Kwf_ws(Kmat);
-
-    std::vector<libMesh::dof_id_type> velocity_dof_indices;
-
     std::vector<libMesh::Point> solid_qpoints_subset;
 
-    // Now we assemble the force coupling part
     // We need to grab the fluid elements that are overlapping with this solid elem.
     // Then, for that fluid element, extract the indices of the *solid* quadrature points
     // that are in that fluid element
@@ -795,214 +722,245 @@ namespace GRINS
         solid_qpoints_subset.clear();
         solid_qpoints_subset.reserve(solid_qpoint_indices.size());
         for( unsigned int i = 0; i < solid_qpoint_indices.size(); i++ )
-          solid_qpoints_subset.push_back( (solid_context.get_element_fe(_disp_vars.u(),2)->get_xyz())[ solid_qpoint_indices[i] ]);
+          solid_qpoints_subset.push_back( solid_qpoints[solid_qpoint_indices[i]]);
 
         _fluid_context->pre_fe_reinit(system,fluid_elem);
         _fluid_context->elem_fe_reinit(&solid_qpoints_subset);
 
-        unsigned int n_fluid_dofs = _fluid_context->get_dof_indices(this->_flow_vars.u()).size();
-
-        velocity_dof_indices.clear();
-        velocity_dof_indices.resize(_flow_vars.dim()*n_fluid_dofs);
-
-        std::vector<libMesh::dof_id_type>::iterator vdof_start = velocity_dof_indices.begin();
-        const std::vector<libMesh::dof_id_type>& u_dof_indices =
-          _fluid_context->get_dof_indices(this->_flow_vars.u());
-
-        for( unsigned int i = 0; i < u_dof_indices.size(); i++ )
-          velocity_dof_indices[i] = u_dof_indices[i];
-
-        const std::vector<libMesh::dof_id_type>& v_dof_indices =
-          _fluid_context->get_dof_indices(this->_flow_vars.u());
-
-        for( unsigned int i = 0; i < v_dof_indices.size(); i++ )
-          velocity_dof_indices[i+n_fluid_dofs] = v_dof_indices[i];
-
-        //Build up solid dof indices
-        std::vector<libMesh::dof_id_type> solid_dof_indices;
-
-        solid_dof_indices.clear();
-        solid_dof_indices.resize(_disp_vars.dim()*n_solid_dofs);
-
-        std::vector<libMesh::dof_id_type>::iterator sdof_start = solid_dof_indices.begin();
-        const std::vector<libMesh::dof_id_type>& us_dof_indices =
-          solid_context.get_dof_indices(u_var);
-
-        for( unsigned int i = 0; i < us_dof_indices.size(); i++ )
-          solid_dof_indices[i] = us_dof_indices[i];
-
-        const std::vector<libMesh::dof_id_type>& vs_dof_indices =
-          solid_context.get_dof_indices(v_var);
-
-        for( unsigned int i = 0; i < vs_dof_indices.size(); i++ )
-          solid_dof_indices[i+n_solid_dofs] = vs_dof_indices[i];
-
-        libMesh::DenseSubVector<libMesh::Number> & Fu = _fluid_context->get_elem_residual(this->_flow_vars.u());
-        libMesh::DenseSubVector<libMesh::Number> & Fv = _fluid_context->get_elem_residual(this->_flow_vars.v());
-        libMesh::DenseSubVector<libMesh::Number> * Fw = NULL;
-
-        if( _flow_vars.dim() == 3 )
-          Fw = &_fluid_context->get_elem_residual(this->_flow_vars.w());
-
-        if( compute_jacobian)
-          {
-            Kmat.resize( this->_flow_vars.dim()*n_fluid_dofs, this->_disp_vars.dim()*n_solid_dofs );
-
-            // We need to manually manage the indexing since we're working only on this particular subblock
-            Kuf_us.reposition( 0, 0, n_fluid_dofs, n_solid_dofs );
-            Kuf_vs.reposition( 0, n_solid_dofs, n_fluid_dofs, n_solid_dofs );
-            Kvf_us.reposition( n_fluid_dofs, 0, n_fluid_dofs, n_solid_dofs );
-            Kvf_vs.reposition( n_fluid_dofs, n_solid_dofs, n_fluid_dofs, n_solid_dofs );
-
-            if( _flow_vars.dim() == 3 )
-              {
-                Kuf_ws.reposition( 0, 2*n_solid_dofs, n_fluid_dofs, n_solid_dofs );
-                Kvf_ws.reposition( n_fluid_dofs, 2*n_solid_dofs, n_fluid_dofs, n_solid_dofs );
-                Kwf_us.reposition( 2*n_fluid_dofs, 0, n_fluid_dofs, n_solid_dofs );
-                Kwf_vs.reposition( 2*n_fluid_dofs, n_solid_dofs, n_fluid_dofs, n_solid_dofs );
-                Kwf_ws.reposition( 2*n_fluid_dofs, 2*n_solid_dofs, n_fluid_dofs, n_solid_dofs );
-              }
-          }
-
-        for( unsigned int qp = 0; qp < solid_qpoints_subset.size(); qp++ )
-          {
-            libMesh::Gradient grad_u, grad_v, grad_w;
-            solid_context.interior_gradient(this->_disp_vars.u(), solid_qpoint_indices[qp], grad_u);
-            solid_context.interior_gradient(this->_disp_vars.v(), solid_qpoint_indices[qp], grad_v);
-
-            libMesh::TensorValue<libMesh::Real> grad_U;
-            grad_U(0,0) = grad_u(0);
-            grad_U(0,1) = grad_u(1);
-            grad_U(0,2) = grad_u(2);
-            grad_U(1,0) = grad_v(0);
-            grad_U(1,1) = grad_v(1);
-            grad_U(1,2) = grad_v(2);
-
-            libMesh::TensorValue<libMesh::Real> F(grad_U);
-            F(0,0) += 1;
-            F(1,1) += 1;
-
-            // We need to use F^T a few times so just cache it.
-            libMesh::TensorValue<libMesh::Real> Ftrans = F.transpose();
-
-            libMesh::TensorValue<libMesh::Real> E(Ftrans*F);
-            E(0,0) -= 1;
-            E(1,1) -= 1;
-            E *= 0.5;
-
-            libMesh::Real Em = 1000000000;
-            libMesh::Real nu = 0.3;
-            libMesh::Real lambda = Em*nu/(1+nu)*(1-2*nu);
-            libMesh::Real mu = Em/(2*(1+nu));
-
-            libMesh::Real trE = E.tr();
-            libMesh::TensorValue<libMesh::Real> S(2.0*E*mu);
-            S(0,0) += lambda*trE;
-            S(1,1) += lambda*trE;
-
-            libMesh::TensorValue<libMesh::Real> P(F*S);
-
-            // The F^T comes from needing the derivative of the fluid
-            // shape function w.r.t. solid coordinates
-            libMesh::TensorValue<libMesh::Real> tau(P*Ftrans);
-
-            // Gradients w.r.t. the master element coordinates
-            _solid_mech->get_grad_disp(context, solid_qpoint_indices[qp],
-                                       grad_u, grad_v, grad_w);
-
-            // Piola-kirchoff stress tensor in the reference configuration
-            // TODO: tau needs to be scaled basd on mesh dimension
-            libMesh::TensorValue<libMesh::Real> blah;
-            ElasticityTensor C;
-            _solid_mech->get_stress_and_elasticity(context,solid_qpoint_indices[qp],
-                                                   grad_u,grad_v,grad_w,blah,C);
-
-            for (unsigned int i=0; i != n_fluid_dofs; i++)
-              {
-                // Zero index for fluid dphi/JxW since we only requested one quad. point.
-                for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
-                  {
-                    Fu(i) -= tau(alpha,0)*fluid_dphi[i][qp](alpha)*solid_JxW[solid_qpoint_indices[qp]];
-                    Fv(i) -= tau(alpha,1)*fluid_dphi[i][qp](alpha)*solid_JxW[solid_qpoint_indices[qp]];
-
-                    if (this->_flow_vars.dim() == 3)
-                      (*Fw)(i) -= tau(alpha,2)*fluid_dphi[i][qp](alpha)*solid_JxW[solid_qpoint_indices[qp]];
-                  }
-
-                if( compute_jacobian )
-                  {
-                    libMesh::Real factor = solid_JxW[solid_qpoint_indices[qp]]*solid_context.get_elem_solution_derivative();
-
-                    for (unsigned int j=0; j != n_solid_dofs; j++)
-                      {
-                        libMesh::Real term1 = (((S*Ftrans).transpose())*solid_dphi[j][solid_qpoint_indices[qp]])*fluid_dphi[i][qp];
-
-                        libMesh::Real term3 = (P*solid_dphi[j][solid_qpoint_indices[qp]])*fluid_dphi[i][qp];
-
-                        Kuf_us(i,j) -= (term1+term3)*factor;
-                        Kvf_us(i,j) -= (term1+term3)*factor;
-                        Kuf_vs(i,j) -= (term1+term3)*factor;
-                        Kvf_vs(i,j) -= (term1+term3)*factor;
-
-                        if( this->_disp_vars.dim() == 3 )
-                          {
-                            Kuf_ws(i,j) -= (term1+term3)*factor;
-                            Kvf_ws(i,j) -= (term1+term3)*factor;
-                            Kwf_us(i,j) -= (term1+term3)*factor;
-                            Kwf_vs(i,j) -= (term1+term3)*factor;
-                            Kwf_ws(i,j) -= (term1+term3)*factor;
-                          }
-
-                        for( unsigned int I = 0; I < _disp_vars.dim(); I++ )
-                          for( unsigned int J = 0; J < _disp_vars.dim(); J++ )
-                            for( unsigned int K = 0; K < _disp_vars.dim(); K++ )
-                              for( unsigned int L = 0; L < _disp_vars.dim(); L++ )
-                                {
-                                  Kuf_us(i,j) -= F(0,I)*C(I,J,K,L)*F(0,K)*(Ftrans.row(J)*fluid_dphi[i][qp])*solid_dphi[j][solid_qpoint_indices[qp]](L);
-                                  Kuf_vs(i,j) -= F(0,I)*C(I,J,K,L)*F(1,K)*(Ftrans.row(J)*fluid_dphi[i][qp])*solid_dphi[j][solid_qpoint_indices[qp]](L);
-                                  Kvf_us(i,j) -= F(1,I)*C(I,J,K,L)*F(0,K)*(Ftrans.row(J)*fluid_dphi[i][qp])*solid_dphi[j][solid_qpoint_indices[qp]](L);
-                                  Kvf_vs(i,j) -= F(1,I)*C(I,J,K,L)*F(1,K)*(Ftrans.row(J)*fluid_dphi[i][qp])*solid_dphi[j][solid_qpoint_indices[qp]](L);
-
-                                  if( this->_disp_vars.dim() == 3 )
-                                    {
-                                      Kuf_ws(i,j) -= F(0,I)*C(I,J,K,L)*F(2,K)*(Ftrans.row(J)*fluid_dphi[i][qp])*solid_dphi[j][solid_qpoint_indices[qp]](L);
-                                      Kvf_ws(i,j) -= F(1,I)*C(I,J,K,L)*F(2,K)*(Ftrans.row(J)*fluid_dphi[i][qp])*solid_dphi[j][solid_qpoint_indices[qp]](L);
-                                      Kwf_us(i,j) -= F(2,I)*C(I,J,K,L)*F(0,K)*(Ftrans.row(J)*fluid_dphi[i][qp])*solid_dphi[j][solid_qpoint_indices[qp]](L);
-                                      Kwf_vs(i,j) -= F(2,I)*C(I,J,K,L)*F(1,K)*(Ftrans.row(J)*fluid_dphi[i][qp])*solid_dphi[j][solid_qpoint_indices[qp]](L);
-                                      Kwf_ws(i,j) -= F(2,I)*C(I,J,K,L)*F(2,K)*(Ftrans.row(J)*fluid_dphi[i][qp])*solid_dphi[j][solid_qpoint_indices[qp]](L);
-                                    }
-                                }
-
-                      }
-                  }// compute_jacobian
-
-              } //fluid dof loop
-          }
-
-        // Since we manually built the fluid context, we have to manually
-        // constrain and add the residuals and Jacobians.
-        //! \todo  We're hardcoding to the case that the residual is always
-        //  assembled and homogeneous constraints.
-        if( compute_jacobian )
-          {
-            system.get_dof_map().constrain_element_matrix
-              ( Kmat,
-                velocity_dof_indices,
-                solid_dof_indices, false );
-
-            system.matrix->add_matrix( Kmat,
-                                       velocity_dof_indices,
-                                       solid_dof_indices );
-          }
-
-        system.get_dof_map().constrain_element_vector
-          ( _fluid_context->get_elem_residual(),
-            _fluid_context->get_dof_indices(), false );
-
-        system.rhs->add_vector( _fluid_context->get_elem_residual(),
-                                _fluid_context->get_dof_indices() );
+        this->add_source_term_to_fluid_residual(compute_jacobian,
+                                                system,
+                                                *(this->_fluid_context),
+                                                solid_context,
+                                                solid_qpoint_indices,
+                                                solid_qpoints_subset,
+                                                solid_JxW,solid_dphi,fluid_dphi);
 
       } // end loop over overlapping fluid elements
+  }
+
+  template<typename SolidMech>
+  void ImmersedBoundary<SolidMech>::add_source_term_to_fluid_residual
+  ( bool compute_jacobian,
+    MultiphysicsSystem & system,
+    libMesh::FEMContext & fluid_context,
+    AssemblyContext & solid_context,
+    const std::vector<unsigned int> & solid_qpoint_indices,
+    const std::vector<libMesh::Point> & solid_qpoints_subset,
+    const std::vector<libMesh::Real> & solid_JxW,
+    const std::vector<std::vector<libMesh::RealGradient> > & solid_dphi,
+    const std::vector<std::vector<libMesh::RealGradient> > & fluid_dphi )
+  {
+    libMesh::DenseMatrix<libMesh::Number> Kmat;
+
+    libMesh::DenseSubMatrix<libMesh::Number> Kuf_us(Kmat), Kuf_vs(Kmat), Kuf_ws(Kmat);
+    libMesh::DenseSubMatrix<libMesh::Number> Kvf_us(Kmat), Kvf_vs(Kmat), Kvf_ws(Kmat);
+    libMesh::DenseSubMatrix<libMesh::Number> Kwf_us(Kmat), Kwf_vs(Kmat), Kwf_ws(Kmat);
+
+
+
+    unsigned int n_solid_dofs = solid_context.get_dof_indices(this->_disp_vars.u()).size();
+
+    unsigned int n_fluid_dofs = fluid_context.get_dof_indices(this->_flow_vars.u()).size();
+
+
+
+    libMesh::DenseSubVector<libMesh::Number> & Fuf = fluid_context.get_elem_residual(this->_flow_vars.u());
+    libMesh::DenseSubVector<libMesh::Number> & Fvf = fluid_context.get_elem_residual(this->_flow_vars.v());
+    libMesh::DenseSubVector<libMesh::Number> * Fwf = NULL;
+
+    if( _flow_vars.dim() == 3 )
+      Fwf = &fluid_context.get_elem_residual(this->_flow_vars.w());
+
+    if( compute_jacobian)
+      {
+        Kmat.resize( this->_flow_vars.dim()*n_fluid_dofs, this->_disp_vars.dim()*n_solid_dofs );
+
+        // We need to manually manage the indexing since we're working only on this particular subblock
+        Kuf_us.reposition( 0, 0, n_fluid_dofs, n_solid_dofs );
+        Kuf_vs.reposition( 0, n_solid_dofs, n_fluid_dofs, n_solid_dofs );
+        Kvf_us.reposition( n_fluid_dofs, 0, n_fluid_dofs, n_solid_dofs );
+        Kvf_vs.reposition( n_fluid_dofs, n_solid_dofs, n_fluid_dofs, n_solid_dofs );
+
+        if( _flow_vars.dim() == 3 )
+          {
+            Kuf_ws.reposition( 0, 2*n_solid_dofs, n_fluid_dofs, n_solid_dofs );
+            Kvf_ws.reposition( n_fluid_dofs, 2*n_solid_dofs, n_fluid_dofs, n_solid_dofs );
+            Kwf_us.reposition( 2*n_fluid_dofs, 0, n_fluid_dofs, n_solid_dofs );
+            Kwf_vs.reposition( 2*n_fluid_dofs, n_solid_dofs, n_fluid_dofs, n_solid_dofs );
+            Kwf_ws.reposition( 2*n_fluid_dofs, 2*n_solid_dofs, n_fluid_dofs, n_solid_dofs );
+          }
+      }
+
+    for( unsigned int qp = 0; qp < solid_qpoints_subset.size(); qp++ )
+      {
+        libMesh::Gradient grad_u, grad_v, grad_w;
+        solid_context.interior_gradient(this->_disp_vars.u(), solid_qpoint_indices[qp], grad_u);
+        solid_context.interior_gradient(this->_disp_vars.v(), solid_qpoint_indices[qp], grad_v);
+
+        libMesh::TensorValue<libMesh::Real> grad_U;
+        grad_U(0,0) = grad_u(0);
+        grad_U(0,1) = grad_u(1);
+        grad_U(0,2) = grad_u(2);
+        grad_U(1,0) = grad_v(0);
+        grad_U(1,1) = grad_v(1);
+        grad_U(1,2) = grad_v(2);
+
+        libMesh::TensorValue<libMesh::Real> F(grad_U);
+        F(0,0) += 1;
+        F(1,1) += 1;
+
+        // We need to use F^T a few times so just cache it.
+        libMesh::TensorValue<libMesh::Real> Ftrans = F.transpose();
+
+        libMesh::TensorValue<libMesh::Real> E(Ftrans*F);
+        E(0,0) -= 1;
+        E(1,1) -= 1;
+        E *= 0.5;
+
+        libMesh::Real Em = 1000000000;
+        libMesh::Real nu = 0.3;
+        libMesh::Real lambda = Em*nu/(1+nu)*(1-2*nu);
+        libMesh::Real mu = Em/(2*(1+nu));
+
+        libMesh::Real trE = E.tr();
+        libMesh::TensorValue<libMesh::Real> S(2.0*E*mu);
+        S(0,0) += lambda*trE;
+        S(1,1) += lambda*trE;
+
+        libMesh::TensorValue<libMesh::Real> P(F*S);
+
+        // The F^T comes from needing the derivative of the fluid
+        // shape function w.r.t. solid coordinates
+        libMesh::TensorValue<libMesh::Real> tau(P*Ftrans);
+
+        // Gradients w.r.t. the master element coordinates
+        _solid_mech->get_grad_disp(solid_context, solid_qpoint_indices[qp],
+                                   grad_u, grad_v, grad_w);
+
+        // Piola-kirchoff stress tensor in the reference configuration
+        // TODO: tau needs to be scaled basd on mesh dimension
+        libMesh::TensorValue<libMesh::Real> blah;
+        ElasticityTensor C;
+        _solid_mech->get_stress_and_elasticity(solid_context,solid_qpoint_indices[qp],
+                                               grad_u,grad_v,grad_w,blah,C);
+
+        for (unsigned int i=0; i != n_fluid_dofs; i++)
+          {
+            // Zero index for fluid dphi/JxW since we only requested one quad. point.
+            for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
+              {
+                Fuf(i) -= tau(alpha,0)*fluid_dphi[i][qp](alpha)*solid_JxW[solid_qpoint_indices[qp]];
+                Fvf(i) -= tau(alpha,1)*fluid_dphi[i][qp](alpha)*solid_JxW[solid_qpoint_indices[qp]];
+
+                if (this->_flow_vars.dim() == 3)
+                  (*Fwf)(i) -= tau(alpha,2)*fluid_dphi[i][qp](alpha)*solid_JxW[solid_qpoint_indices[qp]];
+              }
+
+            if( compute_jacobian )
+              {
+                libMesh::Real factor = solid_JxW[solid_qpoint_indices[qp]]*solid_context.get_elem_solution_derivative();
+
+                for (unsigned int j=0; j != n_solid_dofs; j++)
+                  {
+                    libMesh::Real term1 = (((S*Ftrans).transpose())*solid_dphi[j][solid_qpoint_indices[qp]])*fluid_dphi[i][qp];
+
+                    libMesh::Real term3 = (P*solid_dphi[j][solid_qpoint_indices[qp]])*fluid_dphi[i][qp];
+
+                    Kuf_us(i,j) -= (term1+term3)*factor;
+                    Kvf_us(i,j) -= (term1+term3)*factor;
+                    Kuf_vs(i,j) -= (term1+term3)*factor;
+                    Kvf_vs(i,j) -= (term1+term3)*factor;
+
+                    if( this->_disp_vars.dim() == 3 )
+                      {
+                        Kuf_ws(i,j) -= (term1+term3)*factor;
+                        Kvf_ws(i,j) -= (term1+term3)*factor;
+                        Kwf_us(i,j) -= (term1+term3)*factor;
+                        Kwf_vs(i,j) -= (term1+term3)*factor;
+                        Kwf_ws(i,j) -= (term1+term3)*factor;
+                      }
+
+                    for( unsigned int I = 0; I < _disp_vars.dim(); I++ )
+                      for( unsigned int J = 0; J < _disp_vars.dim(); J++ )
+                        for( unsigned int K = 0; K < _disp_vars.dim(); K++ )
+                          for( unsigned int L = 0; L < _disp_vars.dim(); L++ )
+                            {
+                              Kuf_us(i,j) -= F(0,I)*C(I,J,K,L)*F(0,K)*(Ftrans.row(J)*fluid_dphi[i][qp])*solid_dphi[j][solid_qpoint_indices[qp]](L);
+                              Kuf_vs(i,j) -= F(0,I)*C(I,J,K,L)*F(1,K)*(Ftrans.row(J)*fluid_dphi[i][qp])*solid_dphi[j][solid_qpoint_indices[qp]](L);
+                              Kvf_us(i,j) -= F(1,I)*C(I,J,K,L)*F(0,K)*(Ftrans.row(J)*fluid_dphi[i][qp])*solid_dphi[j][solid_qpoint_indices[qp]](L);
+                              Kvf_vs(i,j) -= F(1,I)*C(I,J,K,L)*F(1,K)*(Ftrans.row(J)*fluid_dphi[i][qp])*solid_dphi[j][solid_qpoint_indices[qp]](L);
+
+                              if( this->_disp_vars.dim() == 3 )
+                                {
+                                  Kuf_ws(i,j) -= F(0,I)*C(I,J,K,L)*F(2,K)*(Ftrans.row(J)*fluid_dphi[i][qp])*solid_dphi[j][solid_qpoint_indices[qp]](L);
+                                  Kvf_ws(i,j) -= F(1,I)*C(I,J,K,L)*F(2,K)*(Ftrans.row(J)*fluid_dphi[i][qp])*solid_dphi[j][solid_qpoint_indices[qp]](L);
+                                  Kwf_us(i,j) -= F(2,I)*C(I,J,K,L)*F(0,K)*(Ftrans.row(J)*fluid_dphi[i][qp])*solid_dphi[j][solid_qpoint_indices[qp]](L);
+                                  Kwf_vs(i,j) -= F(2,I)*C(I,J,K,L)*F(1,K)*(Ftrans.row(J)*fluid_dphi[i][qp])*solid_dphi[j][solid_qpoint_indices[qp]](L);
+                                  Kwf_ws(i,j) -= F(2,I)*C(I,J,K,L)*F(2,K)*(Ftrans.row(J)*fluid_dphi[i][qp])*solid_dphi[j][solid_qpoint_indices[qp]](L);
+                                }
+                            }
+
+                  }
+              }// compute_jacobian
+
+          } //fluid dof loop
+
+      } // end solid_qpoints_subset loop
+
+    std::vector<libMesh::dof_id_type> velocity_dof_indices;
+    velocity_dof_indices.resize(_flow_vars.dim()*n_fluid_dofs);
+
+    const std::vector<libMesh::dof_id_type>& u_dof_indices =
+      fluid_context.get_dof_indices(this->_flow_vars.u());
+
+    for( unsigned int i = 0; i < u_dof_indices.size(); i++ )
+      velocity_dof_indices[i] = u_dof_indices[i];
+
+    const std::vector<libMesh::dof_id_type>& v_dof_indices =
+      fluid_context.get_dof_indices(this->_flow_vars.v());
+
+    for( unsigned int i = 0; i < v_dof_indices.size(); i++ )
+      velocity_dof_indices[i+n_fluid_dofs] = v_dof_indices[i];
+
+    //Build up solid dof indices
+    std::vector<libMesh::dof_id_type> solid_dof_indices;
+    solid_dof_indices.resize(_disp_vars.dim()*n_solid_dofs);
+
+    const std::vector<libMesh::dof_id_type>& us_dof_indices =
+      solid_context.get_dof_indices(this->_disp_vars.u());
+
+    for( unsigned int i = 0; i < us_dof_indices.size(); i++ )
+      solid_dof_indices[i] = us_dof_indices[i];
+
+    const std::vector<libMesh::dof_id_type>& vs_dof_indices =
+      solid_context.get_dof_indices(this->_disp_vars.v());
+
+    for( unsigned int i = 0; i < vs_dof_indices.size(); i++ )
+      solid_dof_indices[i+n_solid_dofs] = vs_dof_indices[i];
+
+    // Since we manually built the fluid context, we have to manually
+    // constrain and add the residuals and Jacobians.
+    //! \todo  We're hardcoding to the case that the residual is always
+    //  assembled and homogeneous constraints.
+    if( compute_jacobian )
+      {
+        system.get_dof_map().constrain_element_matrix
+          ( Kmat,
+            velocity_dof_indices,
+            solid_dof_indices, false );
+
+        system.matrix->add_matrix( Kmat,
+                                   velocity_dof_indices,
+                                   solid_dof_indices );
+      }
+
+    system.get_dof_map().constrain_element_vector
+      ( fluid_context.get_elem_residual(),
+        fluid_context.get_dof_indices(), false );
+
+    system.rhs->add_vector( fluid_context.get_elem_residual(),
+                            fluid_context.get_dof_indices() );
+
   }
 
     //instantiate IBM classes
