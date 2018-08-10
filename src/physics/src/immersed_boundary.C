@@ -722,6 +722,7 @@ namespace GRINS
 
         this->prepare_fluid_context( system,
                                      fluid_elem_id,
+                                     solid_context,
                                      solid_qpoint_indices,
                                      solid_qpoints,
                                      solid_qpoints_subset,
@@ -742,6 +743,7 @@ namespace GRINS
   void ImmersedBoundary<SolidMech>::prepare_fluid_context
   ( const MultiphysicsSystem & system,
     libMesh::dof_id_type fluid_elem_id,
+    const AssemblyContext & solid_context,
     const std::vector<unsigned int> & solid_qpoint_indices,
     const std::vector<libMesh::Point> & solid_qpoints,
     std::vector<libMesh::Point> & solid_qpoints_subset,
@@ -750,11 +752,20 @@ namespace GRINS
     solid_qpoints_subset.clear();
     solid_qpoints_subset.reserve(solid_qpoint_indices.size());
 
+    libMesh::Real u,v,w;
+
     for( unsigned int i = 0; i < solid_qpoint_indices.size(); i++ )
       {
-        const libMesh::Point & xqp = solid_qpoints[solid_qpoint_indices[i]];
+        unsigned int qp = solid_qpoint_indices[i];
 
-        libMesh::Point xpu_qp(xqp(0),xqp(1),xqp(2));
+        solid_context.interior_value(this->_disp_vars.u(), qp, u );
+        solid_context.interior_value(this->_disp_vars.v(), qp, v );
+        if(this->_disp_vars.dim() == 3)
+          solid_context.interior_value(this->_disp_vars.w(), qp, w );
+
+        const libMesh::Point & xqp = solid_qpoints[qp];
+
+        libMesh::Point xpu_qp(xqp(0)+u, xqp(1)+v, xqp(2)+w);
 
         solid_qpoints_subset.push_back( xpu_qp );
       }
