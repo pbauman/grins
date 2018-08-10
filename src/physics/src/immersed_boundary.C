@@ -367,14 +367,6 @@ namespace GRINS
     MultiphysicsSystem & system = context.get_multiphysics_system();
 
     unsigned int u_var = this->_disp_vars.u();
-    unsigned int v_var = this->_disp_vars.v();
-
-    unsigned int u_dot_var = system.get_second_order_dot_var(u_var);
-    unsigned int v_dot_var = system.get_second_order_dot_var(v_var);
-
-    const unsigned int n_solid_dofs = solid_context.get_dof_indices(u_var).size();
-
-    //std::cout << "n_solid_dofs = " << n_solid_dofs << std::endl;
 
     // Prepare solid info needed
     const std::vector<libMesh::Point> & solid_qpoints =
@@ -395,28 +387,6 @@ namespace GRINS
 
     const std::vector<std::vector<libMesh::RealGradient> > & fluid_dphi =
       _fluid_context->get_element_fe(this->_flow_vars.u())->get_dphi();
-
-
-    // Solid residuals
-    libMesh::DenseSubVector<libMesh::Number> & Fus = solid_context.get_elem_residual(u_dot_var);
-    libMesh::DenseSubVector<libMesh::Number> & Fvs = solid_context.get_elem_residual(v_dot_var);
-    libMesh::DenseSubVector<libMesh::Number> * Fws = NULL;
-
-    // Solid Jacobians
-    libMesh::DenseSubMatrix<libMesh::Number> & Kus_us = solid_context.get_elem_jacobian(u_dot_var,u_dot_var);
-    libMesh::DenseSubMatrix<libMesh::Number> & Kvs_vs = solid_context.get_elem_jacobian(v_dot_var,v_dot_var);
-    libMesh::DenseSubMatrix<libMesh::Number> * Kws_ws = NULL;
-
-    unsigned int w_var = libMesh::invalid_uint;
-    unsigned int w_dot_var = libMesh::invalid_uint;
-    if ( this->_disp_vars.dim() == 3 )
-      {
-        w_var = this->_disp_vars.w();
-        w_dot_var = system.get_second_order_dot_var(w_var);
-
-        Fws = &solid_context.get_elem_residual(w_var);
-        Kws_ws = &solid_context.get_elem_jacobian(w_dot_var,w_dot_var);
-      }
 
     std::vector<libMesh::Point> solid_qpoints_subset;
 
