@@ -119,11 +119,6 @@ namespace GRINS
     libMesh::UniquePtr<libMesh::FEMContext> _solid_context;
     libMesh::UniquePtr<libMesh::FEMContext> _fluid_context;
 
-    //! Residual contributions to the fluid
-    void element_time_derivative_fluid(AssemblyContext& context);
-
-    //! Residual contributions to the solid
-    void element_time_derivative_solid(AssemblyContext& context);
 
     void assemble_fluid_var_residual_contributions( bool compute_jacobian,
                                                     AssemblyContext & context );
