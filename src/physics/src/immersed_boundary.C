@@ -715,17 +715,17 @@ namespace GRINS
          ++fluid_elem_map_it )
       {
         libMesh::dof_id_type fluid_elem_id = fluid_elem_map_it->first;
-        const libMesh::Elem* fluid_elem = system.get_mesh().elem(fluid_elem_id);
 
+        // Extract out the subset of solid quadrature points we're dealing with on
+        // this fluid element
         const std::vector<unsigned int> & solid_qpoint_indices = fluid_elem_map_it->second;
 
-        solid_qpoints_subset.clear();
-        solid_qpoints_subset.reserve(solid_qpoint_indices.size());
-        for( unsigned int i = 0; i < solid_qpoint_indices.size(); i++ )
-          solid_qpoints_subset.push_back( solid_qpoints[solid_qpoint_indices[i]]);
-
-        _fluid_context->pre_fe_reinit(system,fluid_elem);
-        _fluid_context->elem_fe_reinit(&solid_qpoints_subset);
+        this->prepare_fluid_context( system,
+                                     fluid_elem_id,
+                                     solid_qpoint_indices,
+                                     solid_qpoints,
+                                     solid_qpoints_subset,
+                                     *(this->_fluid_context) );
 
         this->add_source_term_to_fluid_residual(compute_jacobian,
                                                 system,
@@ -736,6 +736,30 @@ namespace GRINS
                                                 solid_JxW,solid_dphi,fluid_dphi);
 
       } // end loop over overlapping fluid elements
+  }
+
+  template<typename SolidMech>
+  void ImmersedBoundary<SolidMech>::prepare_fluid_context
+  ( const MultiphysicsSystem & system,
+    libMesh::dof_id_type fluid_elem_id,
+    const std::vector<unsigned int> & solid_qpoint_indices,
+    const std::vector<libMesh::Point> & solid_qpoints,
+    std::vector<libMesh::Point> & solid_qpoints_subset,
+    libMesh::FEMContext & fluid_context )
+  {
+    solid_qpoints_subset.clear();
+    solid_qpoints_subset.reserve(solid_qpoint_indices.size());
+
+    for( unsigned int i = 0; i < solid_qpoint_indices.size(); i++ )
+      solid_qpoints_subset.push_back( solid_qpoints[solid_qpoint_indices[i]]);
+
+    // Prepare the fluid context for things we're evaluating on the fluid
+    // element at the *deformed* solid quadrature point locations within
+    // the fluid element.
+    const libMesh::Elem * fluid_elem = system.get_mesh().elem(fluid_elem_id);
+
+    _fluid_context->pre_fe_reinit(system,fluid_elem);
+    _fluid_context->elem_fe_reinit(&solid_qpoints_subset);
   }
 
   template<typename SolidMech>
