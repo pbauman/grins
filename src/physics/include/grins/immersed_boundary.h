@@ -96,7 +96,7 @@ namespace GRINS
     DisplacementVariable & _disp_vars;
 
     //! Solid Mechanics from the ibm factory
-    libMesh::UniquePtr<SolidMech> _solid_mech;
+    std::unique_ptr<SolidMech> _solid_mech;
 
     //! The fluid mechanics associated with the IBM method from the input
     std::string _fluid_mechanics;
@@ -110,14 +110,13 @@ namespace GRINS
     //! The subdomain ids for the fluid that are read from input
     std::set<libMesh::subdomain_id_type> _fluid_subdomain_set;
 
-    libMesh::UniquePtr<libMesh::PointLocatorBase> _point_locator;
+    std::unique_ptr<libMesh::PointLocatorBase> _point_locator;
 
-    libMesh::UniquePtr<OverlappingFluidSolidMap> _fluid_solid_overlap;
+    std::unique_ptr<OverlappingFluidSolidMap> _fluid_solid_overlap;
 
-    libMesh::UniquePtr<ImmersedBoundaryAugmentedSparsity> _ibm_sparsity;
+    std::unique_ptr<ImmersedBoundaryAugmentedSparsity> _ibm_sparsity;
 
-    libMesh::UniquePtr<libMesh::FEMContext> _solid_context;
-    libMesh::UniquePtr<libMesh::FEMContext> _fluid_context;
+    std::unique_ptr<libMesh::FEMContext> _fluid_context;
 
     void assemble_accel_term( bool compute_jacobian, AssemblyContext & context );
 
