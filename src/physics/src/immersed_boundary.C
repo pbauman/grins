@@ -751,7 +751,13 @@ namespace GRINS
     solid_qpoints_subset.reserve(solid_qpoint_indices.size());
 
     for( unsigned int i = 0; i < solid_qpoint_indices.size(); i++ )
-      solid_qpoints_subset.push_back( solid_qpoints[solid_qpoint_indices[i]]);
+      {
+        const libMesh::Point & xqp = solid_qpoints[solid_qpoint_indices[i]];
+
+        libMesh::Point xpu_qp(xqp(0),xqp(1),xqp(2));
+
+        solid_qpoints_subset.push_back( xpu_qp );
+      }
 
     // Prepare the fluid context for things we're evaluating on the fluid
     // element at the *deformed* solid quadrature point locations within
