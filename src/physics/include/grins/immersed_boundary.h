@@ -54,7 +54,7 @@ namespace GRINS
   public:
 
     ImmersedBoundary( const std::string & my_physics_name,
-                      libMesh::UniquePtr<SolidMech> & solid_mech_ptr,
+                      std::unique_ptr<SolidMech> & solid_mech_ptr,
                       const GetPot& input );
 
     ImmersedBoundary() = delete;

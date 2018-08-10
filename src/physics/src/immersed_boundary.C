@@ -64,11 +64,13 @@ namespace GRINS
 {
 
   template<typename SolidMech>
-  ImmersedBoundary<SolidMech>::ImmersedBoundary(const std::string& physics_name, libMesh::UniquePtr<SolidMech> & solid_mech_ptr, const GetPot& input)
+  ImmersedBoundary<SolidMech>::ImmersedBoundary(const std::string& physics_name,
+                                                std::unique_ptr<SolidMech> & solid_mech_ptr,
+                                                const GetPot& input)
     : Physics(physics_name, input),
       _flow_vars(GRINSPrivate::VariableWarehouse::get_variable_subclass<VelocityVariable>(VariablesParsing::velocity_variable_name(input,physics_name,VariablesParsing::PHYSICS))),
       _disp_vars(GRINSPrivate::VariableWarehouse::get_variable_subclass<DisplacementVariable>(VariablesParsing::disp_variable_name(input,physics_name,VariablesParsing::PHYSICS))),
-      _solid_mech(solid_mech_ptr.release()),
+      _solid_mech(std::move(solid_mech_ptr)),
       _fluid_mechanics(input("Physics/ImmersedBoundary/fluid_mechanics","DIE!")),
       _solid_mechanics(input("Physics/ImmersedBoundary/solid_mechanics","DIE!"))
   {
