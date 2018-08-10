@@ -119,6 +119,7 @@ namespace GRINS
     libMesh::UniquePtr<libMesh::FEMContext> _solid_context;
     libMesh::UniquePtr<libMesh::FEMContext> _fluid_context;
 
+    void assemble_accel_term( bool compute_jacobian, AssemblyContext & context );
 
     void assemble_fluid_var_residual_contributions( bool compute_jacobian,
                                                     AssemblyContext & context );
