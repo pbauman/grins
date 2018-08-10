@@ -221,7 +221,8 @@ namespace GRINS
     matrix.init();
     matrix.zero();
 
-    libMesh::PetscMatrix<libMesh::Number> & petsc_matrix = libMesh::cast_ref<libMesh::PetscMatrix<libMesh::Number> &>(matrix);
+    libMesh::PetscMatrix<libMesh::Number> & petsc_matrix =
+      libMesh::cast_ref<libMesh::PetscMatrix<libMesh::Number> &>(matrix);
 
     Mat A = petsc_matrix.mat();
 
