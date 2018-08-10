@@ -407,12 +407,15 @@ namespace GRINS
          fluid_elem_map_it != fluid_elem_map.end();
          ++fluid_elem_map_it )
       {
+        // Grab the current fluid element id
         libMesh::dof_id_type fluid_elem_id = fluid_elem_map_it->first;
 
         // Extract out the subset of solid quadrature points we're dealing with on
         // this fluid element
         const std::vector<unsigned int> & solid_qpoint_indices = fluid_elem_map_it->second;
 
+        // Prepare the fluid context for all the things that we'll need for the current
+        // fluid element
         this->prepare_fluid_context( system,
                                      fluid_elem_id,
                                      solid_context,
