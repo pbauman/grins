@@ -57,7 +57,9 @@ namespace GRINS
                       libMesh::UniquePtr<SolidMech> & solid_mech_ptr,
                       const GetPot& input );
 
-    virtual ~ImmersedBoundary(){};
+    ImmersedBoundary() = delete;
+
+    virtual ~ImmersedBoundary() = default;
 
     //! Sets velocity variables to be time-evolving
     virtual void set_time_evolving_vars( libMesh::FEMSystem* system );
@@ -133,7 +135,7 @@ namespace GRINS
 
     bool is_fluid_elem( libMesh::subdomain_id_type elem_id );
 
-    ImmersedBoundary();
+
   };
 
   template<typename SolidMech>
