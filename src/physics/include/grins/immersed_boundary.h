@@ -69,8 +69,7 @@ namespace GRINS
     virtual void init_context( AssemblyContext& context );
 
     //! Residual contributions from the solid in the flow
-    virtual void element_time_derivative( bool compute_jacobian, AssemblyContext& context,
-                                          CachedValues& cache );
+    virtual void element_time_derivative( bool compute_jacobian, AssemblyContext& context );
 
     //! Cache mesh information needed for residual computation
     virtual void preassembly( MultiphysicsSystem & system );
