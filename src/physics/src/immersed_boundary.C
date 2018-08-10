@@ -370,31 +370,31 @@ namespace GRINS
             std::vector<libMesh::dof_id_type>::iterator sdof_start = solid_dof_indices.begin();
             const std::vector<libMesh::dof_id_type>& us_dof_indices =
               solid_context.get_dof_indices(us_var);
-     
+
             for( unsigned int i = 0; i < us_dof_indices.size(); i++ )
               solid_dof_indices[i] = us_dof_indices[i];
-      
+
             const std::vector<libMesh::dof_id_type>& vs_dof_indices =
               solid_context.get_dof_indices(v_var);
-    
+
             for( unsigned int i = 0; i < vs_dof_indices.size(); i++ )
-              solid_dof_indices[i+n_solid_dofs] = vs_dof_indices[i];            
+              solid_dof_indices[i+n_solid_dofs] = vs_dof_indices[i];
 
 
             if( us_var != u_dot_var )
               {
                 const std::vector<libMesh::dof_id_type>& udot_dof_indices =
                   solid_context.get_dof_indices(u_dot_var);
-     
+
                 for( unsigned int i = 0; i < udot_dof_indices.size(); i++ )
                   solid_dof_indices[i+2*n_solid_dofs] = udot_dof_indices[i];
-      
+
                 const std::vector<libMesh::dof_id_type>& vdot_dof_indices =
                   solid_context.get_dof_indices(v_dot_var);
-     
+
                 for( unsigned int i = 0; i < vdot_dof_indices.size(); i++ )
                   solid_dof_indices[i+3*n_solid_dofs] = vdot_dof_indices[i];
-   
+
               }
 
             unsigned int n_fluid_dofs = fluid_context.get_dof_indices(this->_flow_vars.u()).size();
@@ -473,7 +473,7 @@ namespace GRINS
                 for( unsigned int i = 0; i < n_solid_dofs; i++ )
                   {
                  //  ! \todo [PB]: For manifolds, I don't think these are the correct shape
-                 //                   functions because there are missing terms. 
+                 //                   functions because there are missing terms.
                     Fus(i) += Vx*solid_phi[i][solid_qp_idx]*jac;
 
                     if ( this->_disp_vars.dim() >= 2 )
@@ -506,7 +506,7 @@ namespace GRINS
             // Since we manually build the solid context, we have to manually
             // constrain and add the residuals and Jacobians.
          //! \todo  We're hardcoding to the case that the residual is always
-          //    assembled and homogeneous constraints. 
+          //    assembled and homogeneous constraints.
             if( compute_jacobian )
               {
                 system.get_dof_map().constrain_element_matrix
@@ -614,8 +614,8 @@ namespace GRINS
           {
             // Velocity of solid at quadrature point.
             solid_context.interior_rate(this->_disp_vars.u(), qp, Udot(0));
-            
-            if ( this->_disp_vars.dim() >= 2 ) 
+
+            if ( this->_disp_vars.dim() >= 2 )
               solid_context.interior_rate(this->_disp_vars.v(), qp, Udot(1));
 
             if ( this->_disp_vars.dim() == 3 )
@@ -738,7 +738,7 @@ namespace GRINS
 
         if( _flow_vars.dim() == 3 )
           Fw = &_fluid_context->get_elem_residual(this->_flow_vars.w());
- 
+
         if( compute_jacobian)
           {
             Kmat.resize( this->_flow_vars.dim()*n_fluid_dofs, this->_disp_vars.dim()*n_solid_dofs );
@@ -808,7 +808,8 @@ namespace GRINS
             // TODO: tau needs to be scaled basd on mesh dimension
             libMesh::TensorValue<libMesh::Real> blah;
             ElasticityTensor C;
-            _solid_mech->get_stress_and_elasticity(context,solid_qpoint_indices[qp],grad_u,grad_v,grad_w,blah,C);
+            _solid_mech->get_stress_and_elasticity(context,solid_qpoint_indices[qp],
+                                                   grad_u,grad_v,grad_w,blah,C);
 
             for (unsigned int i=0; i != n_fluid_dofs; i++)
               {
@@ -875,7 +876,7 @@ namespace GRINS
         // Since we manually built the fluid context, we have to manually
         // constrain and add the residuals and Jacobians.
         //! \todo  We're hardcoding to the case that the residual is always
-        //  assembled and homogeneous constraints. 
+        //  assembled and homogeneous constraints.
         if( compute_jacobian )
           {
             system.get_dof_map().constrain_element_matrix
