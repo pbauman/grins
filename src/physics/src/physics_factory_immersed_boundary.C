@@ -44,7 +44,7 @@
 namespace GRINS
 {
 
-  libMesh::UniquePtr<Physics> PhysicsFactoryImmersedBoundary::build_physics( const GetPot& input,
+  std::unique_ptr<Physics> PhysicsFactoryImmersedBoundary::build_physics( const GetPot& input,
                                                                              const std::string& physics_name )
   {
 
@@ -75,13 +75,13 @@ namespace GRINS
                                                      stress_strain_model,
                                                      strain_energy);
 
-    libMesh::UniquePtr<Physics> new_physics;
+    std::unique_ptr<Physics> new_physics;
 
     if (solid_mech_input == std::string("ElasticCable"))
       {
         if( stress_strain_model == std::string("hookes_law") )
           {
-            libMesh::UniquePtr<ElasticCable<HookesLaw1D>> solid_mech_ptr( new ElasticCable<HookesLaw1D>(solid_mech_input,input,false) );
+            std::unique_ptr<ElasticCable<HookesLaw1D>> solid_mech_ptr( new ElasticCable<HookesLaw1D>(solid_mech_input,input,false) );
             new_physics.reset( new ImmersedBoundary<ElasticCable<HookesLaw1D> >(physics_name, solid_mech_ptr,  input) );
           }
         else
@@ -95,7 +95,9 @@ namespace GRINS
       {
         if( stress_strain_model == std::string("hookes_law") )
           {
-            libMesh::UniquePtr<ElasticMembrane<HookesLaw>> solid_mech_ptr( new ElasticMembrane<HookesLaw>(solid_mech_input,input,false) );
+            std::unique_ptr<ElasticMembrane<HookesLaw>>
+              solid_mech_ptr( new ElasticMembrane<HookesLaw>(solid_mech_input,input,false) );
+
             new_physics.reset( new ImmersedBoundary< ElasticMembrane<HookesLaw> >(physics_name, solid_mech_ptr, input) );
           }
 
@@ -103,7 +105,9 @@ namespace GRINS
           {
             if( strain_energy == std::string("mooney_rivlin") )
               {
-                libMesh::UniquePtr< ElasticMembrane< IncompressiblePlaneStressHyperelasticity< MooneyRivlin>>> solid_mech_ptr( new ElasticMembrane< IncompressiblePlaneStressHyperelasticity< MooneyRivlin>>(solid_mech_input,input,false));
+                std::unique_ptr< ElasticMembrane< IncompressiblePlaneStressHyperelasticity< MooneyRivlin>>>
+                  solid_mech_ptr( new ElasticMembrane< IncompressiblePlaneStressHyperelasticity< MooneyRivlin>>(solid_mech_input,input,false));
+
                 new_physics.reset( new ImmersedBoundary< ElasticMembrane< IncompressiblePlaneStressHyperelasticity<MooneyRivlin>>>(physics_name, solid_mech_ptr, input) );
               }
             else
