@@ -115,13 +115,7 @@ namespace GRINS
     // supplemental finite element data for variables that
     // we need, but are not defined on the "current" subdomain.
     {
-      libMesh::UniquePtr<libMesh::DiffContext> raw_context = system.build_context();
-      libMesh::FEMContext * context = libMesh::cast_ptr<libMesh::FEMContext *>(raw_context.release());
-      _solid_context.reset(context);
-    }
-
-    {
-      libMesh::UniquePtr<libMesh::DiffContext> raw_context = system.build_context();
+      std::unique_ptr<libMesh::DiffContext> raw_context = system.build_context();
       libMesh::FEMContext * context = libMesh::cast_ptr<libMesh::FEMContext *>(raw_context.release());
       _fluid_context.reset(context);
     }
@@ -393,7 +387,7 @@ namespace GRINS
              solid_elem_map_it != solid_elem_map.end();
              ++solid_elem_map_it )
           {
-            libMesh::UniquePtr<libMesh::DiffContext> raw_context = system.build_context();
+            std::unique_ptr<libMesh::DiffContext> raw_context = system.build_context();
             AssemblyContext & solid_context = libMesh::cast_ref<AssemblyContext &>(*raw_context.get());
 
             // Prepare and reinit helper solid FEMContext for the solid element.
@@ -431,7 +425,7 @@ namespace GRINS
 
             const libMesh::Elem & fluid_elem = fluid_context.get_elem();
 
-            libMesh::UniquePtr<libMesh::FEGenericBase<libMesh::Real> > fluid_fe =
+            std::unique_ptr<libMesh::FEGenericBase<libMesh::Real> > fluid_fe =
               libMesh::FEGenericBase<libMesh::Real>::build(2,fluid_fe_type);
 
             const std::vector<std::vector<libMesh::Real> > & fluid_phi = fluid_fe->get_phi();
