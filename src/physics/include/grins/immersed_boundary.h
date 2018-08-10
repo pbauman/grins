@@ -120,6 +120,13 @@ namespace GRINS
 
     void assemble_accel_term( bool compute_jacobian, AssemblyContext & context );
 
+    void prepare_fluid_context( const MultiphysicsSystem & system,
+                                libMesh::dof_id_type fluid_elem_id,
+                                const std::vector<unsigned int> & solid_qpoint_indices,
+                                const std::vector<libMesh::Point> & solid_qpoints,
+                                std::vector<libMesh::Point> & solid_qpoints_subset,
+                                libMesh::FEMContext & fluid_context );
+
     void add_source_term_to_fluid_residual( bool compute_jacobian,
                                             MultiphysicsSystem & system,
                                             libMesh::FEMContext & fluid_context,
