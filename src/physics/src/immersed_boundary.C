@@ -141,13 +141,13 @@ namespace GRINS
 
 
     // Displacements are second order in time
-    system->time_evolving(_disp_vars.u(),2);
+    system->time_evolving(_disp_vars.u(),1);
 
     if( _disp_vars.dim() >= 2 )
-      system->time_evolving(_disp_vars.v(),2);
+      system->time_evolving(_disp_vars.v(),1);
 
     if ( _disp_vars.dim() == 3 )
-      system->time_evolving(_disp_vars.w(),2);
+      system->time_evolving(_disp_vars.w(),1);
   }
 
   template<typename SolidMech>
@@ -244,7 +244,7 @@ namespace GRINS
   {
     if( this->is_solid_elem( context.get_elem().subdomain_id() ) )
       {
-        this->assemble_accel_term( compute_jacobian, context );
+        //this->assemble_accel_term( compute_jacobian, context );
         this->assemble_solid_var_residual_contributions(compute_jacobian,context);
       }
   }
@@ -519,14 +519,8 @@ namespace GRINS
 
     unsigned int n_fluid_dofs = fluid_context.get_dof_indices(this->_flow_vars.u()).size();
 
-
-
     libMesh::DenseSubVector<libMesh::Number> & Fuf = fluid_context.get_elem_residual(this->_flow_vars.u());
     libMesh::DenseSubVector<libMesh::Number> & Fvf = fluid_context.get_elem_residual(this->_flow_vars.v());
-    libMesh::DenseSubVector<libMesh::Number> * Fwf = NULL;
-
-    if( _flow_vars.dim() == 3 )
-      Fwf = &fluid_context.get_elem_residual(this->_flow_vars.w());
 
     if( compute_jacobian)
       {
@@ -704,6 +698,8 @@ namespace GRINS
   {
     unsigned int u_var = this->_disp_vars.u();
     unsigned int v_var = this->_disp_vars.v();
+
+    /*
     unsigned int w_var = libMesh::invalid_uint;
 
     unsigned int u_dot_var = system.get_second_order_dot_var(u_var);
@@ -714,18 +710,20 @@ namespace GRINS
     unsigned int sshift = 1;
     if( u_var != u_dot_var )
       sshift = 2;
+    */
 
     const unsigned int n_solid_dofs = solid_context.get_dof_indices(u_var).size();
     unsigned int n_fluid_dofs = fluid_context.get_dof_indices(this->_flow_vars.u()).size();
 
     libMesh::DenseSubVector<libMesh::Number> & Fus = solid_context.get_elem_residual(u_var);
     libMesh::DenseSubVector<libMesh::Number> & Fvs = solid_context.get_elem_residual(v_var);
-    libMesh::DenseSubVector<libMesh::Number> * Fws = NULL;
+    //libMesh::DenseSubVector<libMesh::Number> * Fws = NULL;
 
-    libMesh::DenseSubMatrix<libMesh::Number> & Kus_us = solid_context.get_elem_jacobian(u_var,u_dot_var);
-    libMesh::DenseSubMatrix<libMesh::Number> & Kvs_vs = solid_context.get_elem_jacobian(v_var,v_dot_var);
-    libMesh::DenseSubMatrix<libMesh::Number> * Kws_ws = NULL;
+    libMesh::DenseSubMatrix<libMesh::Number> & Kus_us = solid_context.get_elem_jacobian(u_var,u_var);
+    libMesh::DenseSubMatrix<libMesh::Number> & Kvs_vs = solid_context.get_elem_jacobian(v_var,v_var);
+    //libMesh::DenseSubMatrix<libMesh::Number> * Kws_ws = NULL;
 
+    /*
     if ( this->_disp_vars.dim() == 3 )
       {
         w_var = this->_disp_vars.w();
@@ -735,7 +733,7 @@ namespace GRINS
 
         Kws_ws = &solid_context.get_elem_jacobian(w_var,w_dot_var);
       }
-
+    */
     // Setup solid-fluid coupling Jacobian
     // The residual equation is (\dot{U} - V)
     // Thus, this depends on wheter or not we're using a first order time solver
@@ -747,28 +745,10 @@ namespace GRINS
     libMesh::DenseSubMatrix<libMesh::Number> Kus_uf(K), Kvs_vf(K), Kws_wf(K);
     if( compute_jacobian)
       {
-        K.resize( this->_disp_vars.dim()*sshift*n_solid_dofs, this->_flow_vars.dim()*n_fluid_dofs );
+        K.resize( this->_disp_vars.dim()*n_solid_dofs, this->_flow_vars.dim()*n_fluid_dofs );
 
-        if( u_var == u_dot_var )
-          Kus_uf.reposition( 0, 0, n_solid_dofs, n_fluid_dofs );
-        else
-          Kus_uf.reposition( 2*n_solid_dofs, 0, n_solid_dofs, n_fluid_dofs );
-
-        if( this->_disp_vars.dim() >= 2 )
-          {
-            if( u_var == u_dot_var )
-              Kvs_vf.reposition( n_solid_dofs, n_fluid_dofs, n_solid_dofs, n_fluid_dofs );
-            else
-              Kvs_vf.reposition( 3*n_solid_dofs, n_fluid_dofs, n_solid_dofs, n_fluid_dofs );
-          }
-
-        if( this->_disp_vars.dim() == 3 )
-          {
-            if( u_var == u_dot_var )
-              Kws_wf.reposition( 2*n_solid_dofs, 2*n_fluid_dofs, n_solid_dofs, n_fluid_dofs );
-            else
-              Kws_wf.reposition( 5*n_solid_dofs, 2*n_fluid_dofs, n_solid_dofs, n_fluid_dofs );
-          }
+         Kus_uf.reposition( 0, 0, n_solid_dofs, n_fluid_dofs );
+         Kvs_vf.reposition( n_solid_dofs, n_fluid_dofs, n_solid_dofs, n_fluid_dofs );
       }
 
     for( unsigned int qp = 0; qp < solid_qpoints_subset.size(); qp++ )
@@ -776,29 +756,15 @@ namespace GRINS
         unsigned int solid_qp_idx = solid_qpoint_indices[qp];
 
         // Compute the fluid velocity at the solid element quadrature points.
-        libMesh::Real Vx, Vy, Vz;
+        libMesh::Real Vx, Vy;
 
         fluid_context.interior_value(this->_flow_vars.u(), qp, Vx);
         fluid_context.interior_value(this->_flow_vars.v(), qp, Vy);
-        if ( this->_flow_vars.dim() == 3 )
-          fluid_context.interior_value(this->_flow_vars.w(), qp, Vz);
 
         // Compute the dipslacement velocity
-        libMesh::Real udot, vdot, wdot;
-        if( u_var != u_dot_var )
-          {
-            solid_context.interior_value(u_dot_var, solid_qp_idx, udot);
-            solid_context.interior_value(v_dot_var, solid_qp_idx, vdot);
-            if ( this->_disp_vars.dim() == 3 )
-              solid_context.interior_value(w_dot_var, solid_qp_idx, wdot);
-          }
-        else
-          {
-            solid_context.interior_rate(u_var, solid_qp_idx, udot);
-            solid_context.interior_rate(v_var, solid_qp_idx, vdot);
-            if ( this->_disp_vars.dim() == 3 )
-              solid_context.interior_rate(w_var, solid_qp_idx, wdot);
-          }
+        libMesh::Real udot, vdot;
+        solid_context.interior_rate(u_var, solid_qp_idx, udot);
+        solid_context.interior_rate(v_var, solid_qp_idx, vdot);
 
         libMesh::Real jac = solid_JxW[solid_qp_idx];
 
@@ -806,11 +772,8 @@ namespace GRINS
           {
             libMesh::Real sphi_times_jac = solid_phi[i][solid_qp_idx]*jac;
 
-            Fus(i) += (udot - Vx)*sphi_times_jac;
-            Fvs(i) += (vdot - Vy)*sphi_times_jac;
-
-            if ( this->_disp_vars.dim() == 3 )
-              (*Fws)(i) += (wdot - Vz)*sphi_times_jac;
+            Fus(i) += (-udot + Vx)*sphi_times_jac;
+            Fvs(i) += (-vdot + Vy)*sphi_times_jac;
 
             if( compute_jacobian )
               {
@@ -820,16 +783,10 @@ namespace GRINS
                     libMesh::Real sphij = solid_phi[j][solid_qp_idx];
 
                     libMesh::Real diag_value = sphij*sphi_times_jac;
+                    diag_value *= solid_context.get_elem_solution_rate_derivative();
 
-                    if( u_var != u_dot_var )
-                      diag_value *= solid_context.get_elem_solution_derivative();
-                    else
-                      diag_value *= solid_context.get_elem_solution_rate_derivative();
-
-                    Kus_us(i,j) += diag_value;
-                    Kvs_vs(i,j) += diag_value;
-                    if ( this->_disp_vars.dim() == 3 )
-                      (*Kws_ws)(i,j) += diag_value;
+                    Kus_us(i,j) -= diag_value;
+                    Kvs_vs(i,j) -= diag_value;
                   }
 
                 // Solid-fluid block
@@ -838,11 +795,8 @@ namespace GRINS
                     libMesh::Real diag_value = fluid_phi[j][qp]*sphi_times_jac*
                       solid_context.get_elem_solution_derivative();
 
-                    Kus_uf(i,j) -= diag_value;
-                    Kvs_vf(i,j) -= diag_value;
-
-                    if ( this->_disp_vars.dim() == 3 )
-                      Kws_wf(i,j) -= diag_value;
+                    Kus_uf(i,j) += diag_value;
+                    Kvs_vf(i,j) += diag_value;
                   }
 
               } // if compute jacobian
@@ -853,7 +807,7 @@ namespace GRINS
 
     // Prepare dof indice vectors for constraining the coupled solid-fluid Jacobian
     std::vector<libMesh::dof_id_type> solid_dof_indices;
-    solid_dof_indices.resize(_disp_vars.dim()*sshift*n_solid_dofs);
+    solid_dof_indices.resize(_disp_vars.dim()*n_solid_dofs);
 
     const std::vector<libMesh::dof_id_type>& us_dof_indices =
       solid_context.get_dof_indices(u_var);
