@@ -667,17 +667,17 @@ namespace GRINS
     std::vector<libMesh::dof_id_type> velocity_dof_indices;
     velocity_dof_indices.resize(_flow_vars.dim()*n_fluid_dofs);
 
-    const std::vector<libMesh::dof_id_type>& u_dof_indices =
+    const std::vector<libMesh::dof_id_type>& uf_dof_indices =
       fluid_context.get_dof_indices(this->_flow_vars.u());
 
-    for( unsigned int i = 0; i < u_dof_indices.size(); i++ )
-      velocity_dof_indices[i] = u_dof_indices[i];
+    for( unsigned int i = 0; i < uf_dof_indices.size(); i++ )
+      velocity_dof_indices[i] = uf_dof_indices[i];
 
-    const std::vector<libMesh::dof_id_type>& v_dof_indices =
+    const std::vector<libMesh::dof_id_type>& vf_dof_indices =
       fluid_context.get_dof_indices(this->_flow_vars.v());
 
-    for( unsigned int i = 0; i < v_dof_indices.size(); i++ )
-      velocity_dof_indices[i+n_fluid_dofs] = v_dof_indices[i];
+    for( unsigned int i = 0; i < vf_dof_indices.size(); i++ )
+      velocity_dof_indices[i+n_fluid_dofs] = vf_dof_indices[i];
 
     //Build up solid dof indices
     std::vector<libMesh::dof_id_type> solid_dof_indices;
@@ -897,36 +897,20 @@ namespace GRINS
     for( unsigned int i = 0; i < vs_dof_indices.size(); i++ )
       solid_dof_indices[i+n_solid_dofs] = vs_dof_indices[i];
 
-
-    if( u_var != u_dot_var )
-      {
-        const std::vector<libMesh::dof_id_type>& udot_dof_indices =
-          solid_context.get_dof_indices(u_dot_var);
-
-        for( unsigned int i = 0; i < udot_dof_indices.size(); i++ )
-          solid_dof_indices[i+2*n_solid_dofs] = udot_dof_indices[i];
-
-        const std::vector<libMesh::dof_id_type>& vdot_dof_indices =
-          solid_context.get_dof_indices(v_dot_var);
-
-        for( unsigned int i = 0; i < vdot_dof_indices.size(); i++ )
-          solid_dof_indices[i+3*n_solid_dofs] = vdot_dof_indices[i];
-      }
-
     std::vector<libMesh::dof_id_type> velocity_dof_indices;
     velocity_dof_indices.resize(_flow_vars.dim()*n_fluid_dofs);
 
-    const std::vector<libMesh::dof_id_type>& u_dof_indices =
+    const std::vector<libMesh::dof_id_type>& uf_dof_indices =
       fluid_context.get_dof_indices(this->_flow_vars.u());
 
-    for( unsigned int i = 0; i < u_dof_indices.size(); i++ )
-      velocity_dof_indices[i] = u_dof_indices[i];
+    for( unsigned int i = 0; i < uf_dof_indices.size(); i++ )
+      velocity_dof_indices[i] = uf_dof_indices[i];
 
-    const std::vector<libMesh::dof_id_type>& v_dof_indices =
+    const std::vector<libMesh::dof_id_type>& vf_dof_indices =
       fluid_context.get_dof_indices(this->_flow_vars.v());
 
-    for( unsigned int i = 0; i < v_dof_indices.size(); i++ )
-      velocity_dof_indices[i+n_fluid_dofs] = v_dof_indices[i];
+    for( unsigned int i = 0; i < vf_dof_indices.size(); i++ )
+      velocity_dof_indices[i+n_fluid_dofs] = vf_dof_indices[i];
 
     if( compute_jacobian )
       {
