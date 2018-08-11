@@ -550,67 +550,37 @@ namespace GRINS
 
     for( unsigned int qp = 0; qp < solid_qpoints_subset.size(); qp++ )
       {
-        libMesh::Gradient grad_u, grad_v, grad_w;
-        solid_context.interior_gradient(this->_disp_vars.u(), solid_qpoint_indices[qp], grad_u);
-        solid_context.interior_gradient(this->_disp_vars.v(), solid_qpoint_indices[qp], grad_v);
-
-        libMesh::TensorValue<libMesh::Real> grad_U;
-        grad_U(0,0) = grad_u(0);
-        grad_U(0,1) = grad_u(1);
-        grad_U(0,2) = grad_u(2);
-        grad_U(1,0) = grad_v(0);
-        grad_U(1,1) = grad_v(1);
-        grad_U(1,2) = grad_v(2);
-
-        libMesh::TensorValue<libMesh::Real> F(grad_U);
-        F(0,0) += 1;
-        F(1,1) += 1;
-
-        // We need to use F^T a few times so just cache it.
-        libMesh::TensorValue<libMesh::Real> Ftrans = F.transpose();
-
-        libMesh::TensorValue<libMesh::Real> E(Ftrans*F);
-        E(0,0) -= 1;
-        E(1,1) -= 1;
-        E *= 0.5;
-
-        libMesh::Real Em = 100000;
-        libMesh::Real nu = 0.3;
-        libMesh::Real lambda = Em*nu/(1+nu)*(1-2*nu);
-        libMesh::Real mu = Em/(2*(1+nu));
-
-        libMesh::Real trE = E.tr();
-        libMesh::TensorValue<libMesh::Real> S(2.0*E*mu);
-        S(0,0) += lambda*trE;
-        S(1,1) += lambda*trE;
-
-        libMesh::TensorValue<libMesh::Real> P(F*S);
-
-        // The F^T comes from needing the derivative of the fluid
-        // shape function w.r.t. solid coordinates
-        libMesh::TensorValue<libMesh::Real> tau(P*Ftrans);
-
         // Gradients w.r.t. the master element coordinates
-        _solid_mech->get_grad_disp(solid_context, solid_qpoint_indices[qp],
+        /*
+        _solid_mech->get_grad_disp(solid_context, sqp,
                                    grad_u, grad_v, grad_w);
 
-        // Piola-kirchoff stress tensor in the reference configuration
-        // TODO: tau needs to be scaled basd on mesh dimension
         libMesh::TensorValue<libMesh::Real> blah;
         ElasticityTensor C;
-        _solid_mech->get_stress_and_elasticity(solid_context,solid_qpoint_indices[qp],
+        _solid_mech->get_stress_and_elasticity(solid_context,sqp,
                                                grad_u,grad_v,grad_w,blah,C);
+        */
+
+        unsigned int sqp = solid_qpoint_indices[qp];
+
+        libMesh::Real jac = solid_JxW[sqp];
+
+        libMesh::Gradient grad_u, grad_v;
+        solid_context.interior_gradient(this->_disp_vars.u(), sqp, grad_u);
+        solid_context.interior_gradient(this->_disp_vars.v(), sqp, grad_v);
+
+
+        libMesh::TensorValue<libMesh::Real> tau0;
+        this->eval_stress(grad_u,grad_v,tau0);
 
         for (unsigned int i=0; i != n_fluid_dofs; i++)
           {
+
             // Zero index for fluid dphi/JxW since we only requested one quad. point.
             for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
               {
-                Fuf(i) -= tau(alpha,0)*fluid_dphi[i][qp](alpha)*solid_JxW[solid_qpoint_indices[qp]];
-                Fvf(i) -= tau(alpha,1)*fluid_dphi[i][qp](alpha)*solid_JxW[solid_qpoint_indices[qp]];
-
-                if (this->_flow_vars.dim() == 3)
-                  (*Fwf)(i) -= tau(alpha,2)*fluid_dphi[i][qp](alpha)*solid_JxW[solid_qpoint_indices[qp]];
+                Fuf(i) -= tau0(0,alpha)*fluid_dphi[i][qp](alpha)*jac;
+                Fvf(i) -= tau0(1,alpha)*fluid_dphi[i][qp](alpha)*jac;
               }
 
             if( compute_jacobian )
