@@ -388,7 +388,6 @@ namespace GRINS
     const std::vector<std::vector<libMesh::RealGradient> > & fluid_dphi =
       _fluid_context->get_element_fe(this->_flow_vars.u())->get_dphi();
 
-    std::vector<libMesh::Point> solid_qpoints_subset;
 
     // We need to grab the fluid elements that are overlapping with this solid elem.
     // Then, for that fluid element, extract the indices of the *solid* quadrature points
@@ -402,6 +401,8 @@ namespace GRINS
     const std::map<libMesh::dof_id_type,std::vector<unsigned int> > &
       fluid_elem_map = solid_elem_map_it->second;
 
+    std::vector<libMesh::Point> solid_qpoints_subset;
+
     std::vector<unsigned int> qps_visted;
 
     for( std::map<libMesh::dof_id_type,std::vector<unsigned int> >::const_iterator
@@ -409,6 +410,8 @@ namespace GRINS
          fluid_elem_map_it != fluid_elem_map.end();
          ++fluid_elem_map_it )
       {
+
+
         // Grab the current fluid element id
         libMesh::dof_id_type fluid_elem_id = fluid_elem_map_it->first;
 
