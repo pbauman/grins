@@ -228,7 +228,7 @@ namespace GRINS
 
     PetscErrorCode ierr =0;
     ierr = MatSetOption(A, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE);
-    //LIBMESH_CHKERR(ierr);
+    CHKERRABORT(system.comm().get(), ierr);
   }
 
   template<typename SolidMech>
