@@ -56,6 +56,7 @@
 #include "libmesh/petsc_matrix.h"
 #include "libmesh/petsc_macro.h"
 #include "libmesh/petsc_solver_exception.h"
+#include "libmesh/fe_interface.h"
 
 // PETSc includes
 # include <petscsnes.h>
@@ -456,17 +457,19 @@ namespace GRINS
   }
 
   template<typename SolidMech>
-  void ImmersedBoundary<SolidMech>::prepare_fluid_context
-  ( const MultiphysicsSystem & system,
-    libMesh::dof_id_type fluid_elem_id,
-    const AssemblyContext & solid_context,
-    const std::vector<unsigned int> & solid_qpoint_indices,
-    const std::vector<libMesh::Point> & solid_qpoints,
-    std::vector<libMesh::Point> & solid_qpoints_subset,
-    libMesh::FEMContext & fluid_context )
+  void ImmersedBoundary<SolidMech>::prepare_fluid_context( const MultiphysicsSystem & system,
+							   libMesh::dof_id_type fluid_elem_id,
+							   const AssemblyContext & solid_context,
+							   const std::vector<unsigned int> & solid_qpoint_indices,
+							   const std::vector<libMesh::Point> & solid_qpoints,
+							   std::vector<libMesh::Point> & solid_qpoints_subset,
+							   libMesh::FEMContext & fluid_context )
   {
     solid_qpoints_subset.clear();
     solid_qpoints_subset.reserve(solid_qpoint_indices.size());
+    
+    // We compute the *physical* location of the points we need
+    std::vector<libMesh::Point> solid_qpoints_subset_xyz(solid_qpoint_indices.size());
 
     libMesh::Real u,v,w;
 
@@ -483,7 +486,7 @@ namespace GRINS
 
         libMesh::Point xpu_qp(xqp(0)+u, xqp(1)+v, xqp(2)+w);
 
-        solid_qpoints_subset.push_back( xpu_qp );
+        solid_qpoints_subset_xyz[i] = xpu_qp;
       }
 
     // Prepare the fluid context for things we're evaluating on the fluid
@@ -492,20 +495,27 @@ namespace GRINS
     const libMesh::Elem * fluid_elem = system.get_mesh().elem(fluid_elem_id);
 
     fluid_context.pre_fe_reinit(system,fluid_elem);
+
+    libMesh::FEBase * fe = fluid_context.get_element_fe(this->_flow_vars.u());
+    libMesh::FEType fetype = fe->get_fe_type();
+
+    // But we need to hand *reference* element points to the FEMContext to reinit
+    unsigned int dim = 2;
+    libMesh::FEInterface::inverse_map(dim,fetype,fluid_elem,solid_qpoints_subset_xyz,solid_qpoints_subset);
+
     fluid_context.elem_fe_reinit(&solid_qpoints_subset);
   }
 
   template<typename SolidMech>
-  void ImmersedBoundary<SolidMech>::add_source_term_to_fluid_residual
-  ( bool compute_jacobian,
-    MultiphysicsSystem & system,
-    libMesh::FEMContext & fluid_context,
-    AssemblyContext & solid_context,
-    const std::vector<unsigned int> & solid_qpoint_indices,
-    const std::vector<libMesh::Point> & solid_qpoints_subset,
-    const std::vector<libMesh::Real> & solid_JxW,
-    const std::vector<std::vector<libMesh::RealGradient> > & solid_dphi,
-    const std::vector<std::vector<libMesh::RealGradient> > & fluid_dphi )
+  void ImmersedBoundary<SolidMech>::add_source_term_to_fluid_residual ( bool compute_jacobian,
+									MultiphysicsSystem & system,
+									libMesh::FEMContext & fluid_context,
+									AssemblyContext & solid_context,
+									const std::vector<unsigned int> & solid_qpoint_indices,
+									const std::vector<libMesh::Point> & solid_qpoints_subset,
+									const std::vector<libMesh::Real> & solid_JxW,
+									const std::vector<std::vector<libMesh::RealGradient> > & solid_dphi,
+									const std::vector<std::vector<libMesh::RealGradient> > & fluid_dphi )
   {
     libMesh::DenseMatrix<libMesh::Number> Kmat;
 
@@ -695,16 +705,15 @@ namespace GRINS
   }
 
   template<typename SolidMech>
-  void ImmersedBoundary<SolidMech>::add_velocity_coupling_term_to_solid_residual
-  (bool compute_jacobian,
-   MultiphysicsSystem & system,
-   libMesh::FEMContext & fluid_context,
-   AssemblyContext & solid_context,
-   const std::vector<unsigned int> & solid_qpoint_indices,
-   const std::vector<libMesh::Point> & solid_qpoints_subset,
-   const std::vector<libMesh::Real> & solid_JxW,
-   const std::vector<std::vector<libMesh::Real> > & solid_phi,
-   const std::vector<std::vector<libMesh::Real> > & fluid_phi)
+  void ImmersedBoundary<SolidMech>::add_velocity_coupling_term_to_solid_residual( bool compute_jacobian,
+										  MultiphysicsSystem & system,
+										  libMesh::FEMContext & fluid_context,
+										  AssemblyContext & solid_context,
+										  const std::vector<unsigned int> & solid_qpoint_indices,
+										  const std::vector<libMesh::Point> & solid_qpoints_subset,
+										  const std::vector<libMesh::Real> & solid_JxW,
+										  const std::vector<std::vector<libMesh::Real> > & solid_phi,
+										  const std::vector<std::vector<libMesh::Real> > & fluid_phi)
   {
     unsigned int u_var = this->_disp_vars.u();
     unsigned int v_var = this->_disp_vars.v();
