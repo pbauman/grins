@@ -941,13 +941,6 @@ namespace GRINS
                                    velocity_dof_indices );
       }
 
-    system.get_dof_map().constrain_element_vector
-      ( solid_context.get_elem_residual(),
-        solid_dof_indices,
-        false );
-
-    system.rhs->add_vector( solid_context.get_elem_residual(),
-                            solid_dof_indices );
   }
 
   template<typename SolidMech>
