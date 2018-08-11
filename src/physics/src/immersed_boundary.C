@@ -542,6 +542,11 @@ namespace GRINS
           }
       }
 
+    libMesh::DenseSubVector<libMesh::Number> & u_coeffs = solid_context.get_elem_solution(this->_disp_vars.u());
+    libMesh::DenseSubVector<libMesh::Number> & v_coeffs = solid_context.get_elem_solution(this->_disp_vars.v());
+
+    libMesh::Real delta = 1.0e-8;
+
     for( unsigned int qp = 0; qp < solid_qpoints_subset.size(); qp++ )
       {
         // Gradients w.r.t. the master element coordinates
@@ -579,49 +584,54 @@ namespace GRINS
 
             if( compute_jacobian )
               {
-                libMesh::Real factor = solid_JxW[solid_qpoint_indices[qp]]*solid_context.get_elem_solution_derivative();
-
                 for (unsigned int j=0; j != n_solid_dofs; j++)
                   {
-                    libMesh::Real term1 = (((S*Ftrans).transpose())*solid_dphi[j][solid_qpoint_indices[qp]])*fluid_dphi[i][qp];
+                    u_coeffs(j) += delta;
+                    v_coeffs(j) += delta;
 
-                    libMesh::Real term3 = (P*solid_dphi[j][solid_qpoint_indices[qp]])*fluid_dphi[i][qp];
-
-                    Kuf_us(i,j) -= (term1+term3)*factor;
-                    Kvf_us(i,j) -= (term1+term3)*factor;
-                    Kuf_vs(i,j) -= (term1+term3)*factor;
-                    Kvf_vs(i,j) -= (term1+term3)*factor;
-
-                    if( this->_disp_vars.dim() == 3 )
+                    libMesh::Gradient grad_upe, grad_vpe;
+                    for (unsigned int k = 0; k != n_solid_dofs; k++ )
                       {
-                        Kuf_ws(i,j) -= (term1+term3)*factor;
-                        Kvf_ws(i,j) -= (term1+term3)*factor;
-                        Kwf_us(i,j) -= (term1+term3)*factor;
-                        Kwf_vs(i,j) -= (term1+term3)*factor;
-                        Kwf_ws(i,j) -= (term1+term3)*factor;
+                        grad_upe += u_coeffs(k)*solid_dphi[k][sqp];
+                        grad_vpe += v_coeffs(k)*solid_dphi[k][sqp];
                       }
 
-                    for( unsigned int I = 0; I < _disp_vars.dim(); I++ )
-                      for( unsigned int J = 0; J < _disp_vars.dim(); J++ )
-                        for( unsigned int K = 0; K < _disp_vars.dim(); K++ )
-                          for( unsigned int L = 0; L < _disp_vars.dim(); L++ )
-                            {
-                              Kuf_us(i,j) -= F(0,I)*C(I,J,K,L)*F(0,K)*(Ftrans.row(J)*fluid_dphi[i][qp])*solid_dphi[j][solid_qpoint_indices[qp]](L);
-                              Kuf_vs(i,j) -= F(0,I)*C(I,J,K,L)*F(1,K)*(Ftrans.row(J)*fluid_dphi[i][qp])*solid_dphi[j][solid_qpoint_indices[qp]](L);
-                              Kvf_us(i,j) -= F(1,I)*C(I,J,K,L)*F(0,K)*(Ftrans.row(J)*fluid_dphi[i][qp])*solid_dphi[j][solid_qpoint_indices[qp]](L);
-                              Kvf_vs(i,j) -= F(1,I)*C(I,J,K,L)*F(1,K)*(Ftrans.row(J)*fluid_dphi[i][qp])*solid_dphi[j][solid_qpoint_indices[qp]](L);
+                    u_coeffs(j) -= 2*delta;
+                    v_coeffs(j) -= 2*delta;
 
-                              if( this->_disp_vars.dim() == 3 )
-                                {
-                                  Kuf_ws(i,j) -= F(0,I)*C(I,J,K,L)*F(2,K)*(Ftrans.row(J)*fluid_dphi[i][qp])*solid_dphi[j][solid_qpoint_indices[qp]](L);
-                                  Kvf_ws(i,j) -= F(1,I)*C(I,J,K,L)*F(2,K)*(Ftrans.row(J)*fluid_dphi[i][qp])*solid_dphi[j][solid_qpoint_indices[qp]](L);
-                                  Kwf_us(i,j) -= F(2,I)*C(I,J,K,L)*F(0,K)*(Ftrans.row(J)*fluid_dphi[i][qp])*solid_dphi[j][solid_qpoint_indices[qp]](L);
-                                  Kwf_vs(i,j) -= F(2,I)*C(I,J,K,L)*F(1,K)*(Ftrans.row(J)*fluid_dphi[i][qp])*solid_dphi[j][solid_qpoint_indices[qp]](L);
-                                  Kwf_ws(i,j) -= F(2,I)*C(I,J,K,L)*F(2,K)*(Ftrans.row(J)*fluid_dphi[i][qp])*solid_dphi[j][solid_qpoint_indices[qp]](L);
-                                }
-                            }
+                    libMesh::Gradient grad_ume, grad_vme;
+                    for (unsigned int k = 0; k != n_solid_dofs; k++ )
+                      {
+                        grad_ume += u_coeffs(k)*solid_dphi[k][sqp];
+                        grad_vme += v_coeffs(k)*solid_dphi[k][sqp];
+                      }
+
+                    u_coeffs(j) += delta;
+                    v_coeffs(j) += delta;
+
+
+                    libMesh::TensorValue<libMesh::Real> tau_upe;
+                    this->eval_stress(grad_upe,grad_v,tau_upe);
+
+                    libMesh::TensorValue<libMesh::Real> tau_ume;
+                    this->eval_stress(grad_ume,grad_v,tau_ume);
+
+                    libMesh::TensorValue<libMesh::Real> tau_vpe;
+                    this->eval_stress(grad_u,grad_vpe,tau_vpe);
+
+                    libMesh::TensorValue<libMesh::Real> tau_vme;
+                    this->eval_stress(grad_u,grad_vme,tau_vme);
+
+                    for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
+                      {
+                        Kuf_us(i,j) -= (tau_upe(0,alpha)-tau_ume(0,alpha))/(2*delta)*fluid_dphi[i][qp](alpha)*jac;
+                        Kvf_us(i,j) -= (tau_upe(1,alpha)-tau_ume(1,alpha))/(2*delta)*fluid_dphi[i][qp](alpha)*jac;
+                        Kuf_vs(i,j) -= (tau_vpe(0,alpha)-tau_vme(0,alpha))/(2*delta)*fluid_dphi[i][qp](alpha)*jac;
+                        Kvf_vs(i,j) -= (tau_vpe(1,alpha)-tau_vme(1,alpha))/(2*delta)*fluid_dphi[i][qp](alpha)*jac;
+                      }
 
                   }
+
               }// compute_jacobian
 
           } //fluid dof loop
