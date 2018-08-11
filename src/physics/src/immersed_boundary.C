@@ -938,6 +938,60 @@ namespace GRINS
                             solid_dof_indices );
   }
 
+  template<typename SolidMech>
+  void ImmersedBoundary<SolidMech>::eval_stress( const libMesh::Gradient & grad_u,
+                                                 const libMesh::Gradient & grad_v,
+                                                 libMesh::TensorValue<libMesh::Real> & tau )
+  {
+    libMesh::TensorValue<libMesh::Real> grad_U;
+    grad_U(0,0) = grad_u(0);
+    grad_U(0,1) = grad_u(1);
+    grad_U(0,2) = grad_u(2);
+    grad_U(1,0) = grad_v(0);
+    grad_U(1,1) = grad_v(1);
+    grad_U(1,2) = grad_v(2);
+
+    libMesh::TensorValue<libMesh::Real> F(grad_U);
+    F(0,0) += 1;
+    F(1,1) += 1;
+    F(2,2) = 1;
+
+    // We need to use F^T a few times so just cache it.
+    libMesh::TensorValue<libMesh::Real> Ftrans = F.transpose();
+
+    libMesh::TensorValue<libMesh::Real> C(Ftrans*F);
+
+    //libMesh::TensorValue<libMesh::Real> Cinv = C.inverse();
+
+    libMesh::Real I1 = C.tr();
+
+    libMesh::TensorValue<libMesh::Real> I(1,0,0,0,1,0,0,0,1);
+    //libMesh::TensorValue<libMesh::Real> S( I + (I1*I-C) );
+    //S *= 2.0;
+
+    //libMesh::TensorValue<libMesh::Real> E(grad_U + grad_U.transpose());
+    libMesh::TensorValue<libMesh::Real> E(Ftrans*F);
+    E(0,0) -= 1;
+    E(1,1) -= 1;
+    E *= 0.5;
+
+    libMesh::Real Em = 100000;
+    libMesh::Real nu = 0.3;
+    libMesh::Real lambda = Em*nu/(1+nu)*(1-2*nu);
+    libMesh::Real mu = Em/(2*(1+nu));
+
+    libMesh::Real trE = E.tr();
+    libMesh::TensorValue<libMesh::Real> S(2.0*E*mu);
+    S(0,0) += lambda*trE;
+    S(1,1) += lambda*trE;
+
+    libMesh::TensorValue<libMesh::Real> P(F*S);
+
+    // The F^T comes from needing the derivative of the fluid
+    // shape function w.r.t. solid coordinates
+    tau = P*Ftrans;
+  }
+
     //instantiate IBM classes
   template class ImmersedBoundary<ElasticCable<HookesLaw1D> >;
   template class ImmersedBoundary<ElasticMembrane<HookesLaw> >;

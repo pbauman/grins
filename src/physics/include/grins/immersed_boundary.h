@@ -155,6 +155,9 @@ namespace GRINS
 
     bool is_fluid_elem( libMesh::subdomain_id_type elem_id );
 
+    void eval_stress( const libMesh::Gradient & grad_u,
+                      const libMesh::Gradient & grad_v,
+                      libMesh::TensorValue<libMesh::Real> & tau );
 
   };
 
