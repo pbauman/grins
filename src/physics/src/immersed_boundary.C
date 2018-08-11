@@ -56,6 +56,7 @@
 #include "libmesh/petsc_matrix.h"
 #include "libmesh/petsc_macro.h"
 #include "libmesh/petsc_solver_exception.h"
+#include "libmesh/fe_interface.h"
 
 // PETSc includes
 # include <petscsnes.h>
@@ -468,6 +469,9 @@ namespace GRINS
     solid_qpoints_subset.clear();
     solid_qpoints_subset.reserve(solid_qpoint_indices.size());
 
+    // We compute the *physical* location of the points we need
+    std::vector<libMesh::Point> solid_qpoints_subset_xyz(solid_qpoint_indices.size());
+
     libMesh::Real u,v,w;
 
     for( unsigned int i = 0; i < solid_qpoint_indices.size(); i++ )
@@ -483,7 +487,7 @@ namespace GRINS
 
         libMesh::Point xpu_qp(xqp(0)+u, xqp(1)+v, xqp(2)+w);
 
-        solid_qpoints_subset.push_back( xpu_qp );
+        solid_qpoints_subset_xyz[i] = xpu_qp;
       }
 
     // Prepare the fluid context for things we're evaluating on the fluid
@@ -492,6 +496,14 @@ namespace GRINS
     const libMesh::Elem * fluid_elem = system.get_mesh().elem(fluid_elem_id);
 
     fluid_context.pre_fe_reinit(system,fluid_elem);
+
+    libMesh::FEBase * fe = fluid_context.get_element_fe(this->_flow_vars.u());
+    libMesh::FEType fetype = fe->get_fe_type();
+
+    // But we need to hand *reference* element points to the FEMContext to reinit
+    unsigned int dim = 2;
+    libMesh::FEInterface::inverse_map(dim,fetype,fluid_elem,solid_qpoints_subset_xyz,solid_qpoints_subset);
+
     fluid_context.elem_fe_reinit(&solid_qpoints_subset);
   }
 
