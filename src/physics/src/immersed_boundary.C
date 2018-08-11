@@ -402,6 +402,8 @@ namespace GRINS
     const std::map<libMesh::dof_id_type,std::vector<unsigned int> > &
       fluid_elem_map = solid_elem_map_it->second;
 
+    std::vector<unsigned int> qps_visted;
+
     for( std::map<libMesh::dof_id_type,std::vector<unsigned int> >::const_iterator
            fluid_elem_map_it = fluid_elem_map.begin();
          fluid_elem_map_it != fluid_elem_map.end();
@@ -414,6 +416,9 @@ namespace GRINS
         // this fluid element
         const std::vector<unsigned int> & solid_qpoint_indices = fluid_elem_map_it->second;
 
+        for( auto qp : solid_qpoint_indices )
+          qps_visted.push_back(qp);
+
         // Prepare the fluid context for all the things that we'll need for the current
         // fluid element
         this->prepare_fluid_context( system,
@@ -423,6 +428,8 @@ namespace GRINS
                                      solid_qpoints,
                                      solid_qpoints_subset,
                                      *(this->_fluid_context) );
+
+        libmesh_assert_equal_to( solid_qpoint_indices.size(), solid_qpoints_subset.size() );
 
         this->add_source_term_to_fluid_residual(compute_jacobian,
                                                 system,
@@ -441,6 +448,8 @@ namespace GRINS
                                                            solid_JxW,solid_phi,fluid_phi);
 
       } // end loop over overlapping fluid elements
+
+    libmesh_assert_equal_to( solid_qpoints.size(), qps_visted.size() );
   }
 
   template<typename SolidMech>
