@@ -7,7 +7,7 @@
 [SolverOptions]
    [./TimeStepping]
       solver_type = 'libmesh_euler_solver'
-      theta='0.5'
+      theta='1.0'
       delta_t = '0.1'
       n_timesteps = '1'
    [../]
@@ -16,7 +16,7 @@
 # Mesh related options
 [Mesh]
   [./Read]
-    filename = 'simple_block.e'
+    filename = 'new_test_block.e'
   [../]
 []
 
@@ -47,7 +47,7 @@
     ic_ids = '2'
     ic_types = 'parsed'
     ic_variables = 'Ux'
-    ic_values = '{1.0e-6*x}'
+    ic_values = '{1.0e-6*(x+2)}'
   [../]
 
   [./ElasticMembrane]
@@ -115,20 +115,13 @@
 
 [BoundaryConditions]
 
-   bc_ids = '1 6 2:7 3 4 5'
-   bc_id_name_map = 'InflowTop InflowBottom Walls Membrane ContactWall Outflow'
+   bc_ids = '1 2 3 4 5 6'
+   bc_id_name_map = 'Inflow Walls Outflow Membrane SideContactWall BottomContactWall'
 
-   [./InflowTop]
+   [./Inflow]
       [./Velocity]
          type = 'parsed_dirichlet'
-         Vx = '${ExampleOptions/mag}*(1.5-y)*(y-0.5)'
-         Vy = '0.0'
-      [../]
-   [../]
-   [./InflowBottom]
-      [./Velocity]
-         type = 'parsed_dirichlet'
-         Vx = '${ExampleOptions/mag}*(-1.5-y)*(y+0.5)'
+         Vx = '${ExampleOptions/mag}*(1.5-y)*(y+1.5)'
          Vy = '0.0'
       [../]
    [../]
@@ -147,9 +140,14 @@
         type = 'homogeneous_neumann'
       [../]
    [../]
-   [./ContactWall]
+   [./SideContactWall]
       [./Displacement]
         type = 'pinned'
+      [../]
+   [../]
+   [./BottomContactWall]
+      [./Displacement]
+        type = 'roller_x'
       [../]
    [../]
 []
@@ -157,8 +155,8 @@
 # Visualization options #
 [vis-options]
 output_vis = 'true'
-vis_output_file_prefix = 'simple_block_out'
-output_residual = 'true'
+vis_output_file_prefix = 'new_test_block_out'
+output_residual = 'false'
 output_format = 'ExodusII'
 []
 
@@ -172,7 +170,7 @@ solver_quiet = 'false'
 echo_physics = 'true'
 #print_element_solutions = 'true'
 #print_element_residuals = 'true'
-#print_element_jacobiana = 'true'
+#print_element_jacobians = 'true'
 #print_residuals = 'true'
 #print_jacobians = 'true'
 #print_solutions = 'true'
@@ -180,8 +178,8 @@ echo_physics = 'true'
 
 # Options related to the solver
 [linear-nonlinear-solver]
-   max_nonlinear_iterations = '2'
+   max_nonlinear_iterations = '30'
    use_numerical_jacobians_only = 'false'
    continue_after_max_iterations = 'true'
-
+   continue_after_backtrack_failure = 'true'
 []
