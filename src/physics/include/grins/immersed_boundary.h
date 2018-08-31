@@ -130,6 +130,7 @@ namespace GRINS
 
     void prepare_fluid_context( const MultiphysicsSystem & system,
                                 const AssemblyContext & solid_context,
+				const std::vector<libMesh::Point> & solid_qpoints,
                                 unsigned int sqp, /* solid quadrature point */
                                 libMesh::dof_id_type fluid_elem_id,
                                 libMesh::FEMContext & fluid_context );
@@ -137,8 +138,10 @@ namespace GRINS
     void add_source_term_to_fluid_residual( bool compute_jacobian,
                                             MultiphysicsSystem & system,
                                             libMesh::FEMContext & fluid_context,
+					    libMesh::dof_id_type fluid_elem_id,
                                             AssemblyContext & solid_context,
                                             const std::vector<unsigned int> & solid_qpoint_indices,
+					    const std::vector<libMesh::Point> & solid_qpoints,
                                             const std::vector<libMesh::Point> & solid_qpoints_subset,
                                             const std::vector<libMesh::Real> & solid_JxW,
                                             const std::vector<std::vector<libMesh::RealGradient> > & solid_dphi,
@@ -147,8 +150,10 @@ namespace GRINS
     void add_velocity_coupling_term_to_solid_residual(bool compute_jacobian,
                                                       MultiphysicsSystem & system,
                                                       libMesh::FEMContext & fluid_context,
+						      libMesh::dof_id_type fluid_elem_id,
                                                       AssemblyContext & solid_context,
                                                       const std::vector<unsigned int> & solid_qpoint_indices,
+						      const std::vector<libMesh::Point> & solid_qpoints,
                                                       const std::vector<libMesh::Point> & solid_qpoints_subset,
                                                       const std::vector<libMesh::Real> & solid_JxW,
                                                       const std::vector<std::vector<libMesh::Real> > & solid_phi,
