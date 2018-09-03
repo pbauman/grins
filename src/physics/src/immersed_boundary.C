@@ -743,42 +743,53 @@ namespace GRINS
 		    
 		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 		  {
-		    Kuf_us(i,j) -= (tau_upe(0,alpha)-tau_ume(0,alpha))/(2*delta)*fluid_dphi[i][qp](alpha)*jac;
-		    Kvf_us(i,j) -= (tau_upe(1,alpha)-tau_ume(1,alpha))/(2*delta)*fluid_dphi[i][qp](alpha)*jac;
-		    Kuf_vs(i,j) -= (tau_vpe(0,alpha)-tau_vme(0,alpha))/(2*delta)*fluid_dphi[i][qp](alpha)*jac;
-		    Kvf_vs(i,j) -= (tau_vpe(1,alpha)-tau_vme(1,alpha))/(2*delta)*fluid_dphi[i][qp](alpha)*jac;
+		    Kuf_us(i,j) -= ((tau_upe(0,alpha)-tau_ume(0,alpha))/(2*delta))*fluid_dphi[i][qp](alpha)*jac;
+		    Kvf_us(i,j) -= ((tau_upe(1,alpha)-tau_ume(1,alpha))/(2*delta))*fluid_dphi[i][qp](alpha)*jac;
+		    Kuf_vs(i,j) -= ((tau_vpe(0,alpha)-tau_vme(0,alpha))/(2*delta))*fluid_dphi[i][qp](alpha)*jac;
+		    Kvf_vs(i,j) -= ((tau_vpe(1,alpha)-tau_vme(1,alpha))/(2*delta))*fluid_dphi[i][qp](alpha)*jac;
 		  }		    
+
 		// Now compute fluid_dphi derivative terms
-		{
-		  u_coeffs(j) += delta;
+	
+		u_coeffs(j) += delta;
 
-		  this->prepare_fluid_context(system,solid_context,solid_qpoints,sqp,fluid_elem_id,fluid_context);
+		this->prepare_fluid_context(system,solid_context,solid_qpoints,sqp,fluid_elem_id,fluid_context);
 
-		  const std::vector<std::vector<libMesh::RealGradient> > fluid_dudphi =
-		    fluid_context.get_element_fe(this->_flow_vars.u())->get_dphi();
+		const std::vector<std::vector<libMesh::RealGradient> > fluid_dphi_upd = fluid_context.get_element_fe(this->_flow_vars.u())->get_dphi();
+		
+		u_coeffs(j) -= 2*delta;
 
-		  for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
-		    {
-		      Kuf_us(i,j) -= tau0(0,alpha)*fluid_dudphi[i][0](alpha)*jac;
-		      Kvf_us(i,j) -= tau0(1,alpha)*fluid_dudphi[i][0](alpha)*jac;
+		this->prepare_fluid_context(system,solid_context,solid_qpoints,sqp,fluid_elem_id,fluid_context);
 
-		    }
-		}
+		const std::vector<std::vector<libMesh::RealGradient> > fluid_dphi_umd = fluid_context.get_element_fe(this->_flow_vars.u())->get_dphi();
+		
+		u_coeffs(j) += delta;
 
-		{
-		  u_coeffs(j) -= 2*delta;
+		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
+		  {
+		    Kuf_us(i,j) -= tau0(0,alpha)*((fluid_dphi_upd[i][0](alpha)-fluid_dphi_umd[i][0](alpha))/(2*delta))*jac;
+		    Kvf_us(i,j) -= tau0(1,alpha)*((fluid_dphi_upd[i][0](alpha)-fluid_dphi_umd[i][0](alpha))/(2*delta))*jac;
+		  }
 
-		  this->prepare_fluid_context(system,solid_context,solid_qpoints,sqp,fluid_elem_id,fluid_context);
+		v_coeffs(j) += delta;
 
-		  const std::vector<std::vector<libMesh::RealGradient> > & fluid_dvdphi =
-		    fluid_context.get_element_fe(this->_flow_vars.v())->get_dphi();
+		this->prepare_fluid_context(system,solid_context,solid_qpoints,sqp,fluid_elem_id,fluid_context);
 
-		  for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
-		    {
-		      Kuf_vs(i,j) -= tau0(0,alpha)*fluid_dvdphi[i][0](alpha)*jac;
-		      Kvf_vs(i,j) -= tau0(1,alpha)*fluid_dvdphi[i][0](alpha)*jac;
-		    }
-		}
+		const std::vector<std::vector<libMesh::RealGradient> > fluid_dphi_vpd = fluid_context.get_element_fe(this->_flow_vars.u())->get_dphi();
+		
+		v_coeffs(j) -= 2*delta;
+
+		this->prepare_fluid_context(system,solid_context,solid_qpoints,sqp,fluid_elem_id,fluid_context);
+
+		const std::vector<std::vector<libMesh::RealGradient> > fluid_dphi_vmd = fluid_context.get_element_fe(this->_flow_vars.u())->get_dphi();
+		
+		v_coeffs(j) += delta;
+
+		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
+		  {
+		    Kuf_vs(i,j) -= tau0(0,alpha)*((fluid_dphi_vpd[i][0](alpha)-fluid_dphi_vmd[i][0](alpha))/(2*delta))*jac;
+		    Kvf_vs(i,j) -= tau0(1,alpha)*((fluid_dphi_vpd[i][0](alpha)-fluid_dphi_vmd[i][0](alpha))/(2*delta))*jac;
+		  }
 
 	      } //solid dof loop
 
