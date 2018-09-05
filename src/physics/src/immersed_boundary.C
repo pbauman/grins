@@ -498,14 +498,14 @@ namespace GRINS
 	    this->add_source_term_to_fluid_residual(compute_jacobian,system,
 						    *(this->_fluid_context),fluid_elem_id,
 						    solid_context,solid_qpoints,
-						    qp, sqp, u_coeffs, v_coeffs,
+						    sqp, u_coeffs, v_coeffs,
 						    jac,delta,solid_dphi,fluid_dphi,
 						    Fuf,Fvf,Kuf_us,Kuf_vs,Kvf_us,Kvf_vs);
 
 	    this->add_velocity_coupling_term_to_solid_residual(compute_jacobian,system,
 							       *(this->_fluid_context),fluid_elem_id,
 							       solid_context,solid_qpoints,
-							       qp, sqp, u_coeffs, v_coeffs,
+							       sqp, u_coeffs, v_coeffs,
 							       jac,delta,solid_phi,fluid_phi,
 							       Fus,Fvs,Kus_uf,Kvs_vf,Kus_us,Kvs_us,Kus_vs,Kvs_vs);
 	  } // end solid_qpoints_subset loop
@@ -669,8 +669,7 @@ namespace GRINS
   void ImmersedBoundary<SolidMech>::add_source_term_to_fluid_residual( bool compute_jacobian, MultiphysicsSystem & system,
 								       libMesh::FEMContext & fluid_context,libMesh::dof_id_type fluid_elem_id,
 								       AssemblyContext & solid_context,
-								       const std::vector<libMesh::Point> & solid_qpoints,
-								       unsigned int qp, unsigned int sqp,
+								       const std::vector<libMesh::Point> & solid_qpoints,unsigned int sqp,
 								       libMesh::DenseSubVector<libMesh::Number> & u_coeffs,
 								       libMesh::DenseSubVector<libMesh::Number> & v_coeffs,
 								       libMesh::Real & jac,libMesh::Real delta,
@@ -698,8 +697,8 @@ namespace GRINS
 	// Zero index for fluid dphi/JxW since we only requested one quad. point.
 	for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 	  {
-	    Fuf(i) -= tau0(0,alpha)*fluid_dphi[i][qp](alpha)*jac;
-	    Fvf(i) -= tau0(1,alpha)*fluid_dphi[i][qp](alpha)*jac;
+	    Fuf(i) -= tau0(0,alpha)*fluid_dphi[i][0](alpha)*jac;
+	    Fvf(i) -= tau0(1,alpha)*fluid_dphi[i][0](alpha)*jac;
 	  }
 	
 	if( compute_jacobian )
@@ -743,10 +742,10 @@ namespace GRINS
 		    
 		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 		  {
-		    Kuf_us(i,j) -= ((tau_upe(0,alpha)-tau_ume(0,alpha))/(2*delta))*fluid_dphi[i][qp](alpha)*jac;
-		    Kvf_us(i,j) -= ((tau_upe(1,alpha)-tau_ume(1,alpha))/(2*delta))*fluid_dphi[i][qp](alpha)*jac;
-		    Kuf_vs(i,j) -= ((tau_vpe(0,alpha)-tau_vme(0,alpha))/(2*delta))*fluid_dphi[i][qp](alpha)*jac;
-		    Kvf_vs(i,j) -= ((tau_vpe(1,alpha)-tau_vme(1,alpha))/(2*delta))*fluid_dphi[i][qp](alpha)*jac;
+		    Kuf_us(i,j) -= ((tau_upe(0,alpha)-tau_ume(0,alpha))/(2*delta))*fluid_dphi[i][0](alpha)*jac;
+		    Kvf_us(i,j) -= ((tau_upe(1,alpha)-tau_ume(1,alpha))/(2*delta))*fluid_dphi[i][0](alpha)*jac;
+		    Kuf_vs(i,j) -= ((tau_vpe(0,alpha)-tau_vme(0,alpha))/(2*delta))*fluid_dphi[i][0](alpha)*jac;
+		    Kvf_vs(i,j) -= ((tau_vpe(1,alpha)-tau_vme(1,alpha))/(2*delta))*fluid_dphi[i][0](alpha)*jac;
 		  }		    
 
 		// Now compute fluid_dphi derivative terms
@@ -771,6 +770,8 @@ namespace GRINS
 		    Kvf_us(i,j) -= tau0(1,alpha)*((fluid_dphi_upd[i][0](alpha)-fluid_dphi_umd[i][0](alpha))/(2*delta))*jac;
 		  }
 
+		this->prepare_fluid_context(system,solid_context,solid_qpoints,sqp,fluid_elem_id,fluid_context);
+
 		v_coeffs(j) += delta;
 
 		this->prepare_fluid_context(system,solid_context,solid_qpoints,sqp,fluid_elem_id,fluid_context);
@@ -791,6 +792,8 @@ namespace GRINS
 		    Kvf_vs(i,j) -= tau0(1,alpha)*((fluid_dphi_vpd[i][0](alpha)-fluid_dphi_vmd[i][0](alpha))/(2*delta))*jac;
 		  }
 
+		this->prepare_fluid_context(system,solid_context,solid_qpoints,sqp,fluid_elem_id,fluid_context);
+
 	      } //solid dof loop
 
 	  }// compute_jacobian
@@ -803,8 +806,7 @@ namespace GRINS
   void ImmersedBoundary<SolidMech>::add_velocity_coupling_term_to_solid_residual( bool compute_jacobian, MultiphysicsSystem & system,
 										  libMesh::FEMContext & fluid_context,libMesh::dof_id_type fluid_elem_id,
 										  AssemblyContext & solid_context,
-										  const std::vector<libMesh::Point> & solid_qpoints,
-										  unsigned int qp, unsigned int sqp,
+										  const std::vector<libMesh::Point> & solid_qpoints,unsigned int sqp,
 										  libMesh::DenseSubVector<libMesh::Number> & u_coeffs,
 										  libMesh::DenseSubVector<libMesh::Number> & v_coeffs,
 										  libMesh::Real & jac,libMesh::Real delta,
@@ -825,8 +827,8 @@ namespace GRINS
     // Compute the fluid velocity at the solid element quadrature points.
     libMesh::Real Vx, Vy;
 
-    fluid_context.interior_value(this->_flow_vars.u(), qp, Vx);
-    fluid_context.interior_value(this->_flow_vars.v(), qp, Vy);
+    fluid_context.interior_value(this->_flow_vars.u(), 0, Vx);
+    fluid_context.interior_value(this->_flow_vars.v(), 0, Vy);
 
     // Compute the dipslacement velocity
     libMesh::Real udot, vdot;
@@ -845,7 +847,7 @@ namespace GRINS
 	    // Solid-fluid block
 	    for( unsigned int j = 0; j < n_fluid_dofs; j++ )
 	      {
-		libMesh::Real diag_value = fluid_phi[j][qp]*sphi_times_jac*
+		libMesh::Real diag_value = fluid_phi[j][0]*sphi_times_jac*
                       fluid_context.get_elem_solution_derivative();
 		
 		Kus_uf(i,j) += diag_value;
@@ -892,6 +894,8 @@ namespace GRINS
 		Kus_us(i,j) -= diag_value_1;
 		Kvs_us(i,j) -= diag_value_2;
 
+		this->prepare_fluid_context(system,solid_context,solid_qpoints,sqp,fluid_elem_id,fluid_context);
+
 		libMesh::Real Vx_vpd, Vy_vpd, Vx_vmd, Vy_vmd;
 
 		{	   
@@ -919,6 +923,8 @@ namespace GRINS
 
 		Kus_vs(i,j) -= diag_value_3;
 		Kvs_vs(i,j) -= diag_value_4;
+
+		this->prepare_fluid_context(system,solid_context,solid_qpoints,sqp,fluid_elem_id,fluid_context);
 
 	      }
 
