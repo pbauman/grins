@@ -56,7 +56,6 @@
 #include "libmesh/petsc_matrix.h"
 #include "libmesh/petsc_macro.h"
 #include "libmesh/petsc_solver_exception.h"
-#include "libmesh/fe_interface.h"
 
 // PETSc includes
 # include <petscsnes.h>
@@ -381,9 +380,6 @@ namespace GRINS
     const std::vector<std::vector<libMesh::Real> > & solid_phi =
       solid_context.get_element_fe(u_var,2)->get_phi();
 
-    const std::vector<std::vector<libMesh::RealGradient> > & solid_dphi =
-      solid_context.get_element_fe(u_var,2)->get_dphi();
-
     // Prepare fluid info needed
     const std::vector<std::vector<libMesh::Real> > & fluid_phi =
       _fluid_context->get_element_fe(this->_flow_vars.u())->get_phi();
@@ -484,9 +480,6 @@ namespace GRINS
 	    Kvs_vf.reposition( n_solid_dofs, n_fluid_dofs, n_solid_dofs, n_fluid_dofs );
 	  }
 	
-	libMesh::DenseSubVector<libMesh::Number> & u_coeffs = solid_context.get_elem_solution(this->_disp_vars.u());
-	libMesh::DenseSubVector<libMesh::Number> & v_coeffs = solid_context.get_elem_solution(this->_disp_vars.v());
-
 	for( unsigned int qp = 0; qp < solid_qpoints_subset.size(); qp++ )
 	  {
 	    unsigned int sqp = solid_qpoint_indices[qp];
@@ -497,15 +490,13 @@ namespace GRINS
 	   	       
 	    this->add_source_term_to_fluid_residual(compute_jacobian,system,
 						    *(this->_fluid_context),fluid_elem_id,
-						    solid_context,solid_qpoints,
-						    sqp, u_coeffs, v_coeffs,
-						    jac,delta,solid_dphi,fluid_dphi,
-						    Fuf,Fvf,Kuf_us,Kuf_vs,Kvf_us,Kvf_vs);
+						    solid_context,solid_qpoints,sqp,
+						    jac,delta,fluid_dphi,Fuf,Fvf,
+						    Kuf_us,Kuf_vs,Kvf_us,Kvf_vs);
 
 	    this->add_velocity_coupling_term_to_solid_residual(compute_jacobian,system,
 							       *(this->_fluid_context),fluid_elem_id,
-							       solid_context,solid_qpoints,
-							       sqp, u_coeffs, v_coeffs,
+							       solid_context,solid_qpoints,sqp,
 							       jac,delta,solid_phi,fluid_phi,
 							       Fus,Fvs,Kus_uf,Kvs_vf,Kus_us,Kvs_us,Kus_vs,Kvs_vs);
 	  } // end solid_qpoints_subset loop
@@ -670,20 +661,20 @@ namespace GRINS
 								       libMesh::FEMContext & fluid_context,libMesh::dof_id_type fluid_elem_id,
 								       AssemblyContext & solid_context,
 								       const std::vector<libMesh::Point> & solid_qpoints,unsigned int sqp,
-								       libMesh::DenseSubVector<libMesh::Number> & u_coeffs,
-								       libMesh::DenseSubVector<libMesh::Number> & v_coeffs,
 								       libMesh::Real & jac,libMesh::Real delta,
-								       const std::vector<std::vector<libMesh::RealGradient> > & solid_dphi,
 								       const std::vector<std::vector<libMesh::RealGradient> > & fluid_dphi,
 								       libMesh::DenseSubVector<libMesh::Number> & Fuf,
 								       libMesh::DenseSubVector<libMesh::Number> & Fvf,
-								       libMesh::DenseSubMatrix<libMesh::Number> Kuf_us,
-								       libMesh::DenseSubMatrix<libMesh::Number> Kuf_vs,
-								       libMesh::DenseSubMatrix<libMesh::Number> Kvf_us,
-								       libMesh::DenseSubMatrix<libMesh::Number> Kvf_vs)
+								       libMesh::DenseSubMatrix<libMesh::Number> & Kuf_us,
+								       libMesh::DenseSubMatrix<libMesh::Number> & Kuf_vs,
+								       libMesh::DenseSubMatrix<libMesh::Number> & Kvf_us,
+								       libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vs)
   { 
     unsigned int n_solid_dofs = solid_context.get_dof_indices(this->_disp_vars.u()).size();
     unsigned int n_fluid_dofs = fluid_context.get_dof_indices(this->_flow_vars.u()).size();
+
+    libMesh::DenseSubVector<libMesh::Number> u_coeffs = solid_context.get_elem_solution(this->_disp_vars.u());
+    libMesh::DenseSubVector<libMesh::Number> v_coeffs = solid_context.get_elem_solution(this->_disp_vars.v());
 
     libMesh::Gradient grad_u, grad_v;
     solid_context.interior_gradient(this->_disp_vars.u(), sqp, grad_u);
@@ -709,21 +700,15 @@ namespace GRINS
 		v_coeffs(j) += delta;
 		
 		libMesh::Gradient grad_upe, grad_vpe;
-		for (unsigned int k = 0; k != n_solid_dofs; k++ )
-		  {
-		    grad_upe += u_coeffs(k)*solid_dphi[k][sqp];
-		    grad_vpe += v_coeffs(k)*solid_dphi[k][sqp];
-		  }
+		solid_context.interior_gradient(this->_disp_vars.u(), sqp, grad_upe);
+		solid_context.interior_gradient(this->_disp_vars.v(), sqp, grad_vpe);
 		
 		u_coeffs(j) -= 2*delta;
 		v_coeffs(j) -= 2*delta;
 		    
 		libMesh::Gradient grad_ume, grad_vme;
-		for (unsigned int k = 0; k != n_solid_dofs; k++ )
-		  {
-		    grad_ume += u_coeffs(k)*solid_dphi[k][sqp];
-		    grad_vme += v_coeffs(k)*solid_dphi[k][sqp];
-		  }
+		solid_context.interior_gradient(this->_disp_vars.u(), sqp, grad_ume);
+		solid_context.interior_gradient(this->_disp_vars.v(), sqp, grad_vme);
 		    
 		u_coeffs(j) += delta;
 		v_coeffs(j) += delta;
@@ -807,15 +792,13 @@ namespace GRINS
 										  libMesh::FEMContext & fluid_context,libMesh::dof_id_type fluid_elem_id,
 										  AssemblyContext & solid_context,
 										  const std::vector<libMesh::Point> & solid_qpoints,unsigned int sqp,
-										  libMesh::DenseSubVector<libMesh::Number> & u_coeffs,
-										  libMesh::DenseSubVector<libMesh::Number> & v_coeffs,
 										  libMesh::Real & jac,libMesh::Real delta,
 										  const std::vector<std::vector<libMesh::Real> > & solid_phi,
 										  const std::vector<std::vector<libMesh::Real> > & fluid_phi,
 										  libMesh::DenseSubVector<libMesh::Number> & Fus,
 										  libMesh::DenseSubVector<libMesh::Number> & Fvs,
-										  libMesh::DenseSubMatrix<libMesh::Number> Kus_uf,
-										  libMesh::DenseSubMatrix<libMesh::Number> Kvs_vf,
+										  libMesh::DenseSubMatrix<libMesh::Number> & Kus_uf,
+										  libMesh::DenseSubMatrix<libMesh::Number> & Kvs_vf,
 										  libMesh::DenseSubMatrix<libMesh::Number> & Kus_us,
 										  libMesh::DenseSubMatrix<libMesh::Number> & Kvs_us,
 										  libMesh::DenseSubMatrix<libMesh::Number> & Kus_vs,
@@ -823,6 +806,9 @@ namespace GRINS
   {
     unsigned int n_solid_dofs = solid_context.get_dof_indices(this->_disp_vars.u()).size();
     unsigned int n_fluid_dofs = fluid_context.get_dof_indices(this->_flow_vars.u()).size();
+
+    libMesh::DenseSubVector<libMesh::Number> u_coeffs = solid_context.get_elem_solution(this->_disp_vars.u());
+    libMesh::DenseSubVector<libMesh::Number> v_coeffs = solid_context.get_elem_solution(this->_disp_vars.v());
 
     // Compute the fluid velocity at the solid element quadrature points.
     libMesh::Real Vx, Vy;
