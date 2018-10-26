@@ -94,6 +94,7 @@ namespace GRINS
 
     //! FE variables for the solid
     DisplacementVariable & _disp_vars;
+    DisplacementVariable & _lambda_var;
 
     //! Solid Mechanics from the ibm factory
     std::unique_ptr<SolidMech> _solid_mech;
@@ -118,8 +119,7 @@ namespace GRINS
 
     std::unique_ptr<libMesh::FEMContext> _fluid_context;
 
-    void assemble_accel_term( bool compute_jacobian, AssemblyContext & context );
-
+ 
     void prepare_fluid_context_batch( const MultiphysicsSystem & system,
                                       libMesh::dof_id_type fluid_elem_id,
                                       const AssemblyContext & solid_context,
@@ -135,18 +135,19 @@ namespace GRINS
                                 libMesh::dof_id_type fluid_elem_id,
                                 libMesh::FEMContext & fluid_context );
 
-    void add_source_term_to_fluid_residual( bool compute_jacobian, MultiphysicsSystem & system,
-					    libMesh::FEMContext & fluid_context, libMesh::dof_id_type fluid_elem_id,
-					    AssemblyContext & solid_context, const std::vector<libMesh::Point> & solid_qpoints,
-					    unsigned int sqp,
-					    libMesh::Real & jac,libMesh::Real delta,
-					    const std::vector<std::vector<libMesh::RealGradient> > & fluid_dphi,
-					    libMesh::DenseSubVector<libMesh::Number> & Fuf,
-					    libMesh::DenseSubVector<libMesh::Number> & Fvf,
-					    libMesh::DenseSubMatrix<libMesh::Number> & Kuf_us,
-					    libMesh::DenseSubMatrix<libMesh::Number> & Kuf_vs,
-					    libMesh::DenseSubMatrix<libMesh::Number> & Kvf_us,
-					    libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vs);
+    void fluid_residual_contribution( bool compute_jacobian, MultiphysicsSystem & system,
+				      libMesh::FEMContext & fluid_context, libMesh::dof_id_type fluid_elem_id,
+				      AssemblyContext & solid_context, const std::vector<libMesh::Point> & solid_qpoints,
+				      unsigned int sqp,
+				      libMesh::Real & jac,libMesh::Real delta,
+				      const std::vector<std::vector<libMesh::Real> > & fluid_phi,
+				      const std::vector<std::vector<libMesh::RealGradient> > & fluid_dphi,
+				      libMesh::DenseSubVector<libMesh::Number> & Fuf,
+				      libMesh::DenseSubVector<libMesh::Number> & Fvf,
+				      libMesh::DenseSubMatrix<libMesh::Number> & Kuf_us,
+				      libMesh::DenseSubMatrix<libMesh::Number> & Kuf_vs,
+				      libMesh::DenseSubMatrix<libMesh::Number> & Kvf_us,
+				      libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vs);
 				
       
     void add_velocity_coupling_term_to_solid_residual( bool compute_jacobian, MultiphysicsSystem & system,
@@ -176,6 +177,10 @@ namespace GRINS
     void eval_stress( const libMesh::Gradient & grad_u,
                       const libMesh::Gradient & grad_v,
                       libMesh::TensorValue<libMesh::Real> & tau );
+  
+    void eval_deform_gradient( const libMesh::Gradient & grad_u,
+			       const libMesh::Gradient & grad_v,
+			       libMesh::TensorValue<libMesh::Real> & F );
   };
 
   template<typename SolidMech>
