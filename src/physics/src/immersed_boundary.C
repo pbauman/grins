@@ -270,9 +270,6 @@ namespace GRINS
     const std::vector<libMesh::Real> & solid_JxW =
       solid_context.get_element_fe(u_var,2)->get_JxW();
 
-    const std::vector<std::vector<libMesh::Real> > & solid_phi =
-      solid_context.get_element_fe(u_var,2)->get_phi();
-
     // Prepare fluid info needed
     const std::vector<std::vector<libMesh::Real> > & fluid_phi =
       _fluid_context->get_element_fe(this->_flow_vars.u())->get_phi();
@@ -394,11 +391,10 @@ namespace GRINS
 					      jac,delta,fluid_phi,fluid_dphi,Fuf,Fvf,
 					      Kuf_us,Kuf_vs,Kvf_us,Kvf_vs);
 	    
-	    this->add_velocity_coupling_term_to_solid_residual(compute_jacobian,system,
-							       *(this->_fluid_context),fluid_elem_id,
-							       solid_context,solid_qpoints,sqp,
-							       jac,delta,solid_phi,fluid_phi,
-							       Fus,Fvs,Kus_uf,Kvs_vf,Kus_us,Kvs_us,Kus_vs,Kvs_vs);
+	    this->solid_residual_contribution(compute_jacobian,system,
+					      solid_context,sqp,
+					      jac,delta,Fus,Fvs,
+					      Kus_us,Kvs_us,Kus_vs,Kvs_vs);
 	  } // end solid_qpoints_subset loop
 	
 	std::vector<libMesh::dof_id_type> velocity_dof_indices;
@@ -758,6 +754,212 @@ namespace GRINS
   }
 
   template<typename SolidMech>
+  void ImmersedBoundary<SolidMech>::solid_residual_contribution( bool compute_jacobian, MultiphysicsSystem & system,
+								 AssemblyContext & solid_context,unsigned int sqp,
+								 libMesh::Real & jac,libMesh::Real delta,
+								 libMesh::DenseSubVector<libMesh::Number> & Fus,
+								 libMesh::DenseSubVector<libMesh::Number> & Fvs,
+								 libMesh::DenseSubMatrix<libMesh::Number> & Kus_us,
+								 libMesh::DenseSubMatrix<libMesh::Number> & Kvs_us,
+								 libMesh::DenseSubMatrix<libMesh::Number> & Kus_vs,
+								 libMesh::DenseSubMatrix<libMesh::Number> & Kvs_vs)
+  {
+    unsigned int n_solid_dofs = solid_context.get_dof_indices(this->_disp_vars.u()).size();
+
+    const std::vector<std::vector<libMesh::Real> > solid_phi = 
+      solid_context.get_element_fe(this->_disp_vars.u(),2)->get_phi();
+    const std::vector<std::vector<libMesh::RealGradient> > solid_dphi = 
+      solid_context.get_element_fe(this->_disp_vars.u(),2)->get_dphi();
+
+    libMesh::DenseSubVector<libMesh::Number> u_coeffs = solid_context.get_elem_solution(this->_disp_vars.u());
+    libMesh::DenseSubVector<libMesh::Number> v_coeffs = solid_context.get_elem_solution(this->_disp_vars.v());
+
+    unsigned int lambda_x = this->_lambda_var.u();
+    unsigned int lambda_y = this->_lambda_var.v();
+
+    libMesh::Gradient grad_u, grad_v;
+    solid_context.interior_gradient(this->_disp_vars.u(), sqp, grad_u);
+    solid_context.interior_gradient(this->_disp_vars.v(), sqp, grad_v);
+
+    libMesh::Gradient grad_lambda_x, grad_lambda_y;
+    solid_context.interior_gradient(lambda_x, sqp, grad_lambda_x);
+    solid_context.interior_gradient(lambda_y, sqp, grad_lambda_y);
+    
+    libMesh::TensorValue<libMesh::Real> P;
+    this->eval_first_Piola(grad_u,grad_v,P);
+
+    for (unsigned int i=0; i != n_solid_dofs; i++)
+      {
+	for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
+	  {
+	    Fus(i) += (grad_lambda_x*solid_dphi[i][sqp] + lambda_x*solid_phi[i][sqp] - P(0,alpha)*solid_dphi[i][sqp](alpha))*jac;
+	    Fvs(i) += (grad_lambda_y*solid_dphi[i][sqp] + lambda_y*solid_phi[i][sqp] - P(1,alpha)*solid_dphi[i][sqp](alpha))*jac;
+	  }
+
+	if( compute_jacobian )
+	  {
+	    for (unsigned int j=0; j != n_solid_dofs; j++)
+	      {
+
+		// Finite differencing the grad_lambda_terms
+
+		u_coeffs(j) += delta;
+
+		libMesh::Gradient grad_lmx_upd, grad_lmy_upd;
+		solid_context.interior_gradient(this->_lambda_var.u(), sqp, grad_lmx_upd);
+		solid_context.interior_gradient(this->_lambda_var.v(), sqp, grad_lmy_upd);
+
+		u_coeffs(j) -= 2*delta;
+
+		libMesh::Gradient grad_lmx_umd, grad_lmy_umd;
+		solid_context.interior_gradient(this->_lambda_var.u(), sqp, grad_lmx_umd);
+		solid_context.interior_gradient(this->_lambda_var.v(), sqp, grad_lmy_umd);
+
+		u_coeffs(j) += delta;
+
+		v_coeffs(j) += delta;
+
+		libMesh::Gradient grad_lmx_vpd, grad_lmy_vpd;
+		solid_context.interior_gradient(this->_lambda_var.u(), sqp, grad_lmx_vpd);
+		solid_context.interior_gradient(this->_lambda_var.v(), sqp, grad_lmy_vpd);
+
+		v_coeffs(j) -= 2*delta;
+
+		libMesh::Gradient grad_lmx_vmd, grad_lmy_vmd;
+		solid_context.interior_gradient(this->_lambda_var.u(), sqp, grad_lmx_vmd);
+		solid_context.interior_gradient(this->_lambda_var.v(), sqp, grad_lmy_vmd);
+
+		v_coeffs(j) += delta;
+		
+		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
+		  {
+		    Kus_us(i,j) += (((grad_lmx_upd-grad_lmx_umd)/(2*delta))*solid_dphi[i][sqp] 
+				    + lambda_x*solid_phi[i][sqp] - P(0,alpha)*solid_dphi[i][sqp](alpha))*jac;
+
+		    Kvs_us(i,j) += (((grad_lmy_upd-grad_lmy_umd)/(2*delta))*solid_dphi[i][sqp] 
+				    + lambda_y*solid_phi[i][sqp] - P(1,alpha)*solid_dphi[i][sqp](alpha))*jac;
+
+		    Kus_vs(i,j) += (((grad_lmx_vpd-grad_lmx_vmd)/(2*delta))*solid_dphi[i][sqp] 
+				    + lambda_x*solid_phi[i][sqp] - P(0,alpha)*solid_dphi[i][sqp](alpha))*jac;
+
+		    Kvs_vs(i,j) += (((grad_lmy_vpd-grad_lmy_vmd)/(2*delta))*solid_dphi[i][sqp] 
+				    + lambda_y*solid_phi[i][sqp] - P(1,alpha)*solid_dphi[i][sqp](alpha))*jac;
+		  }	
+
+
+		// Finite differencing P terms
+
+		u_coeffs(j) += delta;
+		v_coeffs(j) += delta;
+		
+		libMesh::Gradient grad_upd, grad_vpd;
+		solid_context.interior_gradient(this->_disp_vars.u(), sqp, grad_upd);
+		solid_context.interior_gradient(this->_disp_vars.v(), sqp, grad_vpd);
+
+		u_coeffs(j) -= 2*delta;
+		v_coeffs(j) -= 2*delta;
+		    
+		libMesh::Gradient grad_umd, grad_vmd;
+		solid_context.interior_gradient(this->_disp_vars.u(), sqp, grad_umd);
+		solid_context.interior_gradient(this->_disp_vars.v(), sqp, grad_vmd);
+	
+		u_coeffs(j) += delta;
+		v_coeffs(j) += delta;
+		    
+		libMesh::TensorValue<libMesh::Real> P_upd;
+		this->eval_first_Piola(grad_upd,grad_v,P_upd);
+		
+		libMesh::TensorValue<libMesh::Real> P_umd;
+		this->eval_first_Piola(grad_umd,grad_v,P_umd);
+	
+		libMesh::TensorValue<libMesh::Real> P_vpd;
+		this->eval_first_Piola(grad_u,grad_vpd,P_vpd);
+	
+		libMesh::TensorValue<libMesh::Real> P_vmd;
+		this->eval_first_Piola(grad_u,grad_vmd,P_vmd);
+		
+		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
+		  {
+		    Kus_us(i,j) += (grad_lambda_x*solid_dphi[i][sqp] + lambda_x*solid_phi[i][sqp] 
+				    - ((P_upd(0,alpha)-P_umd(0,alpha))/(2*delta))*solid_dphi[i][sqp](alpha))*jac;
+
+		    Kvs_us(i,j) += (grad_lambda_y*solid_dphi[i][sqp] + lambda_y*solid_phi[i][sqp] 
+				    - ((P_upd(1,alpha)-P_umd(1,alpha))/(2*delta))*solid_dphi[i][sqp](alpha))*jac;
+
+		    Kus_vs(i,j) += (grad_lambda_x*solid_dphi[i][sqp] + lambda_x*solid_phi[i][sqp] 
+				    - ((P_vpd(0,alpha)-P_vmd(0,alpha))/(2*delta))*solid_dphi[i][sqp](alpha))*jac;
+
+		    Kvs_vs(i,j) += (grad_lambda_y*solid_dphi[i][sqp] + lambda_y*solid_phi[i][sqp] 
+				    - ((P_vpd(1,alpha)-P_vmd(1,alpha))/(2*delta))*solid_dphi[i][sqp](alpha))*jac;
+		  }		    
+
+		// Compute solid_phi and solid_dphi derivative terms
+	
+		u_coeffs(j) += delta;
+
+		const std::vector<std::vector<libMesh::Real> > solid_phi_upd = solid_context.get_element_fe(this->_disp_vars.u(),2)->get_phi();
+		const std::vector<std::vector<libMesh::RealGradient> > solid_dphi_upd = solid_context.get_element_fe(this->_disp_vars.u(),2)->get_dphi();
+		
+		u_coeffs(j) -= 2*delta;
+
+		const std::vector<std::vector<libMesh::Real> > solid_phi_umd = solid_context.get_element_fe(this->_disp_vars.u(),2)->get_phi();
+		const std::vector<std::vector<libMesh::RealGradient> > solid_dphi_umd = solid_context.get_element_fe(this->_disp_vars.u(),2)->get_dphi();
+		
+		u_coeffs(j) += delta;
+
+		v_coeffs(j) += delta;
+
+		const std::vector<std::vector<libMesh::Real> > solid_phi_vpd = solid_context.get_element_fe(this->_disp_vars.u(),2)->get_phi();
+		const std::vector<std::vector<libMesh::RealGradient> > solid_dphi_vpd = solid_context.get_element_fe(this->_disp_vars.u(),2)->get_dphi();
+		
+		v_coeffs(j) -= 2*delta;
+
+		const std::vector<std::vector<libMesh::Real> > solid_phi_vmd = solid_context.get_element_fe(this->_disp_vars.u(),2)->get_phi();
+		const std::vector<std::vector<libMesh::RealGradient> > solid_dphi_vmd = solid_context.get_element_fe(this->_disp_vars.u(),2)->get_dphi();
+		
+		v_coeffs(j) += delta;
+
+		//Finite differencing the solid_dphi terms
+		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
+		  {
+		    Kus_us(i,j) += (grad_lambda_x*((solid_dphi_upd[i][sqp]-solid_dphi_umd[i][sqp])/(2*delta)) + lambda_x*solid_phi[i][sqp]
+				    - P(0,alpha)*((solid_dphi_upd[i][sqp](alpha)-solid_dphi_umd[i][sqp](alpha))/(2*delta)))*jac;
+
+		    Kvs_us(i,j) += (grad_lambda_y*((solid_dphi_upd[i][sqp]-solid_dphi_umd[i][sqp])/(2*delta)) + lambda_y*solid_phi[i][sqp]
+				    - P(1,alpha)*((solid_dphi_upd[i][sqp](alpha)-solid_dphi_umd[i][sqp](alpha))/(2*delta)))*jac;
+
+		    Kus_vs(i,j) += (grad_lambda_x*((solid_dphi_vpd[i][sqp]-solid_dphi_vmd[i][sqp])/(2*delta)) + lambda_x*solid_phi[i][sqp]
+				    - P(0,alpha)*((solid_dphi_vpd[i][sqp](alpha)-solid_dphi_vmd[i][sqp](alpha))/(2*delta)))*jac;
+		    
+		    Kvs_vs(i,j) += (grad_lambda_y*((solid_dphi_vpd[i][sqp]-solid_dphi_vmd[i][sqp])/(2*delta)) + lambda_y*solid_phi[i][sqp]
+				    - P(1,alpha)*((solid_dphi_vpd[i][sqp](alpha)-solid_dphi_vmd[i][sqp](alpha))/(2*delta)))*jac;
+		  }
+
+		//Finite differencing the solid_phi terms
+		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
+		  {
+		    Kus_us(i,j) += (grad_lambda_x*solid_dphi[i][sqp] + lambda_x*((solid_phi_upd[i][sqp]-solid_phi_umd[i][sqp])/(2*delta)) 
+				    - P(0,alpha)*solid_dphi[i][sqp](alpha))*jac;
+
+		    Kvs_us(i,j) += (grad_lambda_y*solid_dphi[i][sqp] + lambda_y*((solid_phi_upd[i][sqp]-solid_phi_umd[i][sqp])/(2*delta)) 
+				    - P(1,alpha)*solid_dphi[i][sqp](alpha))*jac;
+
+		    Kus_vs(i,j) += (grad_lambda_x*solid_dphi[i][sqp] + lambda_x*((solid_phi_vpd[i][sqp]-solid_phi_vmd[i][sqp])/(2*delta)) 
+				    - P(0,alpha)*solid_dphi[i][sqp](alpha))*jac;
+		    
+		    Kvs_vs(i,j) += (grad_lambda_y*solid_dphi[i][sqp] + lambda_y*((solid_phi_vpd[i][sqp]-solid_phi_vmd[i][sqp])/(2*delta)) 
+				    - P(1,alpha)*solid_dphi[i][sqp](alpha))*jac;
+		  }
+
+	      } //solid dof loop
+
+	  }// compute_jacobian
+
+      } //solid dof loop
+    
+  }
+
+  template<typename SolidMech>
   void ImmersedBoundary<SolidMech>::add_velocity_coupling_term_to_solid_residual( bool compute_jacobian, MultiphysicsSystem & system,
 										  libMesh::FEMContext & fluid_context,libMesh::dof_id_type fluid_elem_id,
 										  AssemblyContext & solid_context,
@@ -908,10 +1110,11 @@ namespace GRINS
   }
 
   template<typename SolidMech>
-  void ImmersedBoundary<SolidMech>::eval_stress( const libMesh::Gradient & grad_u,
+  void ImmersedBoundary<SolidMech>::eval_first_Piola( const libMesh::Gradient & grad_u,
                                                  const libMesh::Gradient & grad_v,
-                                                 libMesh::TensorValue<libMesh::Real> & tau )
+                                                 libMesh::TensorValue<libMesh::Real> & P )
   {
+    /*
     libMesh::TensorValue<libMesh::Real> grad_U;
     grad_U(0,0) = grad_u(0);
     grad_U(0,1) = grad_u(1);
@@ -924,6 +1127,10 @@ namespace GRINS
     F(0,0) += 1;
     F(1,1) += 1;
     F(2,2) = 1;
+    */
+
+    libMesh::TensorValue<libMesh::Real> F;
+    this->eval_deform_gradient(grad_u,grad_v,F);
 
     // We need to use F^T a few times so just cache it.
     libMesh::TensorValue<libMesh::Real> Ftrans = F.transpose();
@@ -954,11 +1161,11 @@ namespace GRINS
     S(0,0) += lambda*trE;
     S(1,1) += lambda*trE;
 
-    libMesh::TensorValue<libMesh::Real> P(F*S);
-
+    P = F*S;
+    
     // The F^T comes from needing the derivative of the fluid
     // shape function w.r.t. solid coordinates
-    tau = P*Ftrans;
+    //tau = P*Ftrans;
   }
   
   //instantiate IBM classes

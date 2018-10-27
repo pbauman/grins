@@ -149,6 +149,15 @@ namespace GRINS
 				      libMesh::DenseSubMatrix<libMesh::Number> & Kvf_us,
 				      libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vs);
 				
+    void solid_residual_contribution( bool compute_jacobian, MultiphysicsSystem & system,
+				      AssemblyContext & solid_context,unsigned int sqp,
+				      libMesh::Real & jac,libMesh::Real delta,
+				      libMesh::DenseSubVector<libMesh::Number> & Fus,
+				      libMesh::DenseSubVector<libMesh::Number> & Fvs,
+				      libMesh::DenseSubMatrix<libMesh::Number> & Kus_us,
+				      libMesh::DenseSubMatrix<libMesh::Number> & Kvs_us,
+				      libMesh::DenseSubMatrix<libMesh::Number> & Kus_vs,
+				      libMesh::DenseSubMatrix<libMesh::Number> & Kvs_vs);
       
     void add_velocity_coupling_term_to_solid_residual( bool compute_jacobian, MultiphysicsSystem & system,
 						       libMesh::FEMContext & fluid_context,libMesh::dof_id_type fluid_elem_id,
@@ -174,9 +183,9 @@ namespace GRINS
 
     bool is_fluid_elem( libMesh::subdomain_id_type elem_id );
 
-    void eval_stress( const libMesh::Gradient & grad_u,
+    void eval_first_Piola( const libMesh::Gradient & grad_u,
                       const libMesh::Gradient & grad_v,
-                      libMesh::TensorValue<libMesh::Real> & tau );
+                      libMesh::TensorValue<libMesh::Real> & F );
   
     void eval_deform_gradient( const libMesh::Gradient & grad_u,
 			       const libMesh::Gradient & grad_v,
