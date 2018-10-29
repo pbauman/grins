@@ -149,7 +149,7 @@ namespace GRINS
 				      libMesh::DenseSubMatrix<libMesh::Number> & Kvf_us,
 				      libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vs);
 				
-    void solid_residual_contribution( bool compute_jacobian, MultiphysicsSystem & system,
+    void solid_residual_contribution( bool compute_jacobian, 
 				      AssemblyContext & solid_context,unsigned int sqp,
 				      libMesh::Real & jac,libMesh::Real delta,
 				      libMesh::DenseSubVector<libMesh::Number> & Fus,
@@ -159,22 +159,19 @@ namespace GRINS
 				      libMesh::DenseSubMatrix<libMesh::Number> & Kus_vs,
 				      libMesh::DenseSubMatrix<libMesh::Number> & Kvs_vs);
       
-    void add_velocity_coupling_term_to_solid_residual( bool compute_jacobian, MultiphysicsSystem & system,
-						       libMesh::FEMContext & fluid_context,libMesh::dof_id_type fluid_elem_id,
-						       AssemblyContext & solid_context,
-						       const std::vector<libMesh::Point> & solid_qpoints,
-						       unsigned int sqp,
-						       libMesh::Real & jac,libMesh::Real delta,
-						       const std::vector<std::vector<libMesh::Real> > & solid_phi,
-						       const std::vector<std::vector<libMesh::Real> > & fluid_phi,
-						       libMesh::DenseSubVector<libMesh::Number> & Fus,
-						       libMesh::DenseSubVector<libMesh::Number> & Fvs,
-						       libMesh::DenseSubMatrix<libMesh::Number> & Kus_uf,
-						       libMesh::DenseSubMatrix<libMesh::Number> & Kvs_vf,
-						       libMesh::DenseSubMatrix<libMesh::Number> & Kus_us,
-						       libMesh::DenseSubMatrix<libMesh::Number> & Kvs_us,
-						       libMesh::DenseSubMatrix<libMesh::Number> & Kus_vs,
-						       libMesh::DenseSubMatrix<libMesh::Number> & Kvs_vs);
+    void lambda_residual_contribution( bool compute_jacobian, MultiphysicsSystem & system,
+				       libMesh::FEMContext & fluid_context,libMesh::dof_id_type fluid_elem_id,
+				       AssemblyContext & solid_context,
+				       const std::vector<libMesh::Point> & solid_qpoints,unsigned int sqp,
+				       libMesh::Real & jac,libMesh::Real delta,
+				       libMesh::DenseSubVector<libMesh::Number> & Fulm,
+				       libMesh::DenseSubVector<libMesh::Number> & Fvlm,
+				       libMesh::DenseSubMatrix<libMesh::Number> & Kulm_uf,
+				       libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_vf,
+				       libMesh::DenseSubMatrix<libMesh::Number> & Kulm_us,
+				       libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_us,
+				       libMesh::DenseSubMatrix<libMesh::Number> & Kulm_vs,
+				       libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_vs);
       
     void assemble_solid_var_residual_contributions( bool compute_jacobian,
                                                     AssemblyContext & context );
