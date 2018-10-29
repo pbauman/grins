@@ -1265,33 +1265,33 @@ namespace GRINS
 		// Finite differencing the grad_udot terms
 		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 		  {
-		    Kulm_us(i,j) -= ((((grad_udot_upd-grad_udot_umd)/(2*delta)) + Ftrans(0,alpha)*grad_Vx)*lambda_dphi[i][sqp] 
+		    Kulm_us(i,j) += (((-(grad_udot_upd-grad_udot_umd)/(2*delta)) + Ftrans(0,alpha)*grad_Vx)*lambda_dphi[i][sqp] 
 				     + (-udot + Vx)*lambda_phi[i][sqp])*jac;
 
-		    Kvlm_us(i,j) -= ((((grad_vdot_upd-grad_vdot_umd)/(2*delta)) + Ftrans(1,alpha)*grad_Vy)*lambda_dphi[i][sqp] 
+		    Kvlm_us(i,j) += (((-(grad_vdot_upd-grad_vdot_umd)/(2*delta)) + Ftrans(1,alpha)*grad_Vy)*lambda_dphi[i][sqp] 
 				     + (-vdot + Vy)*lambda_phi[i][sqp])*jac;
 
-		    Kulm_vs(i,j) -= ((((grad_udot_vpd-grad_udot_vmd)/(2*delta)) + Ftrans(0,alpha)*grad_Vx)*lambda_dphi[i][sqp] 
+		    Kulm_vs(i,j) += (((-(grad_udot_vpd-grad_udot_vmd)/(2*delta)) + Ftrans(0,alpha)*grad_Vx)*lambda_dphi[i][sqp] 
 				     + (-udot + Vx)*lambda_phi[i][sqp])*jac;
 
-		    Kvlm_vs(i,j) -= ((((grad_vdot_vpd-grad_vdot_vmd)/(2*delta)) + Ftrans(1,alpha)*grad_Vy)*lambda_dphi[i][sqp] 
+		    Kvlm_vs(i,j) += (((-(grad_vdot_vpd-grad_vdot_vmd)/(2*delta)) + Ftrans(1,alpha)*grad_Vy)*lambda_dphi[i][sqp] 
 				     + (-vdot + Vy)*lambda_phi[i][sqp])*jac;
 		  }
 
 		//Finite differencing the udot terms
 		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 		  {
-		    Kulm_us(i,j) -= ((-grad_udot + Ftrans(0,alpha)*grad_Vx)*lambda_dphi[i][sqp] 
-				     + (((udot_upd-udot_umd)/(2*delta)) + Vx)*lambda_phi[i][sqp])*jac;
+		    Kulm_us(i,j) += ((-grad_udot + Ftrans(0,alpha)*grad_Vx)*lambda_dphi[i][sqp] 
+				     + ((-(udot_upd-udot_umd)/(2*delta)) + Vx)*lambda_phi[i][sqp])*jac;
 
-		    Kvlm_us(i,j) -= ((-grad_vdot + Ftrans(1,alpha)*grad_Vy)*lambda_dphi[i][sqp] 
-				     + (((vdot_upd-vdot_umd)/(2*delta)) + Vy)*lambda_phi[i][sqp])*jac;
+		    Kvlm_us(i,j) += ((-grad_vdot + Ftrans(1,alpha)*grad_Vy)*lambda_dphi[i][sqp] 
+				     + ((-(vdot_upd-vdot_umd)/(2*delta)) + Vy)*lambda_phi[i][sqp])*jac;
 
-		    Kulm_vs(i,j) -= ((-grad_udot + Ftrans(0,alpha)*grad_Vx)*lambda_dphi[i][sqp] 
-				     + (((udot_vpd-udot_vmd)/(2*delta)) + Vx)*lambda_phi[i][sqp])*jac;
+		    Kulm_vs(i,j) += ((-grad_udot + Ftrans(0,alpha)*grad_Vx)*lambda_dphi[i][sqp] 
+				     + ((-(udot_vpd-udot_vmd)/(2*delta)) + Vx)*lambda_phi[i][sqp])*jac;
 
-		    Kvlm_vs(i,j) -= ((-grad_vdot + Ftrans(1,alpha)*grad_Vy)*lambda_dphi[i][sqp] 
-				     + (((vdot_vpd-vdot_vmd)/(2*delta)) + Vy)*lambda_phi[i][sqp])*jac;
+		    Kvlm_vs(i,j) += ((-grad_vdot + Ftrans(1,alpha)*grad_Vy)*lambda_dphi[i][sqp] 
+				     + ((-(vdot_vpd-vdot_vmd)/(2*delta)) + Vy)*lambda_phi[i][sqp])*jac;
 		  }
 
 		// Computing lambda_phi and lambda_dphi derivative terms
