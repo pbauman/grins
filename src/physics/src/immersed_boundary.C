@@ -1001,6 +1001,9 @@ namespace GRINS
     libMesh::DenseSubVector<libMesh::Number> u_coeffs = solid_context.get_elem_solution(this->_disp_vars.u());
     libMesh::DenseSubVector<libMesh::Number> v_coeffs = solid_context.get_elem_solution(this->_disp_vars.v());
 
+    libMesh::DenseSubVector<libMesh::Number> fluid_ucoeff = fluid_context.get_elem_solution(this->_flow_vars.u());
+    libMesh::DenseSubVector<libMesh::Number> fluid_vcoeff = fluid_context.get_elem_solution(this->_flow_vars.v());
+
     const std::vector<std::vector<libMesh::Real> > fluid_phi = 
       fluid_context.get_element_fe(this->_flow_vars.u())->get_phi();
     const std::vector<std::vector<libMesh::Real> > solid_phi = 
@@ -1052,25 +1055,62 @@ namespace GRINS
 	    // lambda-fluid block
 	    for( unsigned int j = 0; j < n_fluid_dofs; j++ )
 	      {
-		libMesh::Real diag_value = fluid_phi[j][0]*lambda_phi[i][sqp]*jac*
-                      fluid_context.get_elem_solution_derivative();
+		// Computing V and grad_V terms fluid derivative terms
 		
-		Kulm_uf(i,j) += diag_value;
-		Kvlm_vf(i,j) += diag_value;
-	      }
+		libMesh::Real Vxpd, Vypd, Vxmd, Vymd;
+		libMesh::Gradient grad_Vxpd, grad_Vypd, grad_Vxmd, grad_Vymd;
+		
+		{	   
+		  fluid_ucoeff(j) += delta;
+		  fluid_vcoeff(j) += delta;
+
+		  fluid_context.interior_value(this->_flow_vars.u(), 0, Vxpd);
+		  fluid_context.interior_value(this->_flow_vars.v(), 0, Vypd);
+
+		  fluid_context.interior_gradient(this->_flow_vars.u(), 0, grad_Vxpd);
+		  fluid_context.interior_gradient(this->_flow_vars.v(), 0, grad_Vypd);
+		}
+
+		{
+		  fluid_ucoeff(j) -= 2*delta;
+		  fluid_vcoeff(j) -= 2*delta;
+
+		  fluid_context.interior_value(this->_flow_vars.u(), 0, Vxmd);
+		  fluid_context.interior_value(this->_flow_vars.v(), 0, Vymd);
+
+		  fluid_context.interior_gradient(this->_flow_vars.u(), 0, grad_Vxmd);
+		  fluid_context.interior_gradient(this->_flow_vars.v(), 0, grad_Vymd);
+		}
+
+		fluid_ucoeff(j) += delta;
+		fluid_vcoeff(j) += delta;
+
+		// Finite differencing the grad_V terms w.r.t fluid
+		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
+		  {
+		    Kulm_uf(i,j) += ((-grad_udot + Ftrans(0,alpha)*((grad_Vxpd-grad_Vxmd)/(2*delta)))*lambda_dphi[i][sqp] 
+				     + (-udot + Vx)*lambda_phi[i][sqp])*jac;
+
+		    Kvlm_vf(i,j) += ((-grad_vdot + Ftrans(1,alpha)*((grad_Vypd-grad_Vymd)/(2*delta)))*lambda_dphi[i][sqp] 
+				     + (-vdot + Vy)*lambda_phi[i][sqp])*jac;
+		  }
+
+		//Finite differencing the V terms w.r.t fluid
+		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
+		  {
+		    Kulm_uf(i,j) += ((-grad_udot + Ftrans(0,alpha)*grad_Vx)*lambda_dphi[i][sqp] 
+				     + (-udot + ((Vxpd-Vxmd)/(2*delta)))*lambda_phi[i][sqp])*jac;
+
+		    Kvlm_vf(i,j) += ((-grad_vdot + Ftrans(1,alpha)*grad_Vy)*lambda_dphi[i][sqp] 
+				     + (-vdot + ((Vypd-Vymd)/(2*delta)))*lambda_phi[i][sqp])*jac;
+		  }
+
+	      } //fluid dof loop
 
 	    // lambda-solid block
 	    for( unsigned int j = 0; j < n_solid_dofs; j++ )
 	      {
 
-		libMesh::Real sphij = solid_phi[j][sqp];
-
-		libMesh::Real diag_value = sphij*lambda_phi[i][sqp]*jac;
-		diag_value *= solid_context.get_elem_solution_rate_derivative();
-		
-		Kulm_us(i,j) -= diag_value;
-		Kvlm_vs(i,j) -= diag_value;
-			
 		// Finite differencing Ftranspose terms
 
 		u_coeffs(j) += delta;
@@ -1122,7 +1162,7 @@ namespace GRINS
 		  }		
 	
 
-		// Computing V and grad_V terms derivative terms
+		// Computing V and grad_V terms solid derivative terms
 
 		libMesh::Real Vx_upd, Vy_upd, Vx_umd, Vy_umd;
 		libMesh::Gradient grad_Vx_upd, grad_Vy_upd, grad_Vx_umd, grad_Vy_umd;
@@ -1182,7 +1222,7 @@ namespace GRINS
 		}
 		v_coeffs(j) += delta;
 		
-		// Finite differencing the grad_V terms
+		// Finite differencing the grad_V terms w.r.t solid
 		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 		  {
 		    Kulm_us(i,j) += ((-grad_udot + Ftrans(0,alpha)*((grad_Vx_upd-grad_Vx_umd)/(2*delta)))*lambda_dphi[i][sqp] 
@@ -1198,7 +1238,7 @@ namespace GRINS
 				     + (-vdot + Vy)*lambda_phi[i][sqp])*jac;
 		  }
 
-		//Finite differencing the V terms
+		//Finite differencing the V terms w.r.t solid
 		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 		  {
 		    Kulm_us(i,j) += ((-grad_udot + Ftrans(0,alpha)*grad_Vx)*lambda_dphi[i][sqp] 
