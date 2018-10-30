@@ -159,7 +159,9 @@ namespace GRINS
 				      libMesh::DenseSubMatrix<libMesh::Number> & Kus_us,
 				      libMesh::DenseSubMatrix<libMesh::Number> & Kvs_us,
 				      libMesh::DenseSubMatrix<libMesh::Number> & Kus_vs,
-				      libMesh::DenseSubMatrix<libMesh::Number> & Kvs_vs);
+				      libMesh::DenseSubMatrix<libMesh::Number> & Kvs_vs,
+				      libMesh::DenseSubMatrix<libMesh::Number> & Kus_ulm,
+				      libMesh::DenseSubMatrix<libMesh::Number> & Kvs_vlm);
       
     void lambda_residual_contribution( bool compute_jacobian, MultiphysicsSystem & system,
 				       libMesh::FEMContext & fluid_context,libMesh::dof_id_type fluid_elem_id,
