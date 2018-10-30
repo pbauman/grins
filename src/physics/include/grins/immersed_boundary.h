@@ -147,7 +147,9 @@ namespace GRINS
 				      libMesh::DenseSubMatrix<libMesh::Number> & Kuf_us,
 				      libMesh::DenseSubMatrix<libMesh::Number> & Kuf_vs,
 				      libMesh::DenseSubMatrix<libMesh::Number> & Kvf_us,
-				      libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vs);
+				      libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vs,
+				      libMesh::DenseSubMatrix<libMesh::Number> & Kuf_ulm,
+				      libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vlm);
 				
     void solid_residual_contribution( bool compute_jacobian, 
 				      AssemblyContext & solid_context,unsigned int sqp,
@@ -172,6 +174,7 @@ namespace GRINS
 				       libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_us,
 				       libMesh::DenseSubMatrix<libMesh::Number> & Kulm_vs,
 				       libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_vs);
+				       
       
     void assemble_solid_var_residual_contributions( bool compute_jacobian,
                                                     AssemblyContext & context );
