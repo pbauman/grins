@@ -296,12 +296,18 @@ namespace GRINS
     libMesh::DenseSubMatrix<libMesh::Number> & Kulm_vs = solid_context.get_elem_jacobian(lambda_x,v_var);
     libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_vs = solid_context.get_elem_jacobian(lambda_y,v_var);
 
-    libMesh::DenseMatrix<libMesh::Number> Kmat;        
-    libMesh::DenseSubMatrix<libMesh::Number> Kuf_us(Kmat), Kuf_vs(Kmat);
-    libMesh::DenseSubMatrix<libMesh::Number> Kvf_us(Kmat), Kvf_vs(Kmat);
+    libMesh::DenseSubMatrix<libMesh::Number> & Kus_ulm = solid_context.get_elem_jacobian(u_var,lambda_x);
+    libMesh::DenseSubMatrix<libMesh::Number> & Kvs_vlm = solid_context.get_elem_jacobian(v_var,lambda_y);
 
-    libMesh::DenseMatrix<libMesh::Number> K;
-    libMesh::DenseSubMatrix<libMesh::Number> Kulm_uf(K), Kvlm_vf(K);
+    libMesh::DenseMatrix<libMesh::Number> Kf_s;        
+    libMesh::DenseSubMatrix<libMesh::Number> Kuf_us(Kf_s), Kuf_vs(Kf_s);
+    libMesh::DenseSubMatrix<libMesh::Number> Kvf_us(Kf_s), Kvf_vs(Kf_s);
+
+    libMesh::DenseMatrix<libMesh::Number> Klm_f;
+    libMesh::DenseSubMatrix<libMesh::Number> Kulm_uf(Klm_f), Kvlm_vf(Klm_f);
+
+    libMesh::DenseMatrix<libMesh::Number> Kf_lm;
+    libMesh::DenseSubMatrix<libMesh::Number> Kuf_ulm(Kf_lm), Kvf_vlm(Kf_lm);
        
     unsigned int n_solid_dofs = solid_context.get_dof_indices(this->_disp_vars.u()).size();
     unsigned int n_lambda_dofs = solid_context.get_dof_indices(this->_lambda_var.u()).size();
@@ -360,7 +366,7 @@ namespace GRINS
 
 	if ( compute_jacobian )
 	  {
-	    Kmat.resize( this->_flow_vars.dim()*n_fluid_dofs, this->_disp_vars.dim()*n_solid_dofs );
+	    Kf_s.resize( this->_flow_vars.dim()*n_fluid_dofs, this->_disp_vars.dim()*n_solid_dofs );
 	    
 	    // We need to manually manage the indexing since we're working only on this particular subblock
 	    Kuf_us.reposition( 0, 0, n_fluid_dofs, n_solid_dofs );
@@ -368,10 +374,15 @@ namespace GRINS
 	    Kvf_us.reposition( n_fluid_dofs, 0, n_fluid_dofs, n_solid_dofs );
 	    Kvf_vs.reposition( n_fluid_dofs, n_solid_dofs, n_fluid_dofs, n_solid_dofs );
 
-	    K.resize( this->_lambda_var.dim()*n_lambda_dofs, this->_flow_vars.dim()*n_fluid_dofs );
+	    Klm_f.resize( this->_lambda_var.dim()*n_lambda_dofs, this->_flow_vars.dim()*n_fluid_dofs );
 
 	    Kulm_uf.reposition( 0, 0, n_lambda_dofs, n_fluid_dofs );
 	    Kvlm_vf.reposition( n_lambda_dofs, n_fluid_dofs, n_lambda_dofs, n_fluid_dofs );
+
+	    Kf_lm.resize( this->_flow_vars.dim()*n_fluid_dofs, this->_lambda_var.dim()*n_lambda_dofs );
+
+	    Kuf_ulm.reposition( 0, 0, n_fluid_dofs, n_lambda_dofs );
+	    Kvf_vlm.reposition( n_fluid_dofs, n_lambda_dofs, n_fluid_dofs, n_lambda_dofs );
 	  }
 	
 	for( unsigned int qp = 0; qp < solid_qpoints_subset.size(); qp++ )
@@ -455,23 +466,32 @@ namespace GRINS
 	if( compute_jacobian )
 	  {
 	    system.get_dof_map().constrain_element_matrix
-	      ( Kmat,
+	      ( Kf_s,
 		velocity_dof_indices,
 		solid_dof_indices, false );
 	    
-	    system.matrix->add_matrix( Kmat,
+	    system.matrix->add_matrix( Kf_s,
 				       velocity_dof_indices,
 				       solid_dof_indices );
 
 	    system.get_dof_map().constrain_element_matrix
-	      ( K,
+	      ( Klm_f,
 		lambda_dof_indices,
 		velocity_dof_indices,
 		false );
 	    
-	    system.matrix->add_matrix( K,
+	    system.matrix->add_matrix( Klm_f,
 				       lambda_dof_indices,
 				       velocity_dof_indices );
+
+	    system.get_dof_map().constrain_element_matrix
+	      ( Kf_lm,
+		velocity_dof_indices,
+		lambda_dof_indices, false );
+	    
+	    system.matrix->add_matrix( Kf_lm,
+				       velocity_dof_indices,
+				       lambda_dof_indices );	    
 	    
 	  }
 	
@@ -626,7 +646,7 @@ namespace GRINS
 	    for (unsigned int j=0; j != n_solid_dofs; j++)
 	      {
 
-		// Finite differencing the grad_lambda_terms
+		// Finite differencing the grad_lambda_terms w.r.t solid
 
 		u_coeffs(j) += delta;
 
