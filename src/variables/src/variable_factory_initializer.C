@@ -61,5 +61,8 @@ namespace GRINS
 
     static ScalarVariableFactory<ScalarVariable>
       grins_factory_scalar_var(VariablesParsing::scalar_var_section());
+
+    static VariableFactoryBasic<LagrangeMultVectorVariable>
+      grins_factory_lag_mult_fe_var(VariablesParsing::lagrange_mult_section());
   }
 } // end namespace GRINS

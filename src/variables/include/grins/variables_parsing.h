@@ -64,6 +64,9 @@ namespace GRINS
     static std::string scalar_var_section()
     { return "ScalarVariable"; }
 
+    static std::string lagrange_mult_section()
+    { return "LagrangeMultiplier"; }
+
     //! Helper function to encapsualte the overall [Variables] section name.
     static std::string variables_section()
     { return "Variables"; }
@@ -146,6 +149,14 @@ namespace GRINS
                                                       subsection_name,
                                                       "displacement_var_name",
                                                       VariablesParsing::displacement_section(),
+                                                      section_type); }
+
+    static std::string lagrange_mult_variable_name( const GetPot& input, const std::string& subsection_name,
+						    const SECTION_TYPE section_type )
+    { return VariablesParsing::section_parse_var_name(input,
+                                                      subsection_name,
+                                                      "lagrange_multiplier_var_name",
+                                                      VariablesParsing::lagrange_mult_section(),
                                                       section_type); }
 
     static std::string species_mass_frac_variable_name( const GetPot& input,
