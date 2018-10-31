@@ -94,7 +94,9 @@ namespace GRINS
 
     //! FE variables for the solid
     DisplacementVariable & _disp_vars;
-    DisplacementVariable & _lambda_var;
+    
+    //! FE variables for the lagrange multiplier
+    LagrangeMultVectorVariable & _lambda_var;
 
     //! Solid Mechanics from the ibm factory
     std::unique_ptr<SolidMech> _solid_mech;
