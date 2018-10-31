@@ -96,7 +96,20 @@ namespace GRINS
 
     ~VelocityVariable(){}
   };
+  
+  class LagrangeMultVectorVariable : public MultcomponentVectorVariable
+  {
+  public:
+    
+    LagrangeMultVectorVariable( const std::vector<std::string>& var_names,
+				const std::vector<VariableIndex>& var_indices,
+				const std::set<libMesh::subdomain_id_type>& subdomain_ids )
+      : MultcomponentVectorVariable(var_names,var_indices,subdomain_ids)
+    {}
 
+    ~LagrangeMultVectorVariable(){}
+  };
+  
 } // end namespace GRINS
 
 #endif // GRINS_MULTICOMPONENT_VECTOR_VARIABLE_H
