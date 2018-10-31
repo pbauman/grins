@@ -279,7 +279,10 @@ ibm_DATA += $(top_srcdir)/examples/immersed_boundary_benchmark/test_block.in
 ibm_DATA += $(top_srcdir)/examples/immersed_boundary_benchmark/test_block_tworef.e
 ibm_DATA += $(top_srcdir)/examples/immersed_boundary_benchmark/new_test_block.in
 ibm_DATA += $(top_srcdir)/examples/immersed_boundary_benchmark/new_test_block.e
+ibm_DATA += $(top_srcdir)/examples/immersed_boundary_benchmark/simple_block.in
 ibm_DATA += $(top_srcdir)/examples/immersed_boundary_benchmark/simple_block.e
+ibm_DATA += $(top_srcdir)/examples/immersed_boundary_benchmark/stick.in
+ibm_DATA += $(top_srcdir)/examples/immersed_boundary_benchmark/stick.e
 ibm_SCRIPTS = $(top_builddir)/examples/immersed_boundary_benchmark/run.sh
 
 EXTRA_DIST += $(ibm_DATA)

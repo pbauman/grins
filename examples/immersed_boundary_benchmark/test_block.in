@@ -16,7 +16,7 @@
 # Mesh related options
 [Mesh]
   [./Read]
-    filename = 'simple_block.e'
+    filename = 'test_block_tworef.e'
   [../]
 []
 
@@ -105,6 +105,13 @@
       order = 'FIRST'
       enabled_subdomains = '1'
   [../]
+  [./LagrangeMultiplier]
+      names = 'LMx LMy'
+      fe_family = 'LAGRANGE'
+      order = 'FIRST'
+      enabled_subdomains = '2'
+  [../]
+
 []
 
 [Strategies]
@@ -157,7 +164,7 @@
 # Visualization options #
 [vis-options]
 output_vis = 'true'
-vis_output_file_prefix = 'simple_block_out'
+vis_output_file_prefix = 'test_block_out'
 output_residual = 'true'
 output_format = 'ExodusII'
 []
