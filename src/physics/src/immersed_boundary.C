@@ -634,15 +634,15 @@ namespace GRINS
     libMesh::TensorValue<libMesh::Real> F;
     this->eval_deform_gradient(grad_u,grad_v,F);
 
-    libMesh::TensorValue<libMesh::Real> Ftrans = F.transpose();
+    //libMesh::TensorValue<libMesh::Real> Ftrans = F.transpose();
 
     for (unsigned int i=0; i != n_fluid_dofs; i++)
       {
 	// Zero index for fluid dphi/JxW since we only requested one quad. point.
 	for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 	  {
-	    Fuf(i) -= (grad_lambda_x*Ftrans(0,alpha)*fluid_dphi[i][0] + lambda_x*fluid_phi[i][0])*jac;
-	    Fvf(i) -= (grad_lambda_y*Ftrans(1,alpha)*fluid_dphi[i][0] + lambda_y*fluid_phi[i][0])*jac;
+	    Fuf(i) -= (grad_lambda_x*fluid_dphi[i][0]*F(0,alpha) + lambda_x*fluid_phi[i][0])*jac;
+	    Fvf(i) -= (grad_lambda_y*fluid_dphi[i][0]*F(1,alpha) + lambda_y*fluid_phi[i][0])*jac;
 	  }
 	
 	if( compute_jacobian )
@@ -651,7 +651,7 @@ namespace GRINS
 	    for (unsigned int j=0; j != n_solid_dofs; j++)
 	      {
 
-		// Finite differencing the grad_lambda_terms w.r.t solid
+		// Computing the grad_lambda and lambda derivative terms w.r.t solid
 
 		u_coeffs(j) += delta;
 
@@ -659,11 +659,19 @@ namespace GRINS
 		solid_context.interior_gradient(this->_lambda_var.u(), sqp, grad_lmx_upd);
 		solid_context.interior_gradient(this->_lambda_var.v(), sqp, grad_lmy_upd);
 
+		libMesh::Real lmx_upd, lmy_upd;
+		solid_context.interior_value(this->_lambda_var.u(), sqp, lmx_upd);
+		solid_context.interior_value(this->_lambda_var.v(), sqp, lmy_upd);
+
 		u_coeffs(j) -= 2*delta;
 
 		libMesh::Gradient grad_lmx_umd, grad_lmy_umd;
 		solid_context.interior_gradient(this->_lambda_var.u(), sqp, grad_lmx_umd);
 		solid_context.interior_gradient(this->_lambda_var.v(), sqp, grad_lmy_umd);
+
+		libMesh::Real lmx_umd, lmy_umd;
+		solid_context.interior_value(this->_lambda_var.u(), sqp, lmx_umd);
+		solid_context.interior_value(this->_lambda_var.v(), sqp, lmy_umd);
 
 		u_coeffs(j) += delta;
 
@@ -673,20 +681,52 @@ namespace GRINS
 		solid_context.interior_gradient(this->_lambda_var.u(), sqp, grad_lmx_vpd);
 		solid_context.interior_gradient(this->_lambda_var.v(), sqp, grad_lmy_vpd);
 
+		libMesh::Real lmx_vpd, lmy_vpd;
+		solid_context.interior_value(this->_lambda_var.u(), sqp, lmx_vpd);
+		solid_context.interior_value(this->_lambda_var.v(), sqp, lmy_vpd);
+
 		v_coeffs(j) -= 2*delta;
 
 		libMesh::Gradient grad_lmx_vmd, grad_lmy_vmd;
 		solid_context.interior_gradient(this->_lambda_var.u(), sqp, grad_lmx_vmd);
 		solid_context.interior_gradient(this->_lambda_var.v(), sqp, grad_lmy_vmd);
 
+		libMesh::Real lmx_vmd, lmy_vmd;
+		solid_context.interior_value(this->_lambda_var.u(), sqp, lmx_vmd);
+		solid_context.interior_value(this->_lambda_var.v(), sqp, lmy_vmd);
+
 		v_coeffs(j) += delta;
 		
+		// Finite differencing the grad_lambda terms w.r.t solid
 		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 		  {
-		    Kuf_us(i,j) -= (((grad_lmx_upd-grad_lmx_umd)/(2*delta))*Ftrans(0,alpha)*fluid_dphi[i][0] + lambda_x*fluid_phi[i][0])*jac;
-		    Kvf_us(i,j) -= (((grad_lmy_upd-grad_lmy_umd)/(2*delta))*Ftrans(1,alpha)*fluid_dphi[i][0] + lambda_y*fluid_phi[i][0])*jac;
-		    Kuf_vs(i,j) -= (((grad_lmx_vpd-grad_lmx_vmd)/(2*delta))*Ftrans(0,alpha)*fluid_dphi[i][0] + lambda_x*fluid_phi[i][0])*jac;
-		    Kvf_vs(i,j) -= (((grad_lmy_vpd-grad_lmy_vmd)/(2*delta))*Ftrans(1,alpha)*fluid_dphi[i][0] + lambda_y*fluid_phi[i][0])*jac;
+		    Kuf_us(i,j) -= (((grad_lmx_upd-grad_lmx_umd)/(2*delta))*fluid_dphi[i][0]*F(0,alpha) 
+				    + lambda_x*fluid_phi[i][0])*jac;
+
+		    Kvf_us(i,j) -= (((grad_lmy_upd-grad_lmy_umd)/(2*delta))*fluid_dphi[i][0]*F(1,alpha) 
+				    + lambda_y*fluid_phi[i][0])*jac;
+		    
+		    Kuf_vs(i,j) -= (((grad_lmx_vpd-grad_lmx_vmd)/(2*delta))*fluid_dphi[i][0]*F(0,alpha) 
+				    + lambda_x*fluid_phi[i][0])*jac;
+		    
+		    Kvf_vs(i,j) -= (((grad_lmy_vpd-grad_lmy_vmd)/(2*delta))*fluid_dphi[i][0]*F(1,alpha) 
+				    + lambda_y*fluid_phi[i][0])*jac;
+		  }	
+
+		// Finite differencing the lambda terms w.r.t solid
+		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
+		  {
+		    Kuf_us(i,j) -= (grad_lambda_x*fluid_dphi[i][0]*F(0,alpha) 
+				    + ((lmx_upd-lmx_umd)/(2*delta))*fluid_phi[i][0])*jac;
+
+		    Kvf_us(i,j) -= (grad_lambda_y*fluid_dphi[i][0]*F(1,alpha) 
+				    + ((lmy_upd-lmy_umd)/(2*delta))*fluid_phi[i][0])*jac;
+		    
+		    Kuf_vs(i,j) -= (grad_lambda_x*fluid_dphi[i][0]*F(0,alpha) 
+				    + ((lmx_vpd-lmx_vmd)/(2*delta))*fluid_phi[i][0])*jac;
+		    
+		    Kvf_vs(i,j) -= (grad_lambda_y*fluid_dphi[i][0]*F(1,alpha) 
+				    + ((lmy_vpd-lmy_vmd)/(2*delta))*fluid_phi[i][0])*jac;
 		  }	
 
 
@@ -711,26 +751,33 @@ namespace GRINS
 		    
 		libMesh::TensorValue<libMesh::Real> F_upd;
 		this->eval_deform_gradient(grad_upd,grad_v,F_upd);
-		libMesh::TensorValue<libMesh::Real> Ft_upd = F_upd.transpose();  
+		//libMesh::TensorValue<libMesh::Real> Ft_upd = F_upd.transpose();  
 	
 		libMesh::TensorValue<libMesh::Real> F_umd;
 		this->eval_deform_gradient(grad_umd,grad_v,F_umd);
-		libMesh::TensorValue<libMesh::Real> Ft_umd = F_umd.transpose();  
+		//libMesh::TensorValue<libMesh::Real> Ft_umd = F_umd.transpose();  
 
 		libMesh::TensorValue<libMesh::Real> F_vpd;
 		this->eval_deform_gradient(grad_u,grad_vpd,F_vpd);
-		libMesh::TensorValue<libMesh::Real> Ft_vpd = F_vpd.transpose();  
+		//libMesh::TensorValue<libMesh::Real> Ft_vpd = F_vpd.transpose();  
 	
 		libMesh::TensorValue<libMesh::Real> F_vmd;
 		this->eval_deform_gradient(grad_u,grad_vmd,F_vmd);
-		libMesh::TensorValue<libMesh::Real> Ft_vmd = F_vmd.transpose();  
+		//libMesh::TensorValue<libMesh::Real> Ft_vmd = F_vmd.transpose();  
 		
 		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 		  {
-		    Kuf_us(i,j) -= (grad_lambda_x*((Ft_upd(0,alpha)-Ft_umd(0,alpha))/(2*delta))*fluid_dphi[i][0] + lambda_x*fluid_phi[i][0])*jac;
-		    Kvf_us(i,j) -= (grad_lambda_y*((Ft_upd(1,alpha)-Ft_umd(1,alpha))/(2*delta))*fluid_dphi[i][0] + lambda_y*fluid_phi[i][0])*jac;
-		    Kuf_vs(i,j) -= (grad_lambda_x*((Ft_vpd(0,alpha)-Ft_vmd(0,alpha))/(2*delta))*fluid_dphi[i][0] + lambda_x*fluid_phi[i][0])*jac;
-		    Kvf_vs(i,j) -= (grad_lambda_y*((Ft_vpd(1,alpha)-Ft_vmd(1,alpha))/(2*delta))*fluid_dphi[i][0] + lambda_y*fluid_phi[i][0])*jac;
+		    Kuf_us(i,j) -= (grad_lambda_x*fluid_dphi[i][0]*((F_upd(0,alpha)-F_umd(0,alpha))/(2*delta)) 
+				    + lambda_x*fluid_phi[i][0])*jac;
+		    
+		    Kvf_us(i,j) -= (grad_lambda_y*fluid_dphi[i][0]*((F_upd(1,alpha)-F_umd(1,alpha))/(2*delta)) 
+				    + lambda_y*fluid_phi[i][0])*jac;
+		    
+		    Kuf_vs(i,j) -= (grad_lambda_x*fluid_dphi[i][0]*((F_vpd(0,alpha)-F_vmd(0,alpha))/(2*delta)) 
+				    + lambda_x*fluid_phi[i][0])*jac;
+		    
+		    Kvf_vs(i,j) -= (grad_lambda_y*fluid_dphi[i][0]*((F_vpd(1,alpha)-F_vmd(1,alpha))/(2*delta)) 
+				    + lambda_y*fluid_phi[i][0])*jac;
 		  }		    
 
 	
@@ -773,19 +820,33 @@ namespace GRINS
 		//Finite differencing the fluid_dphi terms
 		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 		  {
-		    Kuf_us(i,j) -= (grad_lambda_x*Ftrans(0,alpha)*((fluid_dphi_upd[i][0]-fluid_dphi_umd[i][0])/(2*delta)) + lambda_x*fluid_phi[i][0])*jac;
-		    Kvf_us(i,j) -= (grad_lambda_y*Ftrans(1,alpha)*((fluid_dphi_upd[i][0]-fluid_dphi_umd[i][0])/(2*delta)) + lambda_y*fluid_phi[i][0])*jac;
-		    Kuf_vs(i,j) -= (grad_lambda_x*Ftrans(0,alpha)*((fluid_dphi_vpd[i][0]-fluid_dphi_vmd[i][0])/(2*delta)) + lambda_x*fluid_phi[i][0])*jac;
-		    Kvf_vs(i,j) -= (grad_lambda_y*Ftrans(1,alpha)*((fluid_dphi_vpd[i][0]-fluid_dphi_vmd[i][0])/(2*delta)) + lambda_y*fluid_phi[i][0])*jac;
-		  }
+		    Kuf_us(i,j) -= (grad_lambda_x*((fluid_dphi_upd[i][0]-fluid_dphi_umd[i][0])/(2*delta))*F(0,alpha) 
+				    + lambda_x*fluid_phi[i][0])*jac;
+		    
+		    Kvf_us(i,j) -= (grad_lambda_y*((fluid_dphi_upd[i][0]-fluid_dphi_umd[i][0])/(2*delta))*F(1,alpha) 
+				    + lambda_y*fluid_phi[i][0])*jac;
+		    
+		    Kuf_vs(i,j) -= (grad_lambda_x*((fluid_dphi_vpd[i][0]-fluid_dphi_vmd[i][0])/(2*delta))*F(0,alpha) 
+				    + lambda_x*fluid_phi[i][0])*jac;
 
+		    Kvf_vs(i,j) -= (grad_lambda_y*((fluid_dphi_vpd[i][0]-fluid_dphi_vmd[i][0])/(2*delta))*F(1,alpha) 
+				    + lambda_y*fluid_phi[i][0])*jac;
+		  }
+		
 		//Finite differencing the fluid_phi terms
 		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 		  {
-		    Kuf_us(i,j) -= (grad_lambda_x*Ftrans(0,alpha)*fluid_dphi[i][0] + lambda_x*((fluid_phi_upd[i][0]-fluid_phi_umd[i][0])/(2*delta)))*jac;
-		    Kvf_us(i,j) -= (grad_lambda_y*Ftrans(1,alpha)*fluid_dphi[i][0] + lambda_y*((fluid_phi_upd[i][0]-fluid_phi_umd[i][0])/(2*delta)))*jac;
-		    Kuf_vs(i,j) -= (grad_lambda_x*Ftrans(0,alpha)*fluid_dphi[i][0] + lambda_x*((fluid_phi_vpd[i][0]-fluid_phi_vmd[i][0])/(2*delta)))*jac;
-		    Kvf_vs(i,j) -= (grad_lambda_y*Ftrans(1,alpha)*fluid_dphi[i][0] + lambda_y*((fluid_phi_vpd[i][0]-fluid_phi_vmd[i][0])/(2*delta)))*jac;
+		    Kuf_us(i,j) -= (grad_lambda_x*fluid_dphi[i][0]*F(0,alpha) 
+				    + lambda_x*((fluid_phi_upd[i][0]-fluid_phi_umd[i][0])/(2*delta)))*jac;
+
+		    Kvf_us(i,j) -= (grad_lambda_y*fluid_dphi[i][0]*F(1,alpha) 
+				    + lambda_y*((fluid_phi_upd[i][0]-fluid_phi_umd[i][0])/(2*delta)))*jac;
+
+		    Kuf_vs(i,j) -= (grad_lambda_x*fluid_dphi[i][0]*F(0,alpha) 
+				    + lambda_x*((fluid_phi_vpd[i][0]-fluid_phi_vmd[i][0])/(2*delta)))*jac;
+
+		    Kvf_vs(i,j) -= (grad_lambda_y*fluid_dphi[i][0]*F(1,alpha) 
+				    + lambda_y*((fluid_phi_vpd[i][0]-fluid_phi_vmd[i][0])/(2*delta)))*jac;
 		  }
 
 		this->prepare_fluid_context(system,solid_context,solid_qpoints,sqp,fluid_elem_id,fluid_context);
@@ -827,15 +888,21 @@ namespace GRINS
 		//Finite differencing the grad_lambda terms		
 		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 		  {
-		    Kuf_ulm(i,j) -= (((grad_lm_xpd-grad_lm_xmd)/(2*delta))*Ftrans(0,alpha)*fluid_dphi[i][0] + lambda_x*fluid_phi[i][0])*jac;
-		    Kvf_vlm(i,j) -= (((grad_lm_ypd-grad_lm_ymd)/(2*delta))*Ftrans(1,alpha)*fluid_dphi[i][0] + lambda_y*fluid_phi[i][0])*jac;
+		    Kuf_ulm(i,j) -= (((grad_lm_xpd-grad_lm_xmd)/(2*delta))*fluid_dphi[i][0]*F(0,alpha) 
+				     + lambda_x*fluid_phi[i][0])*jac;
+		    
+		    Kvf_vlm(i,j) -= (((grad_lm_ypd-grad_lm_ymd)/(2*delta))*fluid_dphi[i][0]*F(1,alpha) 
+				     + lambda_y*fluid_phi[i][0])*jac;
 		  }
 
 		//Finite differencing the lambda terms		
 		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 		  {
-		    Kuf_ulm(i,j) -= (grad_lambda_x*Ftrans(0,alpha)*fluid_dphi[i][0] + ((lambda_xpd-lambda_xmd)/(2*delta))*fluid_phi[i][0])*jac;
-		    Kvf_vlm(i,j) -= (grad_lambda_y*Ftrans(1,alpha)*fluid_dphi[i][0] + ((lambda_ypd-lambda_ymd)/(2*delta))*fluid_phi[i][0])*jac;
+		    Kuf_ulm(i,j) -= (grad_lambda_x*fluid_dphi[i][0]*F(0,alpha) 
+				     + ((lambda_xpd-lambda_xmd)/(2*delta))*fluid_phi[i][0])*jac;
+
+		    Kvf_vlm(i,j) -= (grad_lambda_y*fluid_dphi[i][0]*F(1,alpha) 
+				     + ((lambda_ypd-lambda_ymd)/(2*delta))*fluid_phi[i][0])*jac;
 		  }
 
 	      } //lambda dof loop
