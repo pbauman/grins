@@ -306,7 +306,8 @@ namespace GRINS
     libMesh::DenseSubMatrix<libMesh::Number> Kvf_us(Kf_s), Kvf_vs(Kf_s);
 
     libMesh::DenseMatrix<libMesh::Number> Klm_f;
-    libMesh::DenseSubMatrix<libMesh::Number> Kulm_uf(Klm_f), Kvlm_vf(Klm_f);
+    libMesh::DenseSubMatrix<libMesh::Number> Kulm_uf(Klm_f), Kulm_vf(Klm_f);
+    libMesh::DenseSubMatrix<libMesh::Number> Kvlm_uf(Klm_f), Kvlm_vf(Klm_f);
 
     libMesh::DenseMatrix<libMesh::Number> Kf_lm;
     libMesh::DenseSubMatrix<libMesh::Number> Kuf_ulm(Kf_lm), Kuf_vlm(Kf_lm);
@@ -380,6 +381,8 @@ namespace GRINS
 	    Klm_f.resize( this->_lambda_var.dim()*n_lambda_dofs, this->_flow_vars.dim()*n_fluid_dofs );
 
 	    Kulm_uf.reposition( 0, 0, n_lambda_dofs, n_fluid_dofs );
+	    Kulm_vf.reposition( 0, n_fluid_dofs, n_lambda_dofs, n_fluid_dofs );
+	    Kvlm_uf.reposition( n_lambda_dofs, 0, n_lambda_dofs, n_fluid_dofs );
 	    Kvlm_vf.reposition( n_lambda_dofs, n_fluid_dofs, n_lambda_dofs, n_fluid_dofs );
 
 	    Kf_lm.resize( this->_flow_vars.dim()*n_fluid_dofs, this->_lambda_var.dim()*n_lambda_dofs );
@@ -412,10 +415,11 @@ namespace GRINS
 					      Kus_ulm,Kvs_ulm,Kus_vlm,Kvs_vlm);
 
 	    this->lambda_residual_contribution(compute_jacobian,system,
-					      *(this->_fluid_context),fluid_elem_id,
-					      solid_context,solid_qpoints,sqp,
-					      jac,delta,Fulm,Fvlm,Kulm_uf,Kvlm_vf,
-					      Kulm_us,Kvlm_us,Kulm_vs,Kvlm_vs);
+					       *(this->_fluid_context),fluid_elem_id,
+					       solid_context,solid_qpoints,sqp,
+					       jac,delta,Fulm,Fvlm,
+					       Kulm_uf,Kvlm_uf,Kulm_vf,Kvlm_vf,
+					       Kulm_us,Kvlm_us,Kulm_vs,Kvlm_vs);
 
 	  } // end solid_qpoints_subset loop
 	
@@ -1306,6 +1310,8 @@ namespace GRINS
 								  libMesh::DenseSubVector<libMesh::Number> & Fulm,
 								  libMesh::DenseSubVector<libMesh::Number> & Fvlm,
 								  libMesh::DenseSubMatrix<libMesh::Number> & Kulm_uf,
+								  libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_uf,
+								  libMesh::DenseSubMatrix<libMesh::Number> & Kulm_vf,
 								  libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_vf,
 								  libMesh::DenseSubMatrix<libMesh::Number> & Kulm_us,
 								  libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_us,
@@ -1384,43 +1390,67 @@ namespace GRINS
 	      {
 		// Computing V and grad_V terms fluid derivative terms
 		
-		libMesh::Real Vxpd, Vypd, Vxmd, Vymd;
-		libMesh::Gradient grad_Vxpd, grad_Vypd, grad_Vxmd, grad_Vymd;
+		fluid_ucoeff(j) += delta;
+
+		libMesh::Gradient grad_Vx_upd, grad_Vy_upd;
+		fluid_context.interior_gradient(this->_flow_vars.u(), 0, grad_Vx_upd);
+		fluid_context.interior_gradient(this->_flow_vars.v(), 0, grad_Vy_upd);
+
+		libMesh::Real Vx_upd, Vy_upd;
+		fluid_context.interior_value(this->_flow_vars.u(), 0, Vx_upd);
+		fluid_context.interior_value(this->_flow_vars.v(), 0, Vy_upd);
+
+		fluid_ucoeff(j) -= 2*delta;
+
+		libMesh::Gradient grad_Vx_umd, grad_Vy_umd;
+		fluid_context.interior_gradient(this->_flow_vars.u(), 0, grad_Vx_umd);
+		fluid_context.interior_gradient(this->_flow_vars.v(), 0, grad_Vy_umd);
 		
-		{	   
-		  fluid_ucoeff(j) += delta;
-		  fluid_vcoeff(j) += delta;
-
-		  fluid_context.interior_value(this->_flow_vars.u(), 0, Vxpd);
-		  fluid_context.interior_value(this->_flow_vars.v(), 0, Vypd);
-
-		  fluid_context.interior_gradient(this->_flow_vars.u(), 0, grad_Vxpd);
-		  fluid_context.interior_gradient(this->_flow_vars.v(), 0, grad_Vypd);
-		}
-
-		{
-		  fluid_ucoeff(j) -= 2*delta;
-		  fluid_vcoeff(j) -= 2*delta;
-
-		  fluid_context.interior_value(this->_flow_vars.u(), 0, Vxmd);
-		  fluid_context.interior_value(this->_flow_vars.v(), 0, Vymd);
-
-		  fluid_context.interior_gradient(this->_flow_vars.u(), 0, grad_Vxmd);
-		  fluid_context.interior_gradient(this->_flow_vars.v(), 0, grad_Vymd);
-		}
+		libMesh::Real Vx_umd, Vy_umd;
+		fluid_context.interior_value(this->_flow_vars.u(), 0, Vx_umd);
+		fluid_context.interior_value(this->_flow_vars.v(), 0, Vy_umd);		
 
 		fluid_ucoeff(j) += delta;
+
+		fluid_vcoeff(j) += delta;
+
+		libMesh::Gradient grad_Vx_vpd, grad_Vy_vpd;
+		fluid_context.interior_gradient(this->_flow_vars.u(), 0, grad_Vx_vpd);
+		fluid_context.interior_gradient(this->_flow_vars.v(), 0, grad_Vy_vpd);
+
+		libMesh::Real Vx_vpd, Vy_vpd;
+		fluid_context.interior_value(this->_flow_vars.u(), 0, Vx_vpd);
+		fluid_context.interior_value(this->_flow_vars.v(), 0, Vy_vpd);
+
+		fluid_vcoeff(j) -= 2*delta;
+
+		libMesh::Gradient grad_Vx_vmd, grad_Vy_vmd;
+		fluid_context.interior_gradient(this->_flow_vars.u(), 0, grad_Vx_vmd);
+		fluid_context.interior_gradient(this->_flow_vars.v(), 0, grad_Vy_vmd);
+		
+		libMesh::Real Vx_vmd, Vy_vmd;
+		fluid_context.interior_value(this->_flow_vars.u(), 0, Vx_vmd);
+		fluid_context.interior_value(this->_flow_vars.v(), 0, Vy_vmd);		
+
 		fluid_vcoeff(j) += delta;
 
 		// Finite differencing the grad_V terms w.r.t fluid
 		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 		  {
 		    Kulm_uf(i,j) += (lambda_dphi[i][sqp](alpha)*(-Fdot(0,alpha)) 
-				     + lambda_dphi[i][sqp]*((grad_Vxpd-grad_Vxmd)/(2*delta))*F(0,alpha) 
+				     + lambda_dphi[i][sqp]*((grad_Vx_upd-grad_Vx_umd)/(2*delta))*F(0,alpha) 
+				     + lambda_phi[i][sqp]*(-udot + Vx))*jac;
+
+		    Kvlm_uf(i,j) += (lambda_dphi[i][sqp](alpha)*(-Fdot(0,alpha)) 
+				     + lambda_dphi[i][sqp]*((grad_Vy_upd-grad_Vy_umd)/(2*delta))*F(0,alpha) 
+				     + lambda_phi[i][sqp]*(-udot + Vx))*jac;
+		    
+		    Kulm_vf(i,j) += (lambda_dphi[i][sqp](alpha)*(-Fdot(0,alpha)) 
+				     + lambda_dphi[i][sqp]*((grad_Vx_vpd-grad_Vx_vmd)/(2*delta))*F(0,alpha) 
 				     + lambda_phi[i][sqp]*(-udot + Vx))*jac;
 		    
 		    Kvlm_vf(i,j) += (lambda_dphi[i][sqp](alpha)*(-Fdot(1,alpha)) 
-				     + lambda_dphi[i][sqp]*((grad_Vypd-grad_Vymd)/(2*delta))*F(1,alpha) 
+				     + lambda_dphi[i][sqp]*((grad_Vy_vpd-grad_Vy_vmd)/(2*delta))*F(1,alpha) 
 				     + lambda_phi[i][sqp]*(-vdot + Vy))*jac;
 		  }
 		/*
@@ -1438,11 +1468,19 @@ namespace GRINS
 		  {
 		    Kulm_uf(i,j) += (lambda_dphi[i][sqp](alpha)*(-Fdot(0,alpha)) 
 				     + lambda_dphi[i][sqp]*grad_Vx*F(0,alpha) 
-				     + lambda_phi[i][sqp]*(-udot + ((Vxpd-Vxmd)/(2*delta))))*jac;
+				     + lambda_phi[i][sqp]*(-udot + ((Vx_upd-Vx_umd)/(2*delta))))*jac;
+		    
+		    Kvlm_uf(i,j) += (lambda_dphi[i][sqp](alpha)*(-Fdot(0,alpha)) 
+				     + lambda_dphi[i][sqp]*grad_Vx*F(0,alpha) 
+				     + lambda_phi[i][sqp]*(-udot + ((Vy_upd-Vy_umd)/(2*delta))))*jac;
+		    
+		    Kulm_vf(i,j) += (lambda_dphi[i][sqp](alpha)*(-Fdot(0,alpha)) 
+				     + lambda_dphi[i][sqp]*grad_Vx*F(0,alpha) 
+				     + lambda_phi[i][sqp]*(-udot + ((Vx_vpd-Vx_vmd)/(2*delta))))*jac;
 		    
 		    Kvlm_vf(i,j) += (lambda_dphi[i][sqp](alpha)*(-Fdot(1,alpha)) 
 				     + lambda_dphi[i][sqp]*grad_Vy*F(1,alpha) 
-				     + lambda_phi[i][sqp]*(-vdot + ((Vypd-Vymd)/(2*delta))))*jac;
+				     + lambda_phi[i][sqp]*(-vdot + ((Vy_vpd-Vy_vmd)/(2*delta))))*jac;
 		  }
 		/*
 		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )

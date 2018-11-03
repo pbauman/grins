@@ -177,6 +177,8 @@ namespace GRINS
 				       libMesh::DenseSubVector<libMesh::Number> & Fulm,
 				       libMesh::DenseSubVector<libMesh::Number> & Fvlm,
 				       libMesh::DenseSubMatrix<libMesh::Number> & Kulm_uf,
+				       libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_uf,
+				       libMesh::DenseSubMatrix<libMesh::Number> & Kulm_vf,
 				       libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_vf,
 				       libMesh::DenseSubMatrix<libMesh::Number> & Kulm_us,
 				       libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_us,
