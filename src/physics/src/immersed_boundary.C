@@ -617,19 +617,20 @@ namespace GRINS
     libMesh::DenseSubVector<libMesh::Number> u_coeffs = solid_context.get_elem_solution(this->_disp_vars.u());
     libMesh::DenseSubVector<libMesh::Number> v_coeffs = solid_context.get_elem_solution(this->_disp_vars.v());
 
-    unsigned int lambda_x = this->_lambda_var.u();
-    unsigned int lambda_y = this->_lambda_var.v();
+    libMesh::Real lambda_x, lambda_y;
+    solid_context.interior_value(this->_lambda_var.u(), sqp, lambda_x);
+    solid_context.interior_value(this->_lambda_var.v(), sqp, lambda_y);
 
-    libMesh::DenseSubVector<libMesh::Number> lambda_xcoeff = solid_context.get_elem_solution(lambda_x);
-    libMesh::DenseSubVector<libMesh::Number> lambda_ycoeff = solid_context.get_elem_solution(lambda_y);
+    libMesh::DenseSubVector<libMesh::Number> lambda_xcoeff = solid_context.get_elem_solution(this->_lambda_var.u());
+    libMesh::DenseSubVector<libMesh::Number> lambda_ycoeff = solid_context.get_elem_solution(this->_lambda_var.v());
 
     libMesh::Gradient grad_u, grad_v;
     solid_context.interior_gradient(this->_disp_vars.u(), sqp, grad_u);
     solid_context.interior_gradient(this->_disp_vars.v(), sqp, grad_v);
 
     libMesh::Gradient grad_lambda_x, grad_lambda_y;
-    solid_context.interior_gradient(lambda_x, sqp, grad_lambda_x);
-    solid_context.interior_gradient(lambda_y, sqp, grad_lambda_y);
+    solid_context.interior_gradient(this->_lambda_var.u(), sqp, grad_lambda_x);
+    solid_context.interior_gradient(this->_lambda_var.v(), sqp, grad_lambda_y);
     
     libMesh::TensorValue<libMesh::Real> F;
     this->eval_deform_gradient(grad_u,grad_v,F);
@@ -937,19 +938,20 @@ namespace GRINS
     libMesh::DenseSubVector<libMesh::Number> u_coeffs = solid_context.get_elem_solution(this->_disp_vars.u());
     libMesh::DenseSubVector<libMesh::Number> v_coeffs = solid_context.get_elem_solution(this->_disp_vars.v());
 
-    unsigned int lambda_x = this->_lambda_var.u();
-    unsigned int lambda_y = this->_lambda_var.v();
+    libMesh::Real lambda_x, lambda_y;
+    solid_context.interior_value(this->_lambda_var.u(), sqp, lambda_x);
+    solid_context.interior_value(this->_lambda_var.v(), sqp, lambda_y);
 
-    libMesh::DenseSubVector<libMesh::Number> lambda_xcoeff = solid_context.get_elem_solution(lambda_x);
-    libMesh::DenseSubVector<libMesh::Number> lambda_ycoeff = solid_context.get_elem_solution(lambda_y);
+    libMesh::DenseSubVector<libMesh::Number> lambda_xcoeff = solid_context.get_elem_solution(this->_lambda_var.u());
+    libMesh::DenseSubVector<libMesh::Number> lambda_ycoeff = solid_context.get_elem_solution(this->_lambda_var.v());
 
     libMesh::Gradient grad_u, grad_v;
     solid_context.interior_gradient(this->_disp_vars.u(), sqp, grad_u);
     solid_context.interior_gradient(this->_disp_vars.v(), sqp, grad_v);
 
     libMesh::Gradient grad_lambda_x, grad_lambda_y;
-    solid_context.interior_gradient(lambda_x, sqp, grad_lambda_x);
-    solid_context.interior_gradient(lambda_y, sqp, grad_lambda_y);
+    solid_context.interior_gradient(this->_lambda_var.u(), sqp, grad_lambda_x);
+    solid_context.interior_gradient(this->_lambda_var.v(), sqp, grad_lambda_y);
     
     libMesh::TensorValue<libMesh::Real> P;
     this->eval_first_Piola(grad_u,grad_v,P);
