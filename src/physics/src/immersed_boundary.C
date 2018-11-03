@@ -971,7 +971,7 @@ namespace GRINS
 	    for (unsigned int j=0; j != n_solid_dofs; j++)
 	      {
 
-		// Finite differencing the grad_lambda_terms
+		// Computing the grad_lambda and lambda derivative terms w.r.t solid
 
 		u_coeffs(j) += delta;
 
@@ -979,11 +979,19 @@ namespace GRINS
 		solid_context.interior_gradient(this->_lambda_var.u(), sqp, grad_lmx_upd);
 		solid_context.interior_gradient(this->_lambda_var.v(), sqp, grad_lmy_upd);
 
+		libMesh::Real lmx_upd, lmy_upd;
+		solid_context.interior_value(this->_lambda_var.u(), sqp, lmx_upd);
+		solid_context.interior_value(this->_lambda_var.v(), sqp, lmy_upd);
+
 		u_coeffs(j) -= 2*delta;
 
 		libMesh::Gradient grad_lmx_umd, grad_lmy_umd;
 		solid_context.interior_gradient(this->_lambda_var.u(), sqp, grad_lmx_umd);
 		solid_context.interior_gradient(this->_lambda_var.v(), sqp, grad_lmy_umd);
+
+		libMesh::Real lmx_umd, lmy_umd;
+		solid_context.interior_value(this->_lambda_var.u(), sqp, lmx_umd);
+		solid_context.interior_value(this->_lambda_var.v(), sqp, lmy_umd);
 
 		u_coeffs(j) += delta;
 
@@ -993,14 +1001,23 @@ namespace GRINS
 		solid_context.interior_gradient(this->_lambda_var.u(), sqp, grad_lmx_vpd);
 		solid_context.interior_gradient(this->_lambda_var.v(), sqp, grad_lmy_vpd);
 
+		libMesh::Real lmx_vpd, lmy_vpd;
+		solid_context.interior_value(this->_lambda_var.u(), sqp, lmx_vpd);
+		solid_context.interior_value(this->_lambda_var.v(), sqp, lmy_vpd);
+
 		v_coeffs(j) -= 2*delta;
 
 		libMesh::Gradient grad_lmx_vmd, grad_lmy_vmd;
 		solid_context.interior_gradient(this->_lambda_var.u(), sqp, grad_lmx_vmd);
 		solid_context.interior_gradient(this->_lambda_var.v(), sqp, grad_lmy_vmd);
 
+		libMesh::Real lmx_vmd, lmy_vmd;
+		solid_context.interior_value(this->_lambda_var.u(), sqp, lmx_vmd);
+		solid_context.interior_value(this->_lambda_var.v(), sqp, lmy_vmd);
+
 		v_coeffs(j) += delta;
-		
+
+		// Finite differncing the grad_lambda terms		
 		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 		  {
 		    Kus_us(i,j) += (((grad_lmx_upd-grad_lmx_umd)/(2*delta))*solid_dphi[i][sqp] 
@@ -1014,6 +1031,26 @@ namespace GRINS
 
 		    Kvs_vs(i,j) += (((grad_lmy_vpd-grad_lmy_vmd)/(2*delta))*solid_dphi[i][sqp] 
 				    + lambda_y*solid_phi[i][sqp] - P(1,alpha)*solid_dphi[i][sqp](alpha))*jac;
+		  }
+
+		// Finite differncing the lambda terms		
+		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
+		  {
+		    Kus_us(i,j) += (grad_lambda_x*solid_dphi[i][sqp] 
+				    + ((lmx_upd-lmx_umd)/(2*delta))*solid_phi[i][sqp] 
+				    - P(0,alpha)*solid_dphi[i][sqp](alpha))*jac;
+
+		    Kvs_us(i,j) += (grad_lambda_y*solid_dphi[i][sqp] 
+				    + ((lmy_upd-lmy_umd)/(2*delta))*solid_phi[i][sqp] 
+				    - P(1,alpha)*solid_dphi[i][sqp](alpha))*jac;
+
+		    Kus_vs(i,j) += (grad_lambda_x*solid_dphi[i][sqp] 
+				    + ((lmx_vpd-lmx_vmd)/(2*delta))*solid_phi[i][sqp] 
+				    - P(0,alpha)*solid_dphi[i][sqp](alpha))*jac;
+
+		    Kvs_vs(i,j) += (grad_lambda_y*solid_dphi[i][sqp] 
+				    + ((lmy_vpd-lmy_vmd)/(2*delta))*solid_phi[i][sqp] 
+				    - P(1,alpha)*solid_dphi[i][sqp](alpha))*jac;
 		  }	
 
 
