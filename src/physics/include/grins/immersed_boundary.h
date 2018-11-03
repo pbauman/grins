@@ -151,6 +151,8 @@ namespace GRINS
 				      libMesh::DenseSubMatrix<libMesh::Number> & Kvf_us,
 				      libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vs,
 				      libMesh::DenseSubMatrix<libMesh::Number> & Kuf_ulm,
+				      libMesh::DenseSubMatrix<libMesh::Number> & Kuf_vlm,
+				      libMesh::DenseSubMatrix<libMesh::Number> & Kvf_ulm,
 				      libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vlm);
 				
     void solid_residual_contribution( bool compute_jacobian, 
