@@ -1360,7 +1360,7 @@ namespace GRINS
     libMesh::TensorValue<libMesh::Real> F;
     this->eval_deform_gradient(grad_u,grad_v,F);
     
-    //libMesh::TensorValue<libMesh::Real> Ftrans = F.transpose();
+    libMesh::TensorValue<libMesh::Real>  gradV_times_F;
 
     //Computing Fdot
     libMesh::TensorValue<libMesh::Real> Fdot;
@@ -1368,19 +1368,23 @@ namespace GRINS
 	  {
 	    solid_context.interior_rate(F(0,alpha), sqp, Fdot(0,alpha));
 	    solid_context.interior_rate(F(1,alpha), sqp, Fdot(1,alpha));
+
+	    for( unsigned int beta = 0; beta < 2; beta++ )
+	      {
+		gradV_times_F(0,alpha) += grad_Vx(beta)*F(beta,alpha);
+		gradV_times_F(1,alpha) += grad_Vy(beta)*F(beta,alpha);
+	      }
    	  }
     
     for( unsigned int i = 0; i < n_lambda_dofs; i++ )
       {
 	for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 	  {
-	    Fulm(i) += (lambda_dphi[i][sqp](alpha)*(-Fdot(0,alpha)) 
-			+ lambda_dphi[i][sqp]*grad_Vx*F(0,alpha) 
-			+ lambda_phi[i][sqp]*(-udot + Vx))*jac;
+	    Fulm(i) += (lambda_dphi[i][sqp](alpha)*(gradV_times_F(0,alpha) - Fdot(0,alpha)) 
+			+ lambda_phi[i][sqp]*(Vx - udot))*jac;
 
-	    Fvlm(i) += (lambda_dphi[i][sqp](alpha)*(-Fdot(1,alpha)) 
-			+ lambda_dphi[i][sqp]*grad_Vy*F(1,alpha) 
-			+ lambda_phi[i][sqp]*(-vdot + Vy))*jac;
+	    Fvlm(i) += (lambda_dphi[i][sqp](alpha)*(gradV_times_F(1,alpha) - Fdot(1,alpha)) 
+			+ lambda_phi[i][sqp]*(Vy - vdot))*jac;
 	  }
 
 	if( compute_jacobian )
