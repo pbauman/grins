@@ -138,12 +138,12 @@ namespace GRINS
                                 libMesh::FEMContext & fluid_context );
 
     void fluid_residual_contribution( bool compute_jacobian, MultiphysicsSystem & system,
-				      libMesh::FEMContext & fluid_context, libMesh::dof_id_type fluid_elem_id,
-				      AssemblyContext & solid_context, const std::vector<libMesh::Point> & solid_qpoints,
+				      libMesh::FEMContext & fluid_context, 
+				      libMesh::dof_id_type fluid_elem_id,
+				      AssemblyContext & solid_context, 
+				      const std::vector<libMesh::Point> & solid_qpoints,
 				      unsigned int sqp,
 				      libMesh::Real & jac,libMesh::Real delta,
-				      const std::vector<std::vector<libMesh::Real> > & fluid_phi,
-				      const std::vector<std::vector<libMesh::RealGradient> > & fluid_dphi,
 				      libMesh::DenseSubVector<libMesh::Number> & Fuf,
 				      libMesh::DenseSubVector<libMesh::Number> & Fvf,
 				      libMesh::DenseSubMatrix<libMesh::Number> & Kuf_us,

@@ -273,13 +273,6 @@ namespace GRINS
     const std::vector<libMesh::Real> & solid_JxW =
       solid_context.get_element_fe(u_var,2)->get_JxW();
 
-    // Prepare fluid info needed
-    const std::vector<std::vector<libMesh::Real> > & fluid_phi =
-      _fluid_context->get_element_fe(this->_flow_vars.u())->get_phi();
-
-    const std::vector<std::vector<libMesh::RealGradient> > & fluid_dphi =
-      _fluid_context->get_element_fe(this->_flow_vars.u())->get_dphi();
-
     libMesh::DenseSubVector<libMesh::Number> & Fus = solid_context.get_elem_residual(u_var);
     libMesh::DenseSubVector<libMesh::Number> & Fvs = solid_context.get_elem_residual(v_var);
 
@@ -404,7 +397,7 @@ namespace GRINS
 	    this->fluid_residual_contribution(compute_jacobian,system,
 					      *(this->_fluid_context),fluid_elem_id,
 					      solid_context,solid_qpoints,sqp,
-					      jac,delta,fluid_phi,fluid_dphi,Fuf,Fvf,
+					      jac,delta,Fuf,Fvf,
 					      Kuf_us,Kuf_vs,Kvf_us,Kvf_vs,
 					      Kuf_ulm,Kuf_vlm,Kvf_ulm,Kvf_vlm);
 	    
@@ -607,12 +600,12 @@ namespace GRINS
 
   template<typename SolidMech>
   void ImmersedBoundary<SolidMech>::fluid_residual_contribution( bool compute_jacobian, MultiphysicsSystem & system,
-								 libMesh::FEMContext & fluid_context,libMesh::dof_id_type fluid_elem_id,
+								 libMesh::FEMContext & fluid_context,
+								 libMesh::dof_id_type fluid_elem_id,
 								 AssemblyContext & solid_context,
-								 const std::vector<libMesh::Point> & solid_qpoints,unsigned int sqp,
+								 const std::vector<libMesh::Point> & solid_qpoints,
+								 unsigned int sqp,
 								 libMesh::Real & jac,libMesh::Real delta,
-								 const std::vector<std::vector<libMesh::Real> > & fluid_phi,
-								 const std::vector<std::vector<libMesh::RealGradient> > & fluid_dphi,
 								 libMesh::DenseSubVector<libMesh::Number> & Fuf,
 								 libMesh::DenseSubVector<libMesh::Number> & Fvf,
 								 libMesh::DenseSubMatrix<libMesh::Number> & Kuf_us,
@@ -649,15 +642,30 @@ namespace GRINS
     libMesh::TensorValue<libMesh::Real> F;
     this->eval_deform_gradient(grad_u,grad_v,F);
 
-    //libMesh::TensorValue<libMesh::Real> Ftrans = F.transpose();
+    const std::vector<std::vector<libMesh::Real> > fluid_phi = 
+      fluid_context.get_element_fe(this->_flow_vars.u())->get_phi();
+    const std::vector<std::vector<libMesh::RealGradient> > fluid_dphi = 
+      fluid_context.get_element_fe(this->_flow_vars.u())->get_dphi();
 
+    libMesh::TensorValue<libMesh::Real> fdphi_times_F;
+     
     for (unsigned int i=0; i != n_fluid_dofs; i++)
       {
+	//Computing fdphi_times_F
+	for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
+	  {
+	    for( unsigned int beta = 0; beta < 2; beta++ )
+	      {
+		fdphi_times_F(0,alpha) += fluid_dphi[i][0](beta)*F(beta,alpha);
+		fdphi_times_F(1,alpha) += fluid_dphi[i][0](beta)*F(beta,alpha);
+	      }
+   	  }
+	
 	// Zero index for fluid dphi/JxW since we only requested one quad. point.
 	for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 	  {
-	    Fuf(i) -= (grad_lambda_x*fluid_dphi[i][0]*F(0,alpha) + lambda_x*fluid_phi[i][0])*jac;
-	    Fvf(i) -= (grad_lambda_y*fluid_dphi[i][0]*F(1,alpha) + lambda_y*fluid_phi[i][0])*jac;
+	    Fuf(i) -= (grad_lambda_x(alpha)*fdphi_times_F(0,alpha) + lambda_x*fluid_phi[i][0])*jac;
+	    Fvf(i) -= (grad_lambda_y(alpha)*fdphi_times_F(1,alpha) + lambda_y*fluid_phi[i][0])*jac;
 	  }
 	
 	if( compute_jacobian )
