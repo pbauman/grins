@@ -414,6 +414,8 @@ namespace GRINS
 					      Kus_us,Kvs_us,Kus_vs,Kvs_vs,
 					      Kus_ulm,Kvs_ulm,Kus_vlm,Kvs_vlm);
 
+	    this->prepare_fluid_context(system,solid_context,solid_qpoints,sqp,fluid_elem_id,*(this->_fluid_context));
+	    
 	    this->lambda_residual_contribution(compute_jacobian,system,
 					       *(this->_fluid_context),fluid_elem_id,
 					       solid_context,solid_qpoints,sqp,
@@ -1490,7 +1492,7 @@ namespace GRINS
 	    for( unsigned int j = 0; j < n_solid_dofs; j++ )
 	      {
 
-		// Computing Fdot and Ftranspose derivative terms
+		// Computing Fdot and F derivative terms
 
 		u_coeffs(j) += delta;
 		v_coeffs(j) += delta;
@@ -1511,7 +1513,6 @@ namespace GRINS
 		    
 		libMesh::TensorValue<libMesh::Real> F_upd;
 		this->eval_deform_gradient(grad_upd,grad_v,F_upd);
-		//libMesh::TensorValue<libMesh::Real> Ft_upd = F_upd.transpose();  
 	
 		libMesh::TensorValue<libMesh::Real> Fdot_upd;
 		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
@@ -1522,7 +1523,6 @@ namespace GRINS
 
 		libMesh::TensorValue<libMesh::Real> F_umd;
 		this->eval_deform_gradient(grad_umd,grad_v,F_umd);
-		//libMesh::TensorValue<libMesh::Real> Ft_umd = F_umd.transpose();  
 
 		libMesh::TensorValue<libMesh::Real> Fdot_umd;
 		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
@@ -1533,7 +1533,6 @@ namespace GRINS
 
 		libMesh::TensorValue<libMesh::Real> F_vpd;
 		this->eval_deform_gradient(grad_u,grad_vpd,F_vpd);
-		//libMesh::TensorValue<libMesh::Real> Ft_vpd = F_vpd.transpose();  
 
 		libMesh::TensorValue<libMesh::Real> Fdot_vpd;
 		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
@@ -1544,7 +1543,6 @@ namespace GRINS
 		
 		libMesh::TensorValue<libMesh::Real> F_vmd;
 		this->eval_deform_gradient(grad_u,grad_vmd,F_vmd);
-		//libMesh::TensorValue<libMesh::Real> Ft_vmd = F_vmd.transpose();
 
 		libMesh::TensorValue<libMesh::Real> Fdot_vmd;
 		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
@@ -1556,74 +1554,51 @@ namespace GRINS
 		// Finite differencing the Fdot terms
 		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 		  {
-		    Kulm_us(i,j) += (lambda_dphi[i][sqp](alpha)*(-(Fdot_upd(0,alpha)-Fdot_umd(0,alpha))/(2*delta)) 
-				     + lambda_dphi[i][sqp]*grad_Vx*F(0,alpha) 
-				     + lambda_phi[i][sqp]*(-udot + Vx))*jac;
+		    Kulm_us(i,j) += (lambda_dphi[i][sqp](alpha)*(gradV_times_F(0,alpha) 
+								 - ((Fdot_upd(0,alpha)-Fdot_umd(0,alpha))/(2*delta))) 
+				     + lambda_phi[i][sqp]*(Vx - udot))*jac;
 		    
-		    Kvlm_us(i,j) += (lambda_dphi[i][sqp](alpha)*(-(Fdot_upd(1,alpha)-Fdot_umd(1,alpha))/(2*delta))
-				     + lambda_dphi[i][sqp]*grad_Vy*F(1,alpha) 
-				     + lambda_phi[i][sqp]*(-vdot + Vy))*jac;
+		    Kvlm_us(i,j) += (lambda_dphi[i][sqp](alpha)*(gradV_times_F(1,alpha) 
+								 - ((Fdot_upd(1,alpha)-Fdot_umd(1,alpha))/(2*delta))) 
+				     + lambda_phi[i][sqp]*(Vy - vdot))*jac;
 		    
-		    Kulm_vs(i,j) += (lambda_dphi[i][sqp](alpha)*(-(Fdot_vpd(0,alpha)-Fdot_vmd(0,alpha))/(2*delta))
-				     + lambda_dphi[i][sqp]*grad_Vx*F(0,alpha) 
-				     + lambda_phi[i][sqp]*(-udot + Vx))*jac;
-		    
-		    Kvlm_vs(i,j) += (lambda_dphi[i][sqp](alpha)*(-(Fdot_vpd(1,alpha)-Fdot_vmd(1,alpha))/(2*delta))
-				     + lambda_dphi[i][sqp]*grad_Vy*F(1,alpha) 
-				     + lambda_phi[i][sqp]*(-vdot + Vy))*jac;
+		    Kulm_vs(i,j) += (lambda_dphi[i][sqp](alpha)*(gradV_times_F(0,alpha) 
+								 - ((Fdot_vpd(0,alpha)-Fdot_vmd(0,alpha))/(2*delta)))
+				     + lambda_phi[i][sqp]*(Vx - udot))*jac;
+				     
+		    Kvlm_vs(i,j) += (lambda_dphi[i][sqp](alpha)*(gradV_times_F(1,alpha) 
+								 - ((Fdot_vpd(1,alpha)-Fdot_vmd(1,alpha))/(2*delta))) 
+				     + lambda_phi[i][sqp]*(Vy - vdot))*jac;
 		  }
-		/*
-		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
-		  {
-		    Kulm_us(i,j) += ((-(Fdot_upd(0,alpha)-Fdot_umd(0,alpha))/(2*delta))*lambda_dphi[i][sqp](alpha) 
-				     + Ftrans(0,alpha)*grad_Vx*lambda_dphi[i][sqp] + (-udot + Vx)*lambda_phi[i][sqp])*jac;
-		    
-		    Kvlm_us(i,j) += ((-(Fdot_upd(1,alpha)-Fdot_umd(1,alpha))/(2*delta))*lambda_dphi[i][sqp](alpha)
-				     + Ftrans(0,alpha)*grad_Vx*lambda_dphi[i][sqp] + (-udot + Vx)*lambda_phi[i][sqp])*jac;
-		    
-		    Kulm_vs(i,j) += ((-(Fdot_vpd(0,alpha)-Fdot_vmd(0,alpha))/(2*delta))*lambda_dphi[i][sqp](alpha)
-				     + Ftrans(0,alpha)*grad_Vx*lambda_dphi[i][sqp] + (-udot + Vx)*lambda_phi[i][sqp])*jac;
-		    
-		    Kvlm_vs(i,j) += ((-(Fdot_vpd(1,alpha)-Fdot_vmd(1,alpha))/(2*delta))*lambda_dphi[i][sqp](alpha)
-				     + Ftrans(0,alpha)*grad_Vx*lambda_dphi[i][sqp] + (-udot + Vx)*lambda_phi[i][sqp])*jac;
-		  }
-		*/
+		
 		// Finite differencing the F terms
+		libMesh::TensorValue<libMesh::Real> gVtF_us, gVtF_vs;
+
 		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 		  {
-		    Kulm_us(i,j) += (lambda_dphi[i][sqp](alpha)*(-Fdot(0,alpha)) 
-				     + lambda_dphi[i][sqp]*grad_Vx*((F_upd(0,alpha)-F_umd(0,alpha))/(2*delta)) 
-				     + lambda_phi[i][sqp]*(-udot + Vx))*jac;
+		    for( unsigned int beta = 0; beta < 2; beta++ )
+		      {
+			gVtF_us(0,alpha) += grad_Vx(beta)*((F_upd(beta,alpha)-F_umd(beta,alpha))/(2*delta));
+			gVtF_us(1,alpha) += grad_Vy(beta)*((F_upd(beta,alpha)-F_umd(beta,alpha))/(2*delta));
+			gVtF_vs(0,alpha) += grad_Vx(beta)*((F_vpd(beta,alpha)-F_vmd(beta,alpha))/(2*delta));
+			gVtF_vs(1,alpha) += grad_Vy(beta)*((F_vpd(beta,alpha)-F_vmd(beta,alpha))/(2*delta));
+		      }
+		  }
+
+		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
+		  {
+		    Kulm_us(i,j) += (lambda_dphi[i][sqp](alpha)*(gVtF_us(0,alpha) - Fdot(0,alpha)) 
+				     + lambda_phi[i][sqp]*(Vx - udot))*jac;
+
+		    Kvlm_us(i,j) += (lambda_dphi[i][sqp](alpha)*(gVtF_us(1,alpha) - Fdot(1,alpha)) 
+				     + lambda_phi[i][sqp]*(Vy - vdot))*jac;
 		    
-		    Kvlm_us(i,j) += (lambda_dphi[i][sqp](alpha)*(-Fdot(1,alpha)) 
-				     + lambda_dphi[i][sqp]*grad_Vy*((F_upd(1,alpha)-F_umd(1,alpha))/(2*delta)) 
-				     + lambda_phi[i][sqp]*(-vdot + Vy))*jac;
+		    Kulm_vs(i,j) += (lambda_dphi[i][sqp](alpha)*(gVtF_vs(0,alpha) - Fdot(0,alpha)) 
+				     + lambda_phi[i][sqp]*(Vx - udot))*jac;
 		    
-		    Kulm_vs(i,j) += (lambda_dphi[i][sqp](alpha)*(-Fdot(0,alpha)) 
-				     + lambda_dphi[i][sqp]*grad_Vx*((F_vpd(0,alpha)-F_vmd(0,alpha))/(2*delta))
-				     + lambda_phi[i][sqp]*(-udot + Vx))*jac;
-		    
-		    Kvlm_vs(i,j) += (lambda_dphi[i][sqp](alpha)*(-Fdot(1,alpha)) 
-				     + lambda_dphi[i][sqp]*grad_Vy*((F_vpd(1,alpha)-F_vmd(1,alpha))/(2*delta))
-				     + lambda_phi[i][sqp]*(-vdot + Vy))*jac;
+		    Kvlm_vs(i,j) += (lambda_dphi[i][sqp](alpha)*(gVtF_vs(1,alpha) - Fdot(1,alpha)) 
+				     + lambda_phi[i][sqp]*(Vy - vdot))*jac;
 		  }	
-
-		/*
-		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
-		  {
-		    Kulm_us(i,j) += (-Fdot(0,alpha)*lambda_dphi[i][sqp](alpha) + ((Ft_upd(0,alpha)-Ft_umd(0,alpha))/(2*delta))*grad_Vx*lambda_dphi[i][sqp]
-				     + (-udot + Vx)*lambda_phi[i][sqp])*jac;
-
-		    Kvlm_us(i,j) += (-Fdot(1,alpha)*lambda_dphi[i][sqp](alpha) + ((Ft_upd(1,alpha)-Ft_umd(1,alpha))/(2*delta))*grad_Vy*lambda_dphi[i][sqp] 
-				     + (-vdot + Vy)*lambda_phi[i][sqp])*jac;
-
-		    Kulm_vs(i,j) += (-Fdot(0,alpha)*lambda_dphi[i][sqp](alpha) + ((Ft_vpd(0,alpha)-Ft_vmd(0,alpha))/(2*delta))*grad_Vx*lambda_dphi[i][sqp] 
-				     + (-udot + Vx)*lambda_phi[i][sqp])*jac;
-
-		    Kvlm_vs(i,j) += (-Fdot(1,alpha)*lambda_dphi[i][sqp](alpha) + ((Ft_vpd(1,alpha)-Ft_vmd(1,alpha))/(2*delta))*grad_Vy*lambda_dphi[i][sqp] 
-				     + (-vdot + Vy)*lambda_phi[i][sqp])*jac;
-		  }		
-		*/
 
 		// Computing V and grad_V terms solid derivative terms
 
@@ -1686,78 +1661,50 @@ namespace GRINS
 		v_coeffs(j) += delta;
 		
 		// Finite differencing the grad_V terms w.r.t solid
+		libMesh::TensorValue<libMesh::Real> gradVtF_us, gradVtF_vs;
+		
 		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 		  {
-		    Kulm_us(i,j) += (lambda_dphi[i][sqp](alpha)*(-Fdot(0,alpha)) 
-				     + lambda_dphi[i][sqp]*((grad_Vx_upd-grad_Vx_umd)/(2*delta))*F(0,alpha) 
-				     + lambda_phi[i][sqp]*(-udot + Vx))*jac;
-		    
-		    Kvlm_us(i,j) += (lambda_dphi[i][sqp](alpha)*(-Fdot(1,alpha)) 
-				     + lambda_dphi[i][sqp]*((grad_Vy_upd-grad_Vy_umd)/(2*delta))*F(1,alpha) 
-				     + lambda_phi[i][sqp]*(-vdot + Vy))*jac;
-		    
-		    Kulm_vs(i,j) += (lambda_dphi[i][sqp](alpha)*(-Fdot(0,alpha)) 
-				     + lambda_dphi[i][sqp]*((grad_Vx_vpd-grad_Vx_vmd)/(2*delta))*F(0,alpha) 
-				     + lambda_phi[i][sqp]*(-udot + Vx))*jac;
-		    
-		    Kvlm_vs(i,j) += (lambda_dphi[i][sqp](alpha)*(-Fdot(1,alpha)) 
-				     + lambda_dphi[i][sqp]*((grad_Vy_vpd-grad_Vy_vmd)/(2*delta))*F(1,alpha) 
-				     + lambda_phi[i][sqp]*(-vdot + Vy))*jac;
+		    for( unsigned int beta = 0; beta < 2; beta++ )
+		      {
+			gradVtF_us(0,alpha) += ((grad_Vx_upd(beta)-grad_Vx_umd(beta))/(2*delta))*F(beta,alpha);
+			gradVtF_us(1,alpha) += ((grad_Vy_upd(beta)-grad_Vy_umd(beta))/(2*delta))*F(beta,alpha);
+			gradVtF_vs(0,alpha) += ((grad_Vx_vpd(beta)-grad_Vx_vmd(beta))/(2*delta))*F(beta,alpha);
+			gradVtF_vs(1,alpha) += ((grad_Vy_vpd(beta)-grad_Vy_vmd(beta))/(2*delta))*F(beta,alpha);
+		      }
 		  }
-
-		/*
+		
 		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 		  {
-		    Kulm_us(i,j) += (-Fdot(0,alpha)*lambda_dphi[i][sqp](alpha) + Ftrans(0,alpha)*((grad_Vx_upd-grad_Vx_umd)/(2*delta))*lambda_dphi[i][sqp] 
-				     + (-udot + Vx)*lambda_phi[i][sqp])*jac;
+		    Kulm_us(i,j) += (lambda_dphi[i][sqp](alpha)*(gradVtF_us(0,alpha) - Fdot(0,alpha)) 
+				     + lambda_phi[i][sqp]*(Vx - udot))*jac;
 
-		    Kvlm_us(i,j) += (-Fdot(1,alpha)*lambda_dphi[i][sqp](alpha) + Ftrans(1,alpha)*((grad_Vy_upd-grad_Vy_umd)/(2*delta))*lambda_dphi[i][sqp] 
-				     + (-vdot + Vy)*lambda_phi[i][sqp])*jac;
-
-		    Kulm_vs(i,j) += (-Fdot(0,alpha)*lambda_dphi[i][sqp](alpha) + Ftrans(0,alpha)*((grad_Vx_vpd-grad_Vx_vmd)/(2*delta))*lambda_dphi[i][sqp] 
-				     + (-udot + Vx)*lambda_phi[i][sqp])*jac;
-
-		    Kvlm_vs(i,j) += (-Fdot(1,alpha)*lambda_dphi[i][sqp](alpha) + Ftrans(1,alpha)*((grad_Vy_vpd-grad_Vy_vmd)/(2*delta))*lambda_dphi[i][sqp] 
-				     + (-vdot + Vy)*lambda_phi[i][sqp])*jac;
+		    Kvlm_us(i,j) += (lambda_dphi[i][sqp](alpha)*(gradVtF_us(1,alpha) - Fdot(1,alpha)) 
+				     + lambda_phi[i][sqp]*(Vy - vdot))*jac;
+		    
+		    Kulm_vs(i,j) += (lambda_dphi[i][sqp](alpha)*(gradVtF_vs(0,alpha) - Fdot(0,alpha)) 
+				     + lambda_phi[i][sqp]*(Vx - udot))*jac;
+		    
+		    Kvlm_vs(i,j) += (lambda_dphi[i][sqp](alpha)*(gradVtF_vs(1,alpha) - Fdot(1,alpha)) 
+				     + lambda_phi[i][sqp]*(Vy - vdot))*jac;
 		  }
-		*/
 
 		//Finite differencing the V terms w.r.t solid
 		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 		  {
-		    Kulm_us(i,j) += (lambda_dphi[i][sqp](alpha)*(-Fdot(0,alpha)) 
-				     + lambda_dphi[i][sqp]*grad_Vx*F(0,alpha) 
-				     + lambda_phi[i][sqp]*(-udot + ((Vx_upd-Vx_umd)/(2*delta))))*jac;
+		    Kulm_us(i,j) += (lambda_dphi[i][sqp](alpha)*(gradV_times_F(0,alpha) - Fdot(0,alpha)) 
+				     + lambda_phi[i][sqp]*(((Vx_upd-Vx_umd)/(2*delta)) - udot))*jac;
 		    
-		    Kvlm_us(i,j) += (lambda_dphi[i][sqp](alpha)*(-Fdot(1,alpha)) 
-				     + lambda_dphi[i][sqp]*grad_Vy*F(1,alpha) 
-				     + lambda_phi[i][sqp]*(-vdot + ((Vy_upd-Vy_umd)/(2*delta))))*jac;
+		    Kvlm_us(i,j) += (lambda_dphi[i][sqp](alpha)*(gradV_times_F(1,alpha) - Fdot(1,alpha)) 
+				     + lambda_phi[i][sqp]*(((Vy_upd-Vy_umd)/(2*delta)) - vdot))*jac;
 		    
-		    Kulm_vs(i,j) += (lambda_dphi[i][sqp](alpha)*(-Fdot(0,alpha)) 
-				     + lambda_dphi[i][sqp]*grad_Vx*F(0,alpha) 
-				     + lambda_phi[i][sqp]*(-udot + ((Vx_vpd-Vx_vmd)/(2*delta))))*jac;
+		    Kulm_vs(i,j) += (lambda_dphi[i][sqp](alpha)*(gradV_times_F(0,alpha) - Fdot(0,alpha)) 
+				     + lambda_phi[i][sqp]*(((Vx_vpd-Vx_vmd)/(2*delta)) - udot))*jac;
 		    
-		    Kvlm_vs(i,j) += (lambda_dphi[i][sqp](alpha)*(-Fdot(1,alpha)) 
-				     + lambda_dphi[i][sqp]*grad_Vy*F(1,alpha) 
-				     + lambda_phi[i][sqp]*(-vdot + ((Vy_vpd-Vy_vmd)/(2*delta))))*jac;
+		    Kvlm_vs(i,j) += (lambda_dphi[i][sqp](alpha)*(gradV_times_F(1,alpha) - Fdot(1,alpha)) 
+				     + lambda_phi[i][sqp]*(((Vy_vpd-Vy_vmd)/(2*delta)) - vdot))*jac;
 		  }
 
-		/*
-		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
-		  {
-		    Kulm_us(i,j) += (-Fdot(0,alpha)*lambda_dphi[i][sqp](alpha) + Ftrans(0,alpha)*grad_Vx*lambda_dphi[i][sqp] 
-				     + (-udot + ((Vx_upd-Vx_umd)/(2*delta)))*lambda_phi[i][sqp])*jac;
-
-		    Kvlm_us(i,j) += (-Fdot(1,alpha)*lambda_dphi[i][sqp](alpha) + Ftrans(1,alpha)*grad_Vy*lambda_dphi[i][sqp] 
-				     + (-vdot + ((Vy_upd-Vy_umd)/(2*delta)))*lambda_phi[i][sqp])*jac;
-
-		    Kulm_vs(i,j) += (-Fdot(0,alpha)*lambda_dphi[i][sqp](alpha) + Ftrans(0,alpha)*grad_Vx*lambda_dphi[i][sqp] 
-				     + (-udot + ((Vx_vpd-Vx_vmd)/(2*delta)))*lambda_phi[i][sqp])*jac;
-
-		    Kvlm_vs(i,j) += (-Fdot(1,alpha)*lambda_dphi[i][sqp](alpha) + Ftrans(1,alpha)*grad_Vy*lambda_dphi[i][sqp] 
-				     + (-vdot + ((Vy_vpd-Vy_vmd)/(2*delta)))*lambda_phi[i][sqp])*jac;
-		  }
-		*/
 		this->prepare_fluid_context(system,solid_context,solid_qpoints,sqp,fluid_elem_id,fluid_context);
 
 		//Finite differencing the udot and vdot terms
@@ -1792,143 +1739,90 @@ namespace GRINS
 
 		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 		  {
-		    Kulm_us(i,j) += (lambda_dphi[i][sqp](alpha)*(-Fdot(0,alpha)) 
-				     + lambda_dphi[i][sqp]*grad_Vx*F(0,alpha) 
-				     + lambda_phi[i][sqp]*((-(udot_upd-udot_umd)/(2*delta)) + Vx))*jac;
+		    Kulm_us(i,j) += (lambda_dphi[i][sqp](alpha)*(gradV_times_F(0,alpha) - Fdot(0,alpha)) 
+				     + lambda_phi[i][sqp]*(Vx - ((udot_upd-udot_umd)/(2*delta))))*jac;
 		    
-		    Kvlm_us(i,j) += (lambda_dphi[i][sqp](alpha)*(-Fdot(1,alpha)) 
-				     + lambda_dphi[i][sqp]*grad_Vy*F(1,alpha) 
-				     + lambda_phi[i][sqp]*((-(vdot_upd-vdot_umd)/(2*delta)) + Vy))*jac;
+		    Kvlm_us(i,j) += (lambda_dphi[i][sqp](alpha)*(gradV_times_F(1,alpha) - Fdot(1,alpha)) 
+				     + lambda_phi[i][sqp]*(Vy - ((vdot_upd-vdot_umd)/(2*delta))))*jac;
 		    
-		    Kulm_vs(i,j) += (lambda_dphi[i][sqp](alpha)*(-Fdot(0,alpha)) 
-				     + lambda_dphi[i][sqp]*grad_Vx*F(0,alpha) 
-				     + lambda_phi[i][sqp]*((-(udot_vpd-udot_vmd)/(2*delta)) + Vx))*jac;
+		    Kulm_vs(i,j) += (lambda_dphi[i][sqp](alpha)*(gradV_times_F(0,alpha) - Fdot(0,alpha)) 
+				     + lambda_phi[i][sqp]*(Vx - ((udot_vpd-udot_vmd)/(2*delta))))*jac;
 		    
-		    Kvlm_vs(i,j) += (lambda_dphi[i][sqp](alpha)*(-Fdot(1,alpha)) 
-				     + lambda_dphi[i][sqp]*grad_Vy*F(1,alpha) 
-				     + lambda_phi[i][sqp]*((-(vdot_vpd-vdot_vmd)/(2*delta)) + Vy))*jac;
+		    Kvlm_vs(i,j) += (lambda_dphi[i][sqp](alpha)*(gradV_times_F(1,alpha) - Fdot(1,alpha)) 
+				     + lambda_phi[i][sqp]*(Vy - ((vdot_vpd-vdot_vmd)/(2*delta))))*jac;
 		  }
-
-		/*
-		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
-		  {
-		    Kulm_us(i,j) += (-Fdot(0,alpha)*lambda_dphi[i][sqp](alpha) + Ftrans(0,alpha)*grad_Vx*lambda_dphi[i][sqp] 
-				     + ((-(udot_upd-udot_umd)/(2*delta)) + Vx)*lambda_phi[i][sqp])*jac;
-
-		    Kvlm_us(i,j) += (-Fdot(1,alpha)*lambda_dphi[i][sqp](alpha) + Ftrans(1,alpha)*grad_Vy*lambda_dphi[i][sqp] 
-				     + ((-(vdot_upd-vdot_umd)/(2*delta)) + Vy)*lambda_phi[i][sqp])*jac;
-
-		    Kulm_vs(i,j) += (-Fdot(0,alpha)*lambda_dphi[i][sqp](alpha) + Ftrans(0,alpha)*grad_Vx*lambda_dphi[i][sqp] 
-				     + ((-(udot_vpd-udot_vmd)/(2*delta)) + Vx)*lambda_phi[i][sqp])*jac;
-
-		    Kvlm_vs(i,j) += (-Fdot(1,alpha)*lambda_dphi[i][sqp](alpha) + Ftrans(1,alpha)*grad_Vy*lambda_dphi[i][sqp] 
-				     + ((-(vdot_vpd-vdot_vmd)/(2*delta)) + Vy)*lambda_phi[i][sqp])*jac;
-		  }
-		*/
 
 		// Computing lambda_phi and lambda_dphi derivative terms
 	
 		u_coeffs(j) += delta;
 
-		const std::vector<std::vector<libMesh::Real> > lambda_phi_upd = solid_context.get_element_fe(this->_lambda_var.u(),2)->get_phi();
-		const std::vector<std::vector<libMesh::RealGradient> > lambda_dphi_upd = solid_context.get_element_fe(this->_lambda_var.u(),2)->get_dphi();
+		const std::vector<std::vector<libMesh::Real> > lambda_phi_upd = 
+		  solid_context.get_element_fe(this->_lambda_var.u(),2)->get_phi();
+		const std::vector<std::vector<libMesh::RealGradient> > lambda_dphi_upd = 
+		  solid_context.get_element_fe(this->_lambda_var.u(),2)->get_dphi();
 		
 		u_coeffs(j) -= 2*delta;
 
-		const std::vector<std::vector<libMesh::Real> > lambda_phi_umd = solid_context.get_element_fe(this->_lambda_var.u(),2)->get_phi();
-		const std::vector<std::vector<libMesh::RealGradient> > lambda_dphi_umd = solid_context.get_element_fe(this->_lambda_var.u(),2)->get_dphi();
+		const std::vector<std::vector<libMesh::Real> > lambda_phi_umd = 
+		  solid_context.get_element_fe(this->_lambda_var.u(),2)->get_phi();
+		const std::vector<std::vector<libMesh::RealGradient> > lambda_dphi_umd = 
+		  solid_context.get_element_fe(this->_lambda_var.u(),2)->get_dphi();
 		
 		u_coeffs(j) += delta;
 
 		v_coeffs(j) += delta;
 
-		const std::vector<std::vector<libMesh::Real> > lambda_phi_vpd = solid_context.get_element_fe(this->_lambda_var.u(),2)->get_phi();
-		const std::vector<std::vector<libMesh::RealGradient> > lambda_dphi_vpd = solid_context.get_element_fe(this->_lambda_var.u(),2)->get_dphi();
+		const std::vector<std::vector<libMesh::Real> > lambda_phi_vpd = 
+		  solid_context.get_element_fe(this->_lambda_var.u(),2)->get_phi();
+		const std::vector<std::vector<libMesh::RealGradient> > lambda_dphi_vpd = 
+		  solid_context.get_element_fe(this->_lambda_var.u(),2)->get_dphi();
 
 		v_coeffs(j) -= 2*delta;
 
-		const std::vector<std::vector<libMesh::Real> > lambda_phi_vmd = solid_context.get_element_fe(this->_lambda_var.u(),2)->get_phi();
-		const std::vector<std::vector<libMesh::RealGradient> > lambda_dphi_vmd = solid_context.get_element_fe(this->_lambda_var.u(),2)->get_dphi();
+		const std::vector<std::vector<libMesh::Real> > lambda_phi_vmd = 
+		  solid_context.get_element_fe(this->_lambda_var.u(),2)->get_phi();
+		const std::vector<std::vector<libMesh::RealGradient> > lambda_dphi_vmd = 
+		  solid_context.get_element_fe(this->_lambda_var.u(),2)->get_dphi();
 		
 		v_coeffs(j) += delta;
 
 		// Finite differencing the lambda_dphi terms
 		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 		  {
-		    Kulm_us(i,j) += (((lambda_dphi_upd[i][sqp](alpha)-lambda_dphi_umd[i][sqp](alpha))/(2*delta))*(-Fdot(0,alpha)) 
-				     + ((lambda_dphi_upd[i][sqp]-lambda_dphi_umd[i][sqp])/(2*delta))*grad_Vx*F(0,alpha) 
-				     + lambda_phi[i][sqp]*(-udot + Vx))*jac;
+		    Kulm_us(i,j) += (((lambda_dphi_upd[i][sqp](alpha)-lambda_dphi_umd[i][sqp](alpha))/(2*delta))
+				     *(gradV_times_F(0,alpha) - Fdot(0,alpha)) 
+				     + lambda_phi[i][sqp]*(Vx - udot))*jac;
 		    
-		    Kvlm_us(i,j) += (((lambda_dphi_upd[i][sqp](alpha)-lambda_dphi_umd[i][sqp](alpha))/(2*delta))*(-Fdot(1,alpha)) 
-				     + ((lambda_dphi_upd[i][sqp]-lambda_dphi_umd[i][sqp])/(2*delta))*grad_Vy*F(1,alpha) 
-				     + lambda_phi[i][sqp]*(-vdot + Vy))*jac;
+		    Kvlm_us(i,j) += (((lambda_dphi_upd[i][sqp](alpha)-lambda_dphi_umd[i][sqp](alpha))/(2*delta))
+				     *(gradV_times_F(1,alpha) - Fdot(1,alpha)) 
+				     + lambda_phi[i][sqp]*(Vy - vdot))*jac;
 		    
-		    Kulm_vs(i,j) += (((lambda_dphi_upd[i][sqp](alpha)-lambda_dphi_umd[i][sqp](alpha))/(2*delta))*(-Fdot(0,alpha)) 
-				     + ((lambda_dphi_vpd[i][sqp]-lambda_dphi_vmd[i][sqp])/(2*delta))*grad_Vx*F(0,alpha) 
-				     + lambda_phi[i][sqp]*(-udot + Vx))*jac;
+		    Kulm_vs(i,j) += (((lambda_dphi_vpd[i][sqp](alpha)-lambda_dphi_vmd[i][sqp](alpha))/(2*delta))
+				     *(gradV_times_F(0,alpha) - Fdot(0,alpha)) 
+				     + lambda_phi[i][sqp]*(Vx - udot))*jac;
 		    
-		    Kvlm_vs(i,j) += (((lambda_dphi_upd[i][sqp](alpha)-lambda_dphi_umd[i][sqp](alpha))/(2*delta))*(-Fdot(1,alpha)) 
-				     + ((lambda_dphi_vpd[i][sqp]-lambda_dphi_vmd[i][sqp])/(2*delta))*grad_Vy*F(1,alpha) 
-				     + lambda_phi[i][sqp]*(-vdot + Vy))*jac;
+		    Kvlm_vs(i,j) += (((lambda_dphi_vpd[i][sqp](alpha)-lambda_dphi_vmd[i][sqp](alpha))/(2*delta))
+				     *(gradV_times_F(1,alpha) - Fdot(1,alpha)) 
+				     + lambda_phi[i][sqp]*(Vy - vdot))*jac;
 		  }
 
-		/*
 
-		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
-		  {
-		    Kulm_us(i,j) += (-Fdot(0,alpha)*((lambda_dphi_upd[i][sqp](alpha)-lambda_dphi_umd[i][sqp](alpha))/(2*delta)) 
-				     + Ftrans(0,alpha)*grad_Vx*((lambda_dphi_upd[i][sqp]-lambda_dphi_umd[i][sqp])/(2*delta)) 
-				     + (-udot + Vx)*lambda_phi[i][sqp])*jac;
-
-		    Kvlm_us(i,j) += (-Fdot(1,alpha)*((lambda_dphi_upd[i][sqp](alpha)-lambda_dphi_umd[i][sqp](alpha))/(2*delta)) 
-				     + Ftrans(1,alpha)*grad_Vy*((lambda_dphi_upd[i][sqp]-lambda_dphi_umd[i][sqp])/(2*delta)) 
-				     + (-vdot + Vy)*lambda_phi[i][sqp])*jac;
-
-		    Kulm_vs(i,j) += (-Fdot(0,alpha)*((lambda_dphi_upd[i][sqp](alpha)-lambda_dphi_umd[i][sqp](alpha))/(2*delta)) 
-				     + Ftrans(0,alpha)*grad_Vx*((lambda_dphi_vpd[i][sqp]-lambda_dphi_vmd[i][sqp])/(2*delta)) 
-				     + (-udot + Vx)*lambda_phi[i][sqp])*jac;
-
-		    Kvlm_vs(i,j) += (-Fdot(1,alpha)*((lambda_dphi_upd[i][sqp](alpha)-lambda_dphi_umd[i][sqp](alpha))/(2*delta)) 
-				     + Ftrans(1,alpha)*grad_Vy*((lambda_dphi_vpd[i][sqp]-lambda_dphi_vmd[i][sqp])/(2*delta)) 
-				     + (-vdot + Vy)*lambda_phi[i][sqp])*jac;
-		  }
-		*/
 		//Finite differencing the lambda_phi terms
 		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 		  {
-		    Kulm_us(i,j) += (lambda_dphi[i][sqp](alpha)*(-Fdot(0,alpha)) 
-				     + lambda_dphi[i][sqp]*grad_Vx*F(0,alpha) 
-				     + ((lambda_phi_upd[i][sqp]-lambda_phi_umd[i][sqp])/(2*delta))*(-udot + Vx))*jac;
+		    Kulm_us(i,j) += (lambda_dphi[i][sqp](alpha)*(gradV_times_F(0,alpha) - Fdot(0,alpha)) 
+				     + ((lambda_phi_upd[i][sqp]-lambda_phi_umd[i][sqp])/(2*delta))*(Vx - udot))*jac;
 		    
-		    Kvlm_us(i,j) += (lambda_dphi[i][sqp](alpha)*(-Fdot(1,alpha)) 
-				     + lambda_dphi[i][sqp]*grad_Vy*F(1,alpha) 
-				     + ((lambda_phi_upd[i][sqp]-lambda_phi_umd[i][sqp])/(2*delta))*(-vdot + Vy))*jac;
+		    Kvlm_us(i,j) += (lambda_dphi[i][sqp](alpha)*(gradV_times_F(1,alpha) - Fdot(1,alpha)) 
+				     + ((lambda_phi_upd[i][sqp]-lambda_phi_umd[i][sqp])/(2*delta))*(Vy - vdot))*jac;
 		    
-		    Kulm_vs(i,j) += (lambda_dphi[i][sqp](alpha)*(-Fdot(0,alpha)) 
-				     + lambda_dphi[i][sqp]*grad_Vx*F(0,alpha) 
-				     + ((lambda_phi_vpd[i][sqp]-lambda_phi_vmd[i][sqp])/(2*delta))*(-udot + Vx))*jac;
-
-		    Kvlm_vs(i,j) += (lambda_dphi[i][sqp](alpha)*(-Fdot(1,alpha)) 
-				     + lambda_dphi[i][sqp]*grad_Vy*F(1,alpha) 
-				     + ((lambda_phi_vpd[i][sqp]-lambda_phi_vmd[i][sqp])/(2*delta))*(-vdot + Vy))*jac;
+		    Kulm_vs(i,j) += (lambda_dphi[i][sqp](alpha)*(gradV_times_F(0,alpha) - Fdot(0,alpha)) 
+				     + ((lambda_phi_vpd[i][sqp]-lambda_phi_vmd[i][sqp])/(2*delta))*(Vx - udot))*jac;
+		    
+		    Kvlm_vs(i,j) += (lambda_dphi[i][sqp](alpha)*(gradV_times_F(1,alpha) - Fdot(1,alpha)) 
+				     + ((lambda_phi_vpd[i][sqp]-lambda_phi_vmd[i][sqp])/(2*delta))*(Vy - vdot))*jac;
 		  }
-		
-		/*
-		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
-		  {
-		    Kulm_us(i,j) += (-Fdot(0,alpha)*lambda_dphi[i][sqp](alpha) + Ftrans(0,alpha)*grad_Vx*lambda_dphi[i][sqp] 
-				     + (-udot + Vx)*((lambda_phi_upd[i][sqp]-lambda_phi_umd[i][sqp])/(2*delta)))*jac;
 
-		    Kvlm_us(i,j) += (-Fdot(1,alpha)*lambda_dphi[i][sqp](alpha) + Ftrans(1,alpha)*grad_Vy*lambda_dphi[i][sqp] 
-				     + (-vdot + Vy)*((lambda_phi_upd[i][sqp]-lambda_phi_umd[i][sqp])/(2*delta)))*jac;
-
-		    Kulm_vs(i,j) += (-Fdot(0,alpha)*lambda_dphi[i][sqp](alpha) + Ftrans(0,alpha)*grad_Vx*lambda_dphi[i][sqp] 
-				     + (-udot + Vx)*((lambda_phi_vpd[i][sqp]-lambda_phi_vmd[i][sqp])/(2*delta)))*jac;
-
-		    Kvlm_vs(i,j) += (-Fdot(1,alpha)*lambda_dphi[i][sqp](alpha) + Ftrans(1,alpha)*grad_Vy*lambda_dphi[i][sqp] 
-				     + (-vdot + Vy)*((lambda_phi_vpd[i][sqp]-lambda_phi_vmd[i][sqp])/(2*delta)))*jac;
-		  }
-		*/
 	      } // solid dof loop
 
 	  } // if compute jacobian
