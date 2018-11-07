@@ -1007,8 +1007,11 @@ namespace GRINS
       {
 	for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 	  {
-	    Fus(i) += (grad_lambda_x*solid_dphi[i][sqp] + lambda_x*solid_phi[i][sqp] - P(0,alpha)*solid_dphi[i][sqp](alpha))*jac;
-	    Fvs(i) += (grad_lambda_y*solid_dphi[i][sqp] + lambda_y*solid_phi[i][sqp] - P(1,alpha)*solid_dphi[i][sqp](alpha))*jac;
+	    Fus(i) += ((grad_lambda_x(alpha)-P(0,alpha))*solid_dphi[i][sqp](alpha) 
+		       + lambda_x*solid_phi[i][sqp])*jac;
+
+	    Fvs(i) += ((grad_lambda_y(alpha)-P(1,alpha))*solid_dphi[i][sqp](alpha) 
+		       + lambda_y*solid_phi[i][sqp])*jac;
 	  }
 
 	if( compute_jacobian )
@@ -1064,43 +1067,42 @@ namespace GRINS
 
 		v_coeffs(j) += delta;
 
-		// Finite differncing the grad_lambda terms		
+		// Finite differencing the grad_lambda terms		
 		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 		  {
-		    Kus_us(i,j) += (((grad_lmx_upd-grad_lmx_umd)/(2*delta))*solid_dphi[i][sqp] 
-				    + lambda_x*solid_phi[i][sqp] - P(0,alpha)*solid_dphi[i][sqp](alpha))*jac;
+		    Kus_us(i,j) += ((((grad_lmx_upd(alpha)-grad_lmx_umd(alpha))/(2*delta))
+				     -P(0,alpha))*solid_dphi[i][sqp](alpha) 
+				    + lambda_x*solid_phi[i][sqp])*jac;
 
-		    Kvs_us(i,j) += (((grad_lmy_upd-grad_lmy_umd)/(2*delta))*solid_dphi[i][sqp] 
-				    + lambda_y*solid_phi[i][sqp] - P(1,alpha)*solid_dphi[i][sqp](alpha))*jac;
+		    Kvs_us(i,j) += ((((grad_lmy_upd(alpha)-grad_lmy_umd(alpha))/(2*delta))
+				     -P(1,alpha))*solid_dphi[i][sqp](alpha) 
+				    + lambda_y*solid_phi[i][sqp])*jac;
 
-		    Kus_vs(i,j) += (((grad_lmx_vpd-grad_lmx_vmd)/(2*delta))*solid_dphi[i][sqp] 
-				    + lambda_x*solid_phi[i][sqp] - P(0,alpha)*solid_dphi[i][sqp](alpha))*jac;
+		    Kus_vs(i,j) += ((((grad_lmx_vpd(alpha)-grad_lmx_vmd(alpha))/(2*delta))
+				     -P(0,alpha))*solid_dphi[i][sqp](alpha) 
+				    + lambda_x*solid_phi[i][sqp])*jac;
 
-		    Kvs_vs(i,j) += (((grad_lmy_vpd-grad_lmy_vmd)/(2*delta))*solid_dphi[i][sqp] 
-				    + lambda_y*solid_phi[i][sqp] - P(1,alpha)*solid_dphi[i][sqp](alpha))*jac;
+		    Kvs_vs(i,j) += ((((grad_lmy_vpd(alpha)-grad_lmy_vmd(alpha))/(2*delta))
+				     -P(1,alpha))*solid_dphi[i][sqp](alpha) 
+				    + lambda_y*solid_phi[i][sqp])*jac;
 		  }
 
-		// Finite differncing the lambda terms		
+		// Finite differencing the lambda terms		
 		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 		  {
-		    Kus_us(i,j) += (grad_lambda_x*solid_dphi[i][sqp] 
-				    + ((lmx_upd-lmx_umd)/(2*delta))*solid_phi[i][sqp] 
-				    - P(0,alpha)*solid_dphi[i][sqp](alpha))*jac;
-
-		    Kvs_us(i,j) += (grad_lambda_y*solid_dphi[i][sqp] 
-				    + ((lmy_upd-lmy_umd)/(2*delta))*solid_phi[i][sqp] 
-				    - P(1,alpha)*solid_dphi[i][sqp](alpha))*jac;
-
-		    Kus_vs(i,j) += (grad_lambda_x*solid_dphi[i][sqp] 
-				    + ((lmx_vpd-lmx_vmd)/(2*delta))*solid_phi[i][sqp] 
-				    - P(0,alpha)*solid_dphi[i][sqp](alpha))*jac;
-
-		    Kvs_vs(i,j) += (grad_lambda_y*solid_dphi[i][sqp] 
-				    + ((lmy_vpd-lmy_vmd)/(2*delta))*solid_phi[i][sqp] 
-				    - P(1,alpha)*solid_dphi[i][sqp](alpha))*jac;
+		    Kus_us(i,j) += ((grad_lambda_x(alpha)-P(0,alpha))*solid_dphi[i][sqp](alpha) 
+				    + ((lmx_upd-lmx_umd)/(2*delta))*solid_phi[i][sqp])*jac;
+		    
+		    Kvs_us(i,j) += ((grad_lambda_y(alpha)-P(1,alpha))*solid_dphi[i][sqp](alpha) 
+				    + ((lmy_upd-lmy_umd)/(2*delta))*solid_phi[i][sqp])*jac;
+		    
+		    Kus_vs(i,j) += ((grad_lambda_x(alpha)-P(0,alpha))*solid_dphi[i][sqp](alpha) 
+				    + ((lmx_vpd-lmx_vmd)/(2*delta))*solid_phi[i][sqp])*jac;
+		    
+		    Kvs_vs(i,j) += ((grad_lambda_y(alpha)-P(1,alpha))*solid_dphi[i][sqp](alpha) 
+				    + ((lmy_vpd-lmy_vmd)/(2*delta))*solid_phi[i][sqp])*jac;
 		  }	
-
-
+	
 		// Finite differencing P terms
 
 		u_coeffs(j) += delta;
@@ -1134,77 +1136,93 @@ namespace GRINS
 		
 		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 		  {
-		    Kus_us(i,j) += (grad_lambda_x*solid_dphi[i][sqp] + lambda_x*solid_phi[i][sqp] 
-				    - ((P_upd(0,alpha)-P_umd(0,alpha))/(2*delta))*solid_dphi[i][sqp](alpha))*jac;
+		    Kus_us(i,j) += ((grad_lambda_x(alpha)
+				     -((P_upd(0,alpha)-P_umd(0,alpha))/(2*delta)))*solid_dphi[i][sqp](alpha) 
+				    + lambda_x*solid_phi[i][sqp])*jac;
 
-		    Kvs_us(i,j) += (grad_lambda_y*solid_dphi[i][sqp] + lambda_y*solid_phi[i][sqp] 
-				    - ((P_upd(1,alpha)-P_umd(1,alpha))/(2*delta))*solid_dphi[i][sqp](alpha))*jac;
+		    Kvs_us(i,j) += ((grad_lambda_y(alpha)
+				     -((P_upd(1,alpha)-P_umd(1,alpha))/(2*delta)))*solid_dphi[i][sqp](alpha) 
+				    + lambda_y*solid_phi[i][sqp])*jac;
 
-		    Kus_vs(i,j) += (grad_lambda_x*solid_dphi[i][sqp] + lambda_x*solid_phi[i][sqp] 
-				    - ((P_vpd(0,alpha)-P_vmd(0,alpha))/(2*delta))*solid_dphi[i][sqp](alpha))*jac;
+		    Kus_vs(i,j) += ((grad_lambda_x(alpha)
+				     -((P_vpd(0,alpha)-P_vmd(0,alpha))/(2*delta)))*solid_dphi[i][sqp](alpha) 
+				    + lambda_x*solid_phi[i][sqp])*jac;
 
-		    Kvs_vs(i,j) += (grad_lambda_y*solid_dphi[i][sqp] + lambda_y*solid_phi[i][sqp] 
-				    - ((P_vpd(1,alpha)-P_vmd(1,alpha))/(2*delta))*solid_dphi[i][sqp](alpha))*jac;
+		    Kvs_vs(i,j) += ((grad_lambda_y(alpha)
+				     -((P_vpd(1,alpha)-P_vmd(1,alpha))/(2*delta)))*solid_dphi[i][sqp](alpha) 
+				    + lambda_y*solid_phi[i][sqp])*jac;
 		  }		    
 
 		// Compute solid_phi and solid_dphi derivative terms
 	
 		u_coeffs(j) += delta;
 
-		const std::vector<std::vector<libMesh::Real> > solid_phi_upd = solid_context.get_element_fe(this->_disp_vars.u(),2)->get_phi();
-		const std::vector<std::vector<libMesh::RealGradient> > solid_dphi_upd = solid_context.get_element_fe(this->_disp_vars.u(),2)->get_dphi();
+		const std::vector<std::vector<libMesh::Real> > solid_phi_upd = 
+		  solid_context.get_element_fe(this->_disp_vars.u(),2)->get_phi();
+		const std::vector<std::vector<libMesh::RealGradient> > solid_dphi_upd = 
+		  solid_context.get_element_fe(this->_disp_vars.u(),2)->get_dphi();
 		
 		u_coeffs(j) -= 2*delta;
 
-		const std::vector<std::vector<libMesh::Real> > solid_phi_umd = solid_context.get_element_fe(this->_disp_vars.u(),2)->get_phi();
-		const std::vector<std::vector<libMesh::RealGradient> > solid_dphi_umd = solid_context.get_element_fe(this->_disp_vars.u(),2)->get_dphi();
+		const std::vector<std::vector<libMesh::Real> > solid_phi_umd = 
+		  solid_context.get_element_fe(this->_disp_vars.u(),2)->get_phi();
+		const std::vector<std::vector<libMesh::RealGradient> > solid_dphi_umd = 
+		  solid_context.get_element_fe(this->_disp_vars.u(),2)->get_dphi();
 		
 		u_coeffs(j) += delta;
 
 		v_coeffs(j) += delta;
 
-		const std::vector<std::vector<libMesh::Real> > solid_phi_vpd = solid_context.get_element_fe(this->_disp_vars.u(),2)->get_phi();
-		const std::vector<std::vector<libMesh::RealGradient> > solid_dphi_vpd = solid_context.get_element_fe(this->_disp_vars.u(),2)->get_dphi();
+		const std::vector<std::vector<libMesh::Real> > solid_phi_vpd = 
+		  solid_context.get_element_fe(this->_disp_vars.u(),2)->get_phi();
+		const std::vector<std::vector<libMesh::RealGradient> > solid_dphi_vpd = 
+		  solid_context.get_element_fe(this->_disp_vars.u(),2)->get_dphi();
 		
 		v_coeffs(j) -= 2*delta;
 
-		const std::vector<std::vector<libMesh::Real> > solid_phi_vmd = solid_context.get_element_fe(this->_disp_vars.u(),2)->get_phi();
-		const std::vector<std::vector<libMesh::RealGradient> > solid_dphi_vmd = solid_context.get_element_fe(this->_disp_vars.u(),2)->get_dphi();
+		const std::vector<std::vector<libMesh::Real> > solid_phi_vmd = 
+		  solid_context.get_element_fe(this->_disp_vars.u(),2)->get_phi();
+		const std::vector<std::vector<libMesh::RealGradient> > solid_dphi_vmd 
+		  = solid_context.get_element_fe(this->_disp_vars.u(),2)->get_dphi();
 		
 		v_coeffs(j) += delta;
 
 		//Finite differencing the solid_dphi terms
 		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 		  {
-		    Kus_us(i,j) += (grad_lambda_x*((solid_dphi_upd[i][sqp]-solid_dphi_umd[i][sqp])/(2*delta)) + lambda_x*solid_phi[i][sqp]
-				    - P(0,alpha)*((solid_dphi_upd[i][sqp](alpha)-solid_dphi_umd[i][sqp](alpha))/(2*delta)))*jac;
+		    Kus_us(i,j) += ((grad_lambda_x(alpha)-P(0,alpha))
+				    *((solid_dphi_upd[i][sqp](alpha)-solid_dphi_umd[i][sqp](alpha))/(2*delta)) 
+				    + lambda_x*solid_phi[i][sqp])*jac;
+				    
+		    Kvs_us(i,j) += ((grad_lambda_y(alpha)-P(1,alpha))
+				    *((solid_dphi_upd[i][sqp](alpha)-solid_dphi_umd[i][sqp](alpha))/(2*delta)) 
+				    + lambda_y*solid_phi[i][sqp])*jac;
 
-		    Kvs_us(i,j) += (grad_lambda_y*((solid_dphi_upd[i][sqp]-solid_dphi_umd[i][sqp])/(2*delta)) + lambda_y*solid_phi[i][sqp]
-				    - P(1,alpha)*((solid_dphi_upd[i][sqp](alpha)-solid_dphi_umd[i][sqp](alpha))/(2*delta)))*jac;
-
-		    Kus_vs(i,j) += (grad_lambda_x*((solid_dphi_vpd[i][sqp]-solid_dphi_vmd[i][sqp])/(2*delta)) + lambda_x*solid_phi[i][sqp]
-				    - P(0,alpha)*((solid_dphi_vpd[i][sqp](alpha)-solid_dphi_vmd[i][sqp](alpha))/(2*delta)))*jac;
+		    Kus_vs(i,j) += ((grad_lambda_x(alpha)-P(0,alpha))
+				    *((solid_dphi_vpd[i][sqp](alpha)-solid_dphi_vmd[i][sqp](alpha))/(2*delta)) 
+				    + lambda_x*solid_phi[i][sqp])*jac;
 		    
-		    Kvs_vs(i,j) += (grad_lambda_y*((solid_dphi_vpd[i][sqp]-solid_dphi_vmd[i][sqp])/(2*delta)) + lambda_y*solid_phi[i][sqp]
-				    - P(1,alpha)*((solid_dphi_vpd[i][sqp](alpha)-solid_dphi_vmd[i][sqp](alpha))/(2*delta)))*jac;
+		    Kvs_vs(i,j) += ((grad_lambda_y(alpha)-P(1,alpha))
+				    *((solid_dphi_vpd[i][sqp](alpha)-solid_dphi_vmd[i][sqp](alpha))/(2*delta)) 
+				    + lambda_y*solid_phi[i][sqp])*jac;
 		  }
 
 		//Finite differencing the solid_phi terms
 		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 		  {
-		    Kus_us(i,j) += (grad_lambda_x*solid_dphi[i][sqp] + lambda_x*((solid_phi_upd[i][sqp]-solid_phi_umd[i][sqp])/(2*delta)) 
-				    - P(0,alpha)*solid_dphi[i][sqp](alpha))*jac;
-
-		    Kvs_us(i,j) += (grad_lambda_y*solid_dphi[i][sqp] + lambda_y*((solid_phi_upd[i][sqp]-solid_phi_umd[i][sqp])/(2*delta)) 
-				    - P(1,alpha)*solid_dphi[i][sqp](alpha))*jac;
-
-		    Kus_vs(i,j) += (grad_lambda_x*solid_dphi[i][sqp] + lambda_x*((solid_phi_vpd[i][sqp]-solid_phi_vmd[i][sqp])/(2*delta)) 
-				    - P(0,alpha)*solid_dphi[i][sqp](alpha))*jac;
+		    Kus_us(i,j) += ((grad_lambda_x(alpha)-P(0,alpha))*solid_dphi[i][sqp](alpha) 
+				    + lambda_x*((solid_phi_upd[i][sqp]-solid_phi_umd[i][sqp])/(2*delta)))*jac;
 		    
-		    Kvs_vs(i,j) += (grad_lambda_y*solid_dphi[i][sqp] + lambda_y*((solid_phi_vpd[i][sqp]-solid_phi_vmd[i][sqp])/(2*delta)) 
-				    - P(1,alpha)*solid_dphi[i][sqp](alpha))*jac;
+		    Kvs_us(i,j) += ((grad_lambda_y(alpha)-P(1,alpha))*solid_dphi[i][sqp](alpha) 
+				    + lambda_y*((solid_phi_upd[i][sqp]-solid_phi_umd[i][sqp])/(2*delta)))*jac;
+		    
+		    Kus_vs(i,j) += ((grad_lambda_x(alpha)-P(0,alpha))*solid_dphi[i][sqp](alpha) 
+				    + lambda_x*((solid_phi_vpd[i][sqp]-solid_phi_vmd[i][sqp])/(2*delta)))*jac;
+		    
+		    Kvs_vs(i,j) += ((grad_lambda_y(alpha)-P(1,alpha))*solid_dphi[i][sqp](alpha) 
+				    + lambda_y*((solid_phi_vpd[i][sqp]-solid_phi_vmd[i][sqp])/(2*delta)))*jac;
 		  }
-
+		
 	      } //solid dof loop
 
 	    // solid-lambda block
@@ -1262,37 +1280,37 @@ namespace GRINS
 		//Finite differencing the grad_lambda terms
 		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 		  {
-		    Kus_ulm(i,j) += (((grad_lmx_xpd-grad_lmx_xmd)/(2*delta))*solid_dphi[i][sqp] 
-				     + lambda_x*solid_phi[i][sqp] - P(0,alpha)*solid_dphi[i][sqp](alpha))*jac;
+		    Kus_ulm(i,j) += ((((grad_lmx_xpd(alpha)-grad_lmx_xmd(alpha))/(2*delta)) 
+				      - P(0,alpha))*solid_dphi[i][sqp](alpha) 
+				     + lambda_x*solid_phi[i][sqp])*jac;
 		    
-		    Kvs_ulm(i,j) += (((grad_lmy_xpd-grad_lmy_xmd)/(2*delta))*solid_dphi[i][sqp] 
-				     + lambda_x*solid_phi[i][sqp] - P(0,alpha)*solid_dphi[i][sqp](alpha))*jac;
+		    Kvs_ulm(i,j) += ((((grad_lmy_xpd(alpha)-grad_lmy_xmd(alpha))/(2*delta)) 
+				      - P(1,alpha))*solid_dphi[i][sqp](alpha) 
+				     + lambda_y*solid_phi[i][sqp])*jac;
 		    
-		    Kus_vlm(i,j) += (((grad_lmx_ypd-grad_lmx_ymd)/(2*delta))*solid_dphi[i][sqp] 
-				     + lambda_x*solid_phi[i][sqp] - P(0,alpha)*solid_dphi[i][sqp](alpha))*jac;
+		    Kus_vlm(i,j) += ((((grad_lmx_ypd(alpha)-grad_lmx_ymd(alpha))/(2*delta)) 
+				      - P(0,alpha))*solid_dphi[i][sqp](alpha) 
+				     + lambda_x*solid_phi[i][sqp])*jac;
 		    
-		    Kvs_vlm(i,j) += (((grad_lmy_ypd-grad_lmy_ymd)/(2*delta))*solid_dphi[i][sqp] 
-				     + lambda_y*solid_phi[i][sqp] - P(1,alpha)*solid_dphi[i][sqp](alpha))*jac;
+		    Kvs_vlm(i,j) += ((((grad_lmy_ypd(alpha)-grad_lmy_ymd(alpha))/(2*delta)) 
+				      - P(1,alpha))*solid_dphi[i][sqp](alpha) 
+				     + lambda_y*solid_phi[i][sqp])*jac;
 		  }
 		
 		//Finite differencing the lambda terms	
 		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 		  {
-		    Kus_ulm(i,j) += (grad_lambda_x*solid_dphi[i][sqp] 
-				     + ((lmx_xpd-lmx_xmd)/(2*delta))*solid_phi[i][sqp] 
-				     - P(0,alpha)*solid_dphi[i][sqp](alpha))*jac;
-
-		    Kvs_ulm(i,j) += (grad_lambda_x*solid_dphi[i][sqp] 
-				     + ((lmy_xpd-lmy_xmd)/(2*delta))*solid_phi[i][sqp] 
-				     - P(0,alpha)*solid_dphi[i][sqp](alpha))*jac;
+		    Kus_ulm(i,j) += ((grad_lambda_x(alpha)-P(0,alpha))*solid_dphi[i][sqp](alpha) 
+				     + ((lmx_xpd-lmx_xmd)/(2*delta))*solid_phi[i][sqp])*jac;
 		    
-		    Kus_vlm(i,j) += (grad_lambda_x*solid_dphi[i][sqp] 
-				     + ((lmx_ypd-lmx_ymd)/(2*delta))*solid_phi[i][sqp] 
-				     - P(0,alpha)*solid_dphi[i][sqp](alpha))*jac;
+		    Kvs_ulm(i,j) += ((grad_lambda_y(alpha)-P(1,alpha))*solid_dphi[i][sqp](alpha) 
+				     + ((lmy_xpd-lmy_xmd)/(2*delta))*solid_phi[i][sqp])*jac;
 		    
-		    Kvs_vlm(i,j) += (grad_lambda_y*solid_dphi[i][sqp] 
-				     + ((lmy_ypd-lmy_ymd)/(2*delta))*solid_phi[i][sqp] 
-				     - P(1,alpha)*solid_dphi[i][sqp](alpha))*jac;
+		    Kus_vlm(i,j) += ((grad_lambda_x(alpha)-P(0,alpha))*solid_dphi[i][sqp](alpha) 
+				     + ((lmx_ypd-lmx_ymd)/(2*delta))*solid_phi[i][sqp])*jac;
+		    
+		    Kvs_vlm(i,j) += ((grad_lambda_y(alpha)-P(1,alpha))*solid_dphi[i][sqp](alpha) 
+				     + ((lmy_ypd-lmy_ymd)/(2*delta))*solid_phi[i][sqp])*jac;
 		  }
 		
 	      } //lambda dof loop
