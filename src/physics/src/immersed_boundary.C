@@ -947,36 +947,36 @@ namespace GRINS
 		lambda_ycoeff(j) += delta;
 
 
-		//Finite differencing the grad_lambda terms		
+		//Finite differencing the grad_lambda terms
 		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 		  {
-		    Kuf_ulm(i,j) -= (((grad_lmx_xpd-grad_lmx_xmd)/(2*delta))*fluid_dphi[i][0]*F(0,alpha) 
-				     + lambda_x*fluid_phi[i][0])*jac;
+		    Kuf_ulm(i,j) -= (((grad_lmx_xpd(alpha)-grad_lmx_xmd(alpha))/(2*delta))*fdphi_times_F(0,alpha) 
+				    + lambda_x*fluid_phi[i][0])*jac;
 
-		    Kvf_ulm(i,j) -= (((grad_lmy_xpd-grad_lmy_xmd)/(2*delta))*fluid_dphi[i][0]*F(0,alpha) 
-				     + lambda_x*fluid_phi[i][0])*jac;
+		    Kvf_ulm(i,j) -= (((grad_lmy_xpd(alpha)-grad_lmy_xmd(alpha))/(2*delta))*fdphi_times_F(1,alpha) 
+				    + lambda_y*fluid_phi[i][0])*jac;
 		    
-		    Kuf_vlm(i,j) -= (((grad_lmx_ypd-grad_lmx_ymd)/(2*delta))*fluid_dphi[i][0]*F(0,alpha) 
-				     + lambda_x*fluid_phi[i][0])*jac;
-		    	    
-		    Kvf_vlm(i,j) -= (((grad_lmy_ypd-grad_lmy_ymd)/(2*delta))*fluid_dphi[i][0]*F(1,alpha) 
-				     + lambda_y*fluid_phi[i][0])*jac;
+		    Kuf_vlm(i,j) -= (((grad_lmx_ypd(alpha)-grad_lmx_ymd(alpha))/(2*delta))*fdphi_times_F(0,alpha) 
+				    + lambda_x*fluid_phi[i][0])*jac;
+		    
+		    Kvf_vlm(i,j) -= (((grad_lmy_ypd(alpha)-grad_lmy_ymd(alpha))/(2*delta))*fdphi_times_F(1,alpha) 
+				    + lambda_y*fluid_phi[i][0])*jac;
 		  }
-
+		
 		//Finite differencing the lambda terms		
 		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 		  {
-		    Kuf_ulm(i,j) -= (grad_lambda_x*fluid_dphi[i][0]*F(0,alpha) 
-				     + ((lmx_xpd-lmx_xmd)/(2*delta))*fluid_phi[i][0])*jac;
+		    Kuf_ulm(i,j) -= (grad_lambda_x(alpha)*fdphi_times_F(0,alpha) 
+				    + ((lmx_xpd-lmx_xmd)/(2*delta))*fluid_phi[i][0])*jac;
 
-		    Kvf_ulm(i,j) -= (grad_lambda_x*fluid_dphi[i][0]*F(0,alpha) 
-				     + ((lmy_xpd-lmy_xmd)/(2*delta))*fluid_phi[i][0])*jac;
+		    Kvf_ulm(i,j) -= (grad_lambda_y(alpha)*fdphi_times_F(1,alpha) 
+				    + ((lmy_xpd-lmy_xmd)/(2*delta))*fluid_phi[i][0])*jac;
 		    
-		    Kuf_vlm(i,j) -= (grad_lambda_x*fluid_dphi[i][0]*F(0,alpha) 
-				     + ((lmx_ypd-lmx_ymd)/(2*delta))*fluid_phi[i][0])*jac;
+		    Kuf_vlm(i,j) -= (grad_lambda_x(alpha)*fdphi_times_F(0,alpha) 
+				    + ((lmx_ypd-lmx_ymd)/(2*delta))*fluid_phi[i][0])*jac;
 		    
-		    Kvf_vlm(i,j) -= (grad_lambda_y*fluid_dphi[i][0]*F(1,alpha) 
-				     + ((lmy_ypd-lmy_ymd)/(2*delta))*fluid_phi[i][0])*jac;
+		    Kvf_vlm(i,j) -= (grad_lambda_y(alpha)*fdphi_times_F(1,alpha) 
+				    + ((lmy_ypd-lmy_ymd)/(2*delta))*fluid_phi[i][0])*jac;
 		  }
 
 	      } //lambda dof loop
