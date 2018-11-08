@@ -1376,11 +1376,6 @@ namespace GRINS
     libMesh::DenseSubVector<libMesh::Number> fluid_ucoeff = fluid_context.get_elem_solution(this->_flow_vars.u());
     libMesh::DenseSubVector<libMesh::Number> fluid_vcoeff = fluid_context.get_elem_solution(this->_flow_vars.v());
 
-    const std::vector<std::vector<libMesh::Real> > fluid_phi = 
-      fluid_context.get_element_fe(this->_flow_vars.u())->get_phi();
-    const std::vector<std::vector<libMesh::Real> > solid_phi = 
-      solid_context.get_element_fe(this->_disp_vars.u(),2)->get_phi();
-
     // Prepare lagrange multiplier info needed
     const std::vector<std::vector<libMesh::Real> > & lambda_phi =
       solid_context.get_element_fe(this->_lambda_var.u(),2)->get_phi();
@@ -1651,59 +1646,53 @@ namespace GRINS
 		libMesh::Real Vx_upd, Vy_upd, Vx_umd, Vy_umd;
 		libMesh::Gradient grad_Vx_upd, grad_Vy_upd, grad_Vx_umd, grad_Vy_umd;
 
-		{	   
-		  u_coeffs(j) += delta;
-		  
-		  this->prepare_fluid_context(system,solid_context,solid_qpoints,sqp,fluid_elem_id,fluid_context);
-		
-		  fluid_context.interior_value(this->_flow_vars.u(), 0, Vx_upd);
-		  fluid_context.interior_value(this->_flow_vars.v(), 0, Vy_upd);
-
-		  fluid_context.interior_gradient(this->_flow_vars.u(), 0, grad_Vx_upd);
-		  fluid_context.interior_gradient(this->_flow_vars.v(), 0, grad_Vy_upd);
-		}
-
-		{
-		  u_coeffs(j) -= 2*delta;
-		  
-		  this->prepare_fluid_context(system,solid_context,solid_qpoints,sqp,fluid_elem_id,fluid_context);
-		
-		  fluid_context.interior_value(this->_flow_vars.u(), 0, Vx_umd);
-		  fluid_context.interior_value(this->_flow_vars.v(), 0, Vy_umd);
-
-		  fluid_context.interior_gradient(this->_flow_vars.u(), 0, grad_Vx_umd);
-		  fluid_context.interior_gradient(this->_flow_vars.v(), 0, grad_Vy_umd);
-		}
 		u_coeffs(j) += delta;
 		
 		this->prepare_fluid_context(system,solid_context,solid_qpoints,sqp,fluid_elem_id,fluid_context);
-
+		
+		fluid_context.interior_value(this->_flow_vars.u(), 0, Vx_upd);
+		fluid_context.interior_value(this->_flow_vars.v(), 0, Vy_upd);
+		
+		fluid_context.interior_gradient(this->_flow_vars.u(), 0, grad_Vx_upd);
+		fluid_context.interior_gradient(this->_flow_vars.v(), 0, grad_Vy_upd);
+	      
+		u_coeffs(j) -= 2*delta;
+		
+		this->prepare_fluid_context(system,solid_context,solid_qpoints,sqp,fluid_elem_id,fluid_context);
+		
+		fluid_context.interior_value(this->_flow_vars.u(), 0, Vx_umd);
+		fluid_context.interior_value(this->_flow_vars.v(), 0, Vy_umd);
+		
+		fluid_context.interior_gradient(this->_flow_vars.u(), 0, grad_Vx_umd);
+		fluid_context.interior_gradient(this->_flow_vars.v(), 0, grad_Vy_umd);
+		
+		u_coeffs(j) += delta;
+		
+		this->prepare_fluid_context(system,solid_context,solid_qpoints,sqp,fluid_elem_id,fluid_context);
+		
 		libMesh::Real Vx_vpd, Vy_vpd, Vx_vmd, Vy_vmd;
 		libMesh::Gradient grad_Vx_vpd, grad_Vy_vpd, grad_Vx_vmd, grad_Vy_vmd;
 
-		{	   
-		  v_coeffs(j) += delta;
-		  
-		  this->prepare_fluid_context(system,solid_context,solid_qpoints,sqp,fluid_elem_id,fluid_context);
+		v_coeffs(j) += delta;
 		
-		  fluid_context.interior_value(this->_flow_vars.u(), 0, Vx_vpd);
-		  fluid_context.interior_value(this->_flow_vars.v(), 0, Vy_vpd);
-
-		  fluid_context.interior_gradient(this->_flow_vars.u(), 0, grad_Vx_vpd);
-		  fluid_context.interior_gradient(this->_flow_vars.v(), 0, grad_Vy_vpd);
-		}
-
-		{
-		  v_coeffs(j) -= 2*delta;
-		  
-		  this->prepare_fluid_context(system,solid_context,solid_qpoints,sqp,fluid_elem_id,fluid_context);
+		this->prepare_fluid_context(system,solid_context,solid_qpoints,sqp,fluid_elem_id,fluid_context);
 		
-		  fluid_context.interior_value(this->_flow_vars.u(), 0, Vx_vmd);
-		  fluid_context.interior_value(this->_flow_vars.v(), 0, Vy_vmd);
+		fluid_context.interior_value(this->_flow_vars.u(), 0, Vx_vpd);
+		fluid_context.interior_value(this->_flow_vars.v(), 0, Vy_vpd);
+		
+		fluid_context.interior_gradient(this->_flow_vars.u(), 0, grad_Vx_vpd);
+		fluid_context.interior_gradient(this->_flow_vars.v(), 0, grad_Vy_vpd);
+	    
+		v_coeffs(j) -= 2*delta;
+		  
+		this->prepare_fluid_context(system,solid_context,solid_qpoints,sqp,fluid_elem_id,fluid_context);
+		
+		fluid_context.interior_value(this->_flow_vars.u(), 0, Vx_vmd);
+		fluid_context.interior_value(this->_flow_vars.v(), 0, Vy_vmd);
 
-		  fluid_context.interior_gradient(this->_flow_vars.u(), 0, grad_Vx_vmd);
-		  fluid_context.interior_gradient(this->_flow_vars.v(), 0, grad_Vy_vmd);
-		}
+		fluid_context.interior_gradient(this->_flow_vars.u(), 0, grad_Vx_vmd);
+		fluid_context.interior_gradient(this->_flow_vars.v(), 0, grad_Vy_vmd);
+	      
 		v_coeffs(j) += delta;
 		
 		// Finite differencing the grad_V terms w.r.t solid
