@@ -1593,12 +1593,11 @@ namespace GRINS
 	  }
 	*/
 	//L2 Norm
-	for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
-	  {
-	    Fulm(i) += lambda_phi[i][sqp]*(Vx - udot)*jac;
-
-	    Fvlm(i) += lambda_phi[i][sqp]*(Vy - vdot)*jac;
-	  }
+	
+	Fulm(i) += lambda_phi[i][sqp]*(Vx - udot)*jac;
+	
+	Fvlm(i) += lambda_phi[i][sqp]*(Vy - vdot)*jac;
+	
 
 	if( compute_jacobian )
 	  {
@@ -1700,16 +1699,15 @@ namespace GRINS
 		*/
 		//L2 Norm
 		//Finite differencing the V terms w.r.t fluid
-		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
-		  {
-		    Kulm_uf(i,j) += lambda_phi[i][sqp]*(((Vx_upd-Vx_umd)/(2*delta)) - udot)*jac;
+		
+		Kulm_uf(i,j) += lambda_phi[i][sqp]*((Vx_upd-Vx_umd)/(2*delta))*jac;
+		
+		Kvlm_uf(i,j) += lambda_phi[i][sqp]*((Vy_upd-Vy_umd)/(2*delta))*jac;
+		
+		Kulm_vf(i,j) += lambda_phi[i][sqp]*((Vx_vpd-Vx_vmd)/(2*delta))*jac;
+		
+		Kvlm_vf(i,j) += lambda_phi[i][sqp]*((Vy_vpd-Vy_vmd)/(2*delta))*jac;
 		    
-		    Kvlm_uf(i,j) += lambda_phi[i][sqp]*(((Vy_upd-Vy_umd)/(2*delta)) - vdot)*jac;
-		    
-		    Kulm_vf(i,j) += lambda_phi[i][sqp]*(((Vx_vpd-Vx_vmd)/(2*delta)) - udot)*jac;
-		    
-		    Kvlm_vf(i,j) += lambda_phi[i][sqp]*(((Vy_vpd-Vy_vmd)/(2*delta)) - vdot)*jac;
-		  }
 
 	      } //fluid dof loop
 
@@ -1927,19 +1925,17 @@ namespace GRINS
 		*/
 		//L2 Norm
 		//Finite differencing the V terms w.r.t solid
-		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
-		  {
-		    Kulm_us(i,j) += lambda_phi[i][sqp]*(((Vx_upd-Vx_umd)/(2*delta)) - udot)*jac;
-		    
-		    Kvlm_us(i,j) += lambda_phi[i][sqp]*(((Vy_upd-Vy_umd)/(2*delta)) - vdot)*jac;
-		    
-		    Kulm_vs(i,j) += lambda_phi[i][sqp]*(((Vx_vpd-Vx_vmd)/(2*delta)) - udot)*jac;
-		    
-		    Kvlm_vs(i,j) += lambda_phi[i][sqp]*(((Vy_vpd-Vy_vmd)/(2*delta)) - vdot)*jac;
-		  }
-
+		
+		Kulm_us(i,j) += lambda_phi[i][sqp]*((Vx_upd-Vx_umd)/(2*delta))*jac;
+		
+		Kvlm_us(i,j) += lambda_phi[i][sqp]*((Vy_upd-Vy_umd)/(2*delta))*jac;
+		
+		Kulm_vs(i,j) += lambda_phi[i][sqp]*((Vx_vpd-Vx_vmd)/(2*delta))*jac;
+		
+		Kvlm_vs(i,j) += lambda_phi[i][sqp]*((Vy_vpd-Vy_vmd)/(2*delta))*jac;
+		
 		this->prepare_fluid_context(system,solid_context,solid_qpoints,sqp,fluid_elem_id,fluid_context);
-
+		
 		//Finite differencing the udot and vdot terms
 
 		u_coeffs(j) += delta;
@@ -1987,17 +1983,19 @@ namespace GRINS
 		  }
 		*/
 		//L2 Norm
-		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
-		  {
-		    Kulm_us(i,j) += lambda_phi[i][sqp]*(Vx - ((udot_upd-udot_umd)/(2*delta)))*jac;
-		    
-		    Kvlm_us(i,j) += lambda_phi[i][sqp]*(Vy - ((vdot_upd-vdot_umd)/(2*delta)))*jac;
-		    
-		    Kulm_vs(i,j) += lambda_phi[i][sqp]*(Vx - ((udot_vpd-udot_vmd)/(2*delta)))*jac;
-		    
-		    Kvlm_vs(i,j) += lambda_phi[i][sqp]*(Vy - ((vdot_vpd-vdot_vmd)/(2*delta)))*jac;
-		  }
+	
+		Kulm_us(i,j) -= lambda_phi[i][sqp]*((udot_upd-udot_umd)/(2*delta))*jac;
+		
+		Kvlm_us(i,j) -= lambda_phi[i][sqp]*((vdot_upd-vdot_umd)/(2*delta))*jac;
+		
+		Kulm_vs(i,j) -= lambda_phi[i][sqp]*((udot_vpd-udot_vmd)/(2*delta))*jac;
+		
+		Kvlm_vs(i,j) -= lambda_phi[i][sqp]*((vdot_vpd-vdot_vmd)/(2*delta))*jac;
+		
+		
+		//lambda terms not dependent on solid. No need to differentiate
 
+		/*
 		// Computing lambda_phi and lambda_dphi derivative terms
 	
 		u_coeffs(j) += delta;
@@ -2031,7 +2029,7 @@ namespace GRINS
 		//  solid_context.get_element_fe(this->_lambda_var.u(),2)->get_dphi();
 		
 		v_coeffs(j) += delta;
-		/*
+		
 		//H1 Norm
 		// Finite differencing the lambda_dphi terms
 		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
@@ -2069,7 +2067,7 @@ namespace GRINS
 		    Kvlm_vs(i,j) += (lambda_dphi[i][sqp](alpha)*(gradV_times_F(1,alpha) - Fdot(1,alpha)) 
 				     + ((lambda_phi_vpd[i][sqp]-lambda_phi_vmd[i][sqp])/(2*delta))*(Vy - vdot))*jac;
 		  }
-		*/
+		
 		//L2 Norm
 		//Finite differencing the lambda_phi terms
 		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
@@ -2082,6 +2080,8 @@ namespace GRINS
 		    
 		    Kvlm_vs(i,j) += ((lambda_phi_vpd[i][sqp]-lambda_phi_vmd[i][sqp])/(2*delta))*(Vy - vdot)*jac;
 		  }
+
+		*/
 
 	      } // solid dof loop
 
