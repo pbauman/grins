@@ -672,11 +672,8 @@ namespace GRINS
 	  }
 	*/
 	// L2 Norm
-	for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
-	  {
-	    Fuf(i) -= lambda_x*fluid_phi[i][0]*jac;
-	    Fvf(i) -= lambda_y*fluid_phi[i][0]*jac;
-	  }
+	Fuf(i) -= lambda_x*fluid_phi[i][0]*jac;
+	Fvf(i) -= lambda_y*fluid_phi[i][0]*jac;
 	
 	if( compute_jacobian )
 	  {
@@ -684,24 +681,27 @@ namespace GRINS
 	    for (unsigned int j=0; j != n_solid_dofs; j++)
 	      {
 
+		//Lambda terms don't vary with solid so we don't need this
+
+		/*
 		// Computing the grad_lambda and lambda derivative terms w.r.t solid
 
 		u_coeffs(j) += delta;
-		/*
+	       
 		libMesh::Gradient grad_lmx_upd, grad_lmy_upd;
 		solid_context.interior_gradient(this->_lambda_var.u(), sqp, grad_lmx_upd);
 		solid_context.interior_gradient(this->_lambda_var.v(), sqp, grad_lmy_upd);
-		*/
+	       
 		libMesh::Real lmx_upd, lmy_upd;
 		solid_context.interior_value(this->_lambda_var.u(), sqp, lmx_upd);
 		solid_context.interior_value(this->_lambda_var.v(), sqp, lmy_upd);
 
 		u_coeffs(j) -= 2*delta;
-		/*
+		
 		libMesh::Gradient grad_lmx_umd, grad_lmy_umd;
 		solid_context.interior_gradient(this->_lambda_var.u(), sqp, grad_lmx_umd);
 		solid_context.interior_gradient(this->_lambda_var.v(), sqp, grad_lmy_umd);
-		*/
+		
 		libMesh::Real lmx_umd, lmy_umd;
 		solid_context.interior_value(this->_lambda_var.u(), sqp, lmx_umd);
 		solid_context.interior_value(this->_lambda_var.v(), sqp, lmy_umd);
@@ -709,21 +709,21 @@ namespace GRINS
 		u_coeffs(j) += delta;
 
 		v_coeffs(j) += delta;
-		/*
+		
 		libMesh::Gradient grad_lmx_vpd, grad_lmy_vpd;
 		solid_context.interior_gradient(this->_lambda_var.u(), sqp, grad_lmx_vpd);
 		solid_context.interior_gradient(this->_lambda_var.v(), sqp, grad_lmy_vpd);
-		*/
+		
 		libMesh::Real lmx_vpd, lmy_vpd;
 		solid_context.interior_value(this->_lambda_var.u(), sqp, lmx_vpd);
 		solid_context.interior_value(this->_lambda_var.v(), sqp, lmy_vpd);
 
 		v_coeffs(j) -= 2*delta;
-		/*
+		
 		libMesh::Gradient grad_lmx_vmd, grad_lmy_vmd;
 		solid_context.interior_gradient(this->_lambda_var.u(), sqp, grad_lmx_vmd);
 		solid_context.interior_gradient(this->_lambda_var.v(), sqp, grad_lmy_vmd);
-		*/
+		
 		libMesh::Real lmx_vmd, lmy_vmd;
 		solid_context.interior_value(this->_lambda_var.u(), sqp, lmx_vmd);
 		solid_context.interior_value(this->_lambda_var.v(), sqp, lmy_vmd);
@@ -731,7 +731,7 @@ namespace GRINS
 		v_coeffs(j) += delta;
 		
 		//H1 Norm
-		/*
+		
 		// Finite differencing the grad_lambda terms w.r.t solid
 		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 		  {
@@ -763,7 +763,7 @@ namespace GRINS
 		    Kvf_vs(i,j) -= (grad_lambda_y(alpha)*fdphi_times_F(1,alpha) 
 				    + ((lmy_vpd-lmy_vmd)/(2*delta))*fluid_phi[i][0])*jac;
 		  }
-		*/
+		
 
 		//L2 Norm
 
@@ -778,7 +778,10 @@ namespace GRINS
 		    
 		    Kvf_vs(i,j) -= ((lmy_vpd-lmy_vmd)/(2*delta))*fluid_phi[i][0]*jac;
 		  }
+		*/
+
 		/*
+	      
 		// Finite differencing F terms
 
 		u_coeffs(j) += delta;
@@ -924,16 +927,15 @@ namespace GRINS
 		//L2 Norm
 
 		//Finite differencing the fluid_phi terms
-		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
-		  {
-		    Kuf_us(i,j) -= lambda_x*((fluid_phi_upd[i][0]-fluid_phi_umd[i][0])/(2*delta))*jac;
-		    
-		    Kvf_us(i,j) -= lambda_y*((fluid_phi_upd[i][0]-fluid_phi_umd[i][0])/(2*delta))*jac;
-		    
-		    Kuf_vs(i,j) -= lambda_x*((fluid_phi_vpd[i][0]-fluid_phi_vmd[i][0])/(2*delta))*jac;
-
-		    Kvf_vs(i,j) -= lambda_y*((fluid_phi_vpd[i][0]-fluid_phi_vmd[i][0])/(2*delta))*jac;
-		  }
+		
+		Kuf_us(i,j) -= lambda_x*((fluid_phi_upd[i][0]-fluid_phi_umd[i][0])/(2*delta))*jac;
+		
+		Kvf_us(i,j) -= lambda_y*((fluid_phi_upd[i][0]-fluid_phi_umd[i][0])/(2*delta))*jac;
+		
+		Kuf_vs(i,j) -= lambda_x*((fluid_phi_vpd[i][0]-fluid_phi_vmd[i][0])/(2*delta))*jac;
+		
+		Kvf_vs(i,j) -= lambda_y*((fluid_phi_vpd[i][0]-fluid_phi_vmd[i][0])/(2*delta))*jac;
+		
 
 		this->prepare_fluid_context(system,solid_context,solid_qpoints,sqp,fluid_elem_id,fluid_context);
 
@@ -1026,16 +1028,15 @@ namespace GRINS
 
 		//L2 Norm
 		//Finite differencing the lambda terms		
-		for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
-		  {
-		    Kuf_ulm(i,j) -= ((lmx_xpd-lmx_xmd)/(2*delta))*fluid_phi[i][0]*jac;
+		
+		Kuf_ulm(i,j) -= ((lmx_xpd-lmx_xmd)/(2*delta))*fluid_phi[i][0]*jac;
 
-		    Kvf_ulm(i,j) -= ((lmy_xpd-lmy_xmd)/(2*delta))*fluid_phi[i][0]*jac;
-		    
-		    Kuf_vlm(i,j) -= ((lmx_ypd-lmx_ymd)/(2*delta))*fluid_phi[i][0]*jac;
-		    
-		    Kvf_vlm(i,j) -= ((lmy_ypd-lmy_ymd)/(2*delta))*fluid_phi[i][0]*jac;
-		  }
+		Kvf_ulm(i,j) -= ((lmy_xpd-lmy_xmd)/(2*delta))*fluid_phi[i][0]*jac;
+		
+		Kuf_vlm(i,j) -= ((lmx_ypd-lmx_ymd)/(2*delta))*fluid_phi[i][0]*jac;
+		
+		Kvf_vlm(i,j) -= ((lmy_ypd-lmy_ymd)/(2*delta))*fluid_phi[i][0]*jac;
+		
 
 	      } //lambda dof loop
 
