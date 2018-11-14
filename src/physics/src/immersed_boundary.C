@@ -657,6 +657,8 @@ namespace GRINS
      
     for (unsigned int i=0; i != n_fluid_dofs; i++)
       {
+	libmesh_assert_equal_to( fluid_phi[i].size(), 1 );
+
 	/*
 	//Computing fdphi_times_F
 	for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
@@ -1545,6 +1547,9 @@ namespace GRINS
     const std::vector<std::vector<libMesh::Real> > lambda_phi =
       solid_context.get_element_fe(this->_lambda_var.u(),2)->get_phi();
     
+    const std::vector<std::vector<libMesh::Real> > fluid_phi = 
+      fluid_context.get_element_fe(this->_flow_vars.u())->get_phi();
+    
     //const std::vector<std::vector<libMesh::RealGradient> > & lambda_dphi =
     //  solid_context.get_element_fe(this->_lambda_var.u(),2)->get_dphi();
 
@@ -1610,6 +1615,8 @@ namespace GRINS
 	    // lambda-fluid block
 	    for( unsigned int j = 0; j < n_fluid_dofs; j++ )
 	      {
+		libmesh_assert_equal_to( fluid_phi[j].size(), 1 );
+
 		// Computing V and grad_V terms fluid derivative terms
 		
 		fluid_ucoeff(j) += delta;
