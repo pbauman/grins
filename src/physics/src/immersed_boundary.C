@@ -626,15 +626,15 @@ namespace GRINS
     unsigned int n_fluid_dofs = fluid_context.get_dof_indices(this->_flow_vars.u()).size();
     unsigned int n_lambda_dofs = solid_context.get_dof_indices(this->_lambda_var.u()).size();
 
-    libMesh::DenseSubVector<libMesh::Number> u_coeffs = solid_context.get_elem_solution(this->_disp_vars.u());
-    libMesh::DenseSubVector<libMesh::Number> v_coeffs = solid_context.get_elem_solution(this->_disp_vars.v());
+    libMesh::DenseSubVector<libMesh::Number> & u_coeffs = solid_context.get_elem_solution(this->_disp_vars.u());
+    libMesh::DenseSubVector<libMesh::Number> & v_coeffs = solid_context.get_elem_solution(this->_disp_vars.v());
 
     libMesh::Real lambda_x, lambda_y;
     solid_context.interior_value(this->_lambda_var.u(), sqp, lambda_x);
     solid_context.interior_value(this->_lambda_var.v(), sqp, lambda_y);
 
-    libMesh::DenseSubVector<libMesh::Number> lambda_xcoeff = solid_context.get_elem_solution(this->_lambda_var.u());
-    libMesh::DenseSubVector<libMesh::Number> lambda_ycoeff = solid_context.get_elem_solution(this->_lambda_var.v());
+    libMesh::DenseSubVector<libMesh::Number> & lambda_xcoeff = solid_context.get_elem_solution(this->_lambda_var.u());
+    libMesh::DenseSubVector<libMesh::Number> & lambda_ycoeff = solid_context.get_elem_solution(this->_lambda_var.v());
     /*
     libMesh::Gradient grad_u, grad_v;
     solid_context.interior_gradient(this->_disp_vars.u(), sqp, grad_u);
@@ -1075,15 +1075,15 @@ namespace GRINS
     const std::vector<std::vector<libMesh::RealGradient> > solid_dphi = 
       solid_context.get_element_fe(this->_disp_vars.u(),2)->get_dphi();
 
-    libMesh::DenseSubVector<libMesh::Number> u_coeffs = solid_context.get_elem_solution(this->_disp_vars.u());
-    libMesh::DenseSubVector<libMesh::Number> v_coeffs = solid_context.get_elem_solution(this->_disp_vars.v());
+    libMesh::DenseSubVector<libMesh::Number> & u_coeffs = solid_context.get_elem_solution(this->_disp_vars.u());
+    libMesh::DenseSubVector<libMesh::Number> & v_coeffs = solid_context.get_elem_solution(this->_disp_vars.v());
 
     libMesh::Real lambda_x, lambda_y;
     solid_context.interior_value(this->_lambda_var.u(), sqp, lambda_x);
     solid_context.interior_value(this->_lambda_var.v(), sqp, lambda_y);
 
-    libMesh::DenseSubVector<libMesh::Number> lambda_xcoeff = solid_context.get_elem_solution(this->_lambda_var.u());
-    libMesh::DenseSubVector<libMesh::Number> lambda_ycoeff = solid_context.get_elem_solution(this->_lambda_var.v());
+    libMesh::DenseSubVector<libMesh::Number> & lambda_xcoeff = solid_context.get_elem_solution(this->_lambda_var.u());
+    libMesh::DenseSubVector<libMesh::Number> & lambda_ycoeff = solid_context.get_elem_solution(this->_lambda_var.v());
 
     libMesh::Gradient grad_u, grad_v;
     solid_context.interior_gradient(this->_disp_vars.u(), sqp, grad_u);
@@ -1535,14 +1535,14 @@ namespace GRINS
     unsigned int n_fluid_dofs = fluid_context.get_dof_indices(this->_flow_vars.u()).size();
     unsigned int n_lambda_dofs = solid_context.get_dof_indices(this->_lambda_var.u()).size();
 
-    libMesh::DenseSubVector<libMesh::Number> u_coeffs = solid_context.get_elem_solution(this->_disp_vars.u());
-    libMesh::DenseSubVector<libMesh::Number> v_coeffs = solid_context.get_elem_solution(this->_disp_vars.v());
+    libMesh::DenseSubVector<libMesh::Number> & u_coeffs = solid_context.get_elem_solution(this->_disp_vars.u());
+    libMesh::DenseSubVector<libMesh::Number> & v_coeffs = solid_context.get_elem_solution(this->_disp_vars.v());
 
-    libMesh::DenseSubVector<libMesh::Number> fluid_ucoeff = fluid_context.get_elem_solution(this->_flow_vars.u());
-    libMesh::DenseSubVector<libMesh::Number> fluid_vcoeff = fluid_context.get_elem_solution(this->_flow_vars.v());
+    libMesh::DenseSubVector<libMesh::Number> & fluid_ucoeff = fluid_context.get_elem_solution(this->_flow_vars.u());
+    libMesh::DenseSubVector<libMesh::Number> & fluid_vcoeff = fluid_context.get_elem_solution(this->_flow_vars.v());
 
     // Prepare lagrange multiplier info needed
-    const std::vector<std::vector<libMesh::Real> > & lambda_phi =
+    const std::vector<std::vector<libMesh::Real> > lambda_phi =
       solid_context.get_element_fe(this->_lambda_var.u(),2)->get_phi();
     
     //const std::vector<std::vector<libMesh::RealGradient> > & lambda_dphi =
