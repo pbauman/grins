@@ -122,6 +122,11 @@ namespace GRINS
       libMesh::FEMContext * context = libMesh::cast_ptr<libMesh::FEMContext *>(raw_context.release());
       _fluid_context.reset(context);
     }
+    {
+      std::unique_ptr<libMesh::DiffContext> raw_context = system.build_context();
+      libMesh::FEMContext * context = libMesh::cast_ptr<libMesh::FEMContext *>(raw_context.release());
+      point_fluid_context.reset(context);
+    }
   }
 
   template<typename SolidMech>
@@ -392,10 +397,10 @@ namespace GRINS
 	    
 	    libMesh::Real jac = solid_JxW[sqp];
 	    
-	    this->prepare_fluid_context(system,solid_context,solid_qpoints,sqp,fluid_elem_id,*(this->_fluid_context));
+	    this->prepare_fluid_context(system,solid_context,solid_qpoints,sqp,fluid_elem_id,*(this->point_fluid_context));
 	   	       
 	    this->fluid_residual_contribution(compute_jacobian,system,
-					      *(this->_fluid_context),fluid_elem_id,
+					      *(this->point_fluid_context),fluid_elem_id,
 					      solid_context,solid_qpoints,sqp,
 					      jac,delta,Fuf,Fvf,
 					      Kuf_us,Kuf_vs,Kvf_us,Kvf_vs,
@@ -407,10 +412,10 @@ namespace GRINS
 					      Kus_us,Kvs_us,Kus_vs,Kvs_vs,
 					      Kus_ulm,Kvs_ulm,Kus_vlm,Kvs_vlm);
 
-	    this->prepare_fluid_context(system,solid_context,solid_qpoints,sqp,fluid_elem_id,*(this->_fluid_context));
+	    this->prepare_fluid_context(system,solid_context,solid_qpoints,sqp,fluid_elem_id,*(this->point_fluid_context));
 	    
 	    this->lambda_residual_contribution(compute_jacobian,system,
-					       *(this->_fluid_context),fluid_elem_id,
+					       *(this->point_fluid_context),fluid_elem_id,
 					       solid_context,solid_qpoints,sqp,
 					       jac,delta,Fulm,Fvlm,
 					       Kulm_uf,Kvlm_uf,Kulm_vf,Kvlm_vf,
@@ -642,6 +647,7 @@ namespace GRINS
     libMesh::TensorValue<libMesh::Real> F;
     this->eval_deform_gradient(grad_u,grad_v,F);
     */
+    
     const std::vector<std::vector<libMesh::Real> > fluid_phi = 
       fluid_context.get_element_fe(this->_flow_vars.u())->get_phi();
     //const std::vector<std::vector<libMesh::RealGradient> > fluid_dphi = 

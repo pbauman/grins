@@ -121,6 +121,8 @@ namespace GRINS
 
     std::unique_ptr<libMesh::FEMContext> _fluid_context;
 
+    std::unique_ptr<libMesh::FEMContext> point_fluid_context;
+
  
     void prepare_fluid_context_batch( const MultiphysicsSystem & system,
                                       libMesh::dof_id_type fluid_elem_id,
