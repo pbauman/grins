@@ -139,8 +139,8 @@ namespace GRINS
                                 const libMesh::dof_id_type fluid_elem_id,
                                 libMesh::FEMContext & fluid_context );
 
-    void compute_residuals( AssemblyContext & solid_context,
-                            libMesh::FEMContext & fluid_context,
+    void compute_residuals( const AssemblyContext & solid_context,
+                            const libMesh::FEMContext & fluid_context,
                             unsigned int sqp,
                             libMesh::DenseSubVector<libMesh::Number> & Fuf,
                             libMesh::DenseSubVector<libMesh::Number> & Fvf,
