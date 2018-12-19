@@ -653,11 +653,11 @@ namespace GRINS
     libmesh_assert_equal_to(Kus.n(),n_lambda_dofs);
     libmesh_assert_equal_to(Kvs.n(),n_lambda_dofs);
 
-    this->zero_residuals(Fusp,Fvsp,Fulmp,Fvlmp,Fufp,Fvfp);
-    this->zero_residuals(Fusm,Fvsm,Fulmm,Fvlmm,Fufm,Fvfm);
-
     for( unsigned int j = 0; j < n_lambda_dofs; j++ )
       {
+        this->zero_residuals(Fusp,Fvsp,Fulmp,Fvlmp,Fufp,Fvfp);
+        this->zero_residuals(Fusm,Fvsm,Fulmm,Fvlmm,Fufm,Fvfm);
+
         lambda_coeff(j) += delta;
 
         this->compute_residuals(solid_context,fluid_context,sqp,
@@ -714,11 +714,11 @@ namespace GRINS
     libmesh_assert_equal_to(Kulm.n(),n_fluid_dofs);
     libmesh_assert_equal_to(Kvlm.n(),n_fluid_dofs);
 
-    this->zero_residuals(Fusp,Fvsp,Fulmp,Fvlmp,Fufp,Fvfp);
-    this->zero_residuals(Fusm,Fvsm,Fulmm,Fvlmm,Fufm,Fvfm);
-
     for( unsigned int j = 0; j < n_fluid_dofs; j++ )
       {
+        this->zero_residuals(Fusp,Fvsp,Fulmp,Fvlmp,Fufp,Fvfp);
+        this->zero_residuals(Fusm,Fvsm,Fulmm,Fvlmm,Fufm,Fvfm);
+
         fluid_coeff(j) += delta;
 
         this->compute_residuals(solid_context,fluid_context,sqp,
@@ -785,11 +785,11 @@ namespace GRINS
     libmesh_assert_equal_to(Kulm.n(),n_solid_dofs);
     libmesh_assert_equal_to(Kvlm.n(),n_solid_dofs);
 
-    this->zero_residuals(Fusp,Fvsp,Fulmp,Fvlmp,Fufp,Fvfp);
-    this->zero_residuals(Fusm,Fvsm,Fulmm,Fvlmm,Fufm,Fvfm);
-
     for( unsigned int j = 0; j < n_solid_dofs; j++ )
       {
+        this->zero_residuals(Fusp,Fvsp,Fulmp,Fvlmp,Fufp,Fvfp);
+        this->zero_residuals(Fusm,Fvsm,Fulmm,Fvlmm,Fufm,Fvfm);
+
         solid_coeff(j) += delta;
         this->prepare_fluid_context(system,solid_context,solid_qpoints,sqp,fluid_elem_id,fluid_context);
 
