@@ -171,6 +171,26 @@ namespace GRINS
                                libMesh::DenseSubMatrix<libMesh::Number> & Kus,
                                libMesh::DenseSubMatrix<libMesh::Number> & Kvs);
 
+    void compute_fluid_derivs(AssemblyContext & solid_context,
+                              libMesh::FEMContext & fluid_context,
+                              unsigned int sqp,
+                              libMesh::Real delta,
+                              libMesh::DenseSubVector<libMesh::Number> & fluid_coeff,
+                              libMesh::DenseSubVector<libMesh::Number> & Fufp,
+                              libMesh::DenseSubVector<libMesh::Number> & Fvfp,
+                              libMesh::DenseSubVector<libMesh::Number> & Fusp,
+                              libMesh::DenseSubVector<libMesh::Number> & Fvsp,
+                              libMesh::DenseSubVector<libMesh::Number> & Fulmp,
+                              libMesh::DenseSubVector<libMesh::Number> & Fvlmp,
+                              libMesh::DenseSubVector<libMesh::Number> & Fufm,
+                              libMesh::DenseSubVector<libMesh::Number> & Fvfm,
+                              libMesh::DenseSubVector<libMesh::Number> & Fusm,
+                              libMesh::DenseSubVector<libMesh::Number> & Fvsm,
+                              libMesh::DenseSubVector<libMesh::Number> & Fulmm,
+                              libMesh::DenseSubVector<libMesh::Number> & Fvlmm,
+                              libMesh::DenseSubMatrix<libMesh::Number> & Kulm,
+                              libMesh::DenseSubMatrix<libMesh::Number> & Kvlm);
+
     void zero_residuals(libMesh::DenseSubVector<libMesh::Number> & Fuf,
                         libMesh::DenseSubVector<libMesh::Number> & Fvf,
                         libMesh::DenseSubVector<libMesh::Number> & Fus,

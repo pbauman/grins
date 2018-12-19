@@ -610,6 +610,55 @@ namespace GRINS
   }
 
   template<typename SolidMech>
+  void ImmersedBoundary<SolidMech>::compute_fluid_derivs(AssemblyContext & solid_context,
+                                                         libMesh::FEMContext & fluid_context,
+                                                         unsigned int sqp,
+                                                         libMesh::Real delta,
+                                                         libMesh::DenseSubVector<libMesh::Number> & fluid_coeff,
+                                                         libMesh::DenseSubVector<libMesh::Number> & Fufp,
+                                                         libMesh::DenseSubVector<libMesh::Number> & Fvfp,
+                                                         libMesh::DenseSubVector<libMesh::Number> & Fusp,
+                                                         libMesh::DenseSubVector<libMesh::Number> & Fvsp,
+                                                         libMesh::DenseSubVector<libMesh::Number> & Fulmp,
+                                                         libMesh::DenseSubVector<libMesh::Number> & Fvlmp,
+                                                         libMesh::DenseSubVector<libMesh::Number> & Fufm,
+                                                         libMesh::DenseSubVector<libMesh::Number> & Fvfm,
+                                                         libMesh::DenseSubVector<libMesh::Number> & Fusm,
+                                                         libMesh::DenseSubVector<libMesh::Number> & Fvsm,
+                                                         libMesh::DenseSubVector<libMesh::Number> & Fulmm,
+                                                         libMesh::DenseSubVector<libMesh::Number> & Fvlmm,
+                                                         libMesh::DenseSubMatrix<libMesh::Number> & Kulm,
+                                                         libMesh::DenseSubMatrix<libMesh::Number> & Kvlm)
+  {
+    this->zero_residuals(Fusp,Fvsp,Fulmp,Fvlmp,Fufp,Fvfp);
+    this->zero_residuals(Fusm,Fvsm,Fulmm,Fvlmm,Fufm,Fvfm);
+
+    unsigned int n_fluid_dofs = fluid_context.get_dof_indices(this->_flow_vars.u()).size();
+    unsigned int n_lambda_dofs = solid_context.get_dof_indices(this->_lambda_var.u()).size();
+
+    for( unsigned int j = 0; j < n_fluid_dofs; j++ )
+      {
+        fluid_coeff(j) += delta;
+
+        this->compute_residuals(solid_context,fluid_context,sqp,
+                                Fufp,Fvfp,Fusp,Fvsp,Fulmp,Fvlmp);
+
+        fluid_coeff(j) -= 2*delta;
+
+        this->compute_residuals(solid_context,fluid_context,sqp,
+                                Fufm,Fvfm,Fusm,Fvsm,Fulmm,Fvlmm);
+
+        fluid_coeff(j) += delta;
+
+        for (unsigned int i=0; i != n_lambda_dofs; i++)
+          {
+            Kulm(i,j) += (Fulmp(i) - Fulmm(i))/(2*delta);
+            Kvlm(i,j) += (Fvlmp(i) - Fvlmm(i))/(2*delta);
+          }
+      }
+  }
+
+  template<typename SolidMech>
   void ImmersedBoundary<SolidMech>::zero_residuals(libMesh::DenseSubVector<libMesh::Number> & Fuf,
                                                    libMesh::DenseSubVector<libMesh::Number> & Fvf,
                                                    libMesh::DenseSubVector<libMesh::Number> & Fus,
