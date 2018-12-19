@@ -384,7 +384,7 @@ namespace GRINS
 	  {
 	    unsigned int sqp = solid_qpoint_indices[qp];
 
-	    libMesh::Real jac = solid_JxW[sqp];
+            libMesh::Real jac = solid_JxW[sqp];
 
 	    this->prepare_fluid_context(system,solid_context,solid_qpoints,sqp,fluid_elem_id,*(this->point_fluid_context));
 
@@ -431,12 +431,124 @@ namespace GRINS
                                            Kf_s,Klm_f,Kf_lm);
           }
 
-
-
-
       } // end loop over overlapping fluid elements
 
     libmesh_assert_equal_to( solid_qpoints.size(), qps_visted.size() );
+  }
+
+  template<typename SolidMech>
+  void ImmersedBoundary<SolidMech>::compute_residuals( AssemblyContext & solid_context,
+                                                       libMesh::FEMContext & fluid_context,
+                                                       unsigned int sqp,
+                                                       libMesh::DenseSubVector<libMesh::Number> & Fuf,
+                                                       libMesh::DenseSubVector<libMesh::Number> & Fvf,
+                                                       libMesh::DenseSubVector<libMesh::Number> & Fus,
+                                                       libMesh::DenseSubVector<libMesh::Number> & Fvs,
+                                                       libMesh::DenseSubVector<libMesh::Number> & Fulm,
+                                                       libMesh::DenseSubVector<libMesh::Number> & Fvlm)
+  {
+    unsigned int n_solid_dofs = solid_context.get_dof_indices(this->_disp_vars.u()).size();
+    unsigned int n_fluid_dofs = fluid_context.get_dof_indices(this->_flow_vars.u()).size();
+    unsigned int n_lambda_dofs = solid_context.get_dof_indices(this->_lambda_var.u()).size();
+
+    libMesh::Real lambda_x, lambda_y;
+    solid_context.interior_value(this->_lambda_var.u(), sqp, lambda_x);
+    solid_context.interior_value(this->_lambda_var.v(), sqp, lambda_y);
+
+    libMesh::Gradient grad_u, grad_v;
+    solid_context.interior_gradient(this->_disp_vars.u(), sqp, grad_u);
+    solid_context.interior_gradient(this->_disp_vars.v(), sqp, grad_v);
+
+    libMesh::TensorValue<libMesh::Real> P;
+    this->eval_first_Piola(grad_u,grad_v,P);
+
+    // Compute the fluid velocity at the solid element quadrature points.
+    libMesh::Real Vx, Vy;
+    fluid_context.interior_value(this->_flow_vars.u(), 0, Vx);
+    fluid_context.interior_value(this->_flow_vars.v(), 0, Vy);
+
+    libMesh::Real udot, vdot;
+    solid_context.interior_rate(this->_disp_vars.u(), sqp, udot);
+    solid_context.interior_rate(this->_disp_vars.v(), sqp, vdot);
+
+    const std::vector<std::vector<libMesh::Real> > fluid_phi =
+      fluid_context.get_element_fe(this->_flow_vars.u())->get_phi();
+
+    const std::vector<std::vector<libMesh::Real> > solid_phi =
+      solid_context.get_element_fe(this->_disp_vars.u(),2)->get_phi();
+    const std::vector<std::vector<libMesh::RealGradient> > solid_dphi =
+      solid_context.get_element_fe(this->_disp_vars.u(),2)->get_dphi();
+
+    const std::vector<std::vector<libMesh::Real> > lambda_phi =
+      solid_context.get_element_fe(this->_lambda_var.u(),2)->get_phi();
+
+    const std::vector<libMesh::Real> & solid_JxW =
+      solid_context.get_element_fe(this->_disp_vars.u(),2)->get_JxW();
+
+    libMesh::Real jac = solid_JxW[sqp];
+
+    // Fluid residual
+    for (unsigned int i=0; i != n_fluid_dofs; i++)
+      {
+	libmesh_assert_equal_to( fluid_phi[i].size(), 1 );
+
+        // L2 Norm
+	Fuf(i) -= lambda_x*fluid_phi[i][0]*jac;
+	Fvf(i) -= lambda_y*fluid_phi[i][0]*jac;
+
+        /*
+	//Computing fdphi_times_F
+	for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
+	  {
+	    for( unsigned int beta = 0; beta < 2; beta++ )
+	      {
+		fdphi_times_F(0,alpha) += fluid_dphi[i][0](beta)*F(beta,alpha);
+		fdphi_times_F(1,alpha) += fluid_dphi[i][0](beta)*F(beta,alpha);
+	      }
+   	  }
+	*/
+	// Zero index for fluid dphi/JxW since we only requested one quad. point.
+	/*
+	// H1 Norm
+	for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
+	  {
+	    Fuf(i) -= (grad_lambda_x(alpha)*fdphi_times_F(0,alpha))*jac;
+	    Fvf(i) -= (grad_lambda_y(alpha)*fdphi_times_F(1,alpha))*jac;
+	  }
+	*/
+      }
+
+    // Solid residual
+    for (unsigned int i=0; i != n_solid_dofs; i++)
+      {
+        //L2 Norm
+	Fus(i) += lambda_x*solid_phi[i][sqp]*jac;
+	Fvs(i) += lambda_y*solid_phi[i][sqp]*jac;
+
+	for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
+	  {
+	    Fus(i) -= P(0,alpha)*solid_dphi[i][sqp](alpha)*jac;
+	    Fvs(i) -= P(1,alpha)*solid_dphi[i][sqp](alpha)*jac;
+	  }
+      }
+
+    // Lambda residual
+    for( unsigned int i = 0; i < n_lambda_dofs; i++ )
+      {
+        //L2 Norm
+        Fulm(i) += lambda_phi[i][sqp]*(Vx - udot)*jac;
+	Fvlm(i) += lambda_phi[i][sqp]*(Vy - vdot)*jac;
+
+        /*
+	//H1 Norm
+	for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
+	  {
+	    Fulm(i) += (lambda_dphi[i][sqp](alpha)*(gradV_times_F(0,alpha) - Fdot(0,alpha))))*jac;
+
+	    Fvlm(i) += (lambda_dphi[i][sqp](alpha)*(gradV_times_F(1,alpha) - Fdot(1,alpha)))*jac;
+	  }
+	*/
+      }
   }
 
   template<typename SolidMech>

@@ -139,6 +139,16 @@ namespace GRINS
                                 libMesh::dof_id_type fluid_elem_id,
                                 libMesh::FEMContext & fluid_context );
 
+    void compute_residuals( AssemblyContext & solid_context,
+                            libMesh::FEMContext & fluid_context,
+                            unsigned int sqp,
+                            libMesh::DenseSubVector<libMesh::Number> & Fuf,
+                            libMesh::DenseSubVector<libMesh::Number> & Fvf,
+                            libMesh::DenseSubVector<libMesh::Number> & Fus,
+                            libMesh::DenseSubVector<libMesh::Number> & Fvs,
+                            libMesh::DenseSubVector<libMesh::Number> & Fulm,
+                            libMesh::DenseSubVector<libMesh::Number> & Fvlm);
+
     void fluid_residual_contribution( bool compute_jacobian, MultiphysicsSystem & system,
 				      libMesh::FEMContext & fluid_context,
 				      libMesh::dof_id_type fluid_elem_id,
