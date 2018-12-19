@@ -276,8 +276,11 @@ namespace GRINS
         libMesh::DenseSubVector<libMesh::Number> & Fvs = solid_context.get_elem_residual(v_var);
 
         // For computing numerical Jacobians
-        libMesh::DenseSubVector<libMesh::Number> Fusp(Fus), Fusm(Fus);
-        libMesh::DenseSubVector<libMesh::Number> Fvsp(Fvs), Fvsm(Fvs);
+        libMesh::DenseVector<libMesh::Number> Fusp_dummy(n_solid_dofs), Fvsp_dummy(n_solid_dofs);
+        libMesh::DenseVector<libMesh::Number> Fusm_dummy(n_solid_dofs), Fvsm_dummy(n_solid_dofs);
+
+        libMesh::DenseSubVector<libMesh::Number> Fusp(Fusp_dummy,0,n_solid_dofs), Fusm(Fusm_dummy,0,n_solid_dofs);
+        libMesh::DenseSubVector<libMesh::Number> Fvsp(Fvsp_dummy,0,n_solid_dofs), Fvsm(Fvsm_dummy,0,n_solid_dofs);
 
         libMesh::DenseSubMatrix<libMesh::Number> & Kus_us = solid_context.get_elem_jacobian(u_var,u_var);
         libMesh::DenseSubMatrix<libMesh::Number> & Kvs_us = solid_context.get_elem_jacobian(v_var,u_var);
@@ -288,8 +291,11 @@ namespace GRINS
         libMesh::DenseSubVector<libMesh::Number> & Fvlm = solid_context.get_elem_residual(lambda_y);
 
         // For computing numerical Jacobians
-        libMesh::DenseSubVector<libMesh::Number> Fulmp(Fulm), Fulmm(Fulm);
-        libMesh::DenseSubVector<libMesh::Number> Fvlmp(Fvlm), Fvlmm(Fvlm);
+        libMesh::DenseVector<libMesh::Number> Fulmp_dummy(n_lambda_dofs), Fvlmp_dummy(n_lambda_dofs);
+        libMesh::DenseVector<libMesh::Number> Fulmm_dummy(n_lambda_dofs), Fvlmm_dummy(n_lambda_dofs);
+
+        libMesh::DenseSubVector<libMesh::Number> Fulmp(Fulmp_dummy,0,n_lambda_dofs), Fulmm(Fulmm_dummy,0,n_lambda_dofs);
+        libMesh::DenseSubVector<libMesh::Number> Fvlmp(Fvlmp_dummy,0,n_lambda_dofs), Fvlmm(Fvlmm_dummy,0,n_lambda_dofs);
 
         libMesh::DenseSubMatrix<libMesh::Number> & Kulm_us = solid_context.get_elem_jacobian(lambda_x,u_var);
         libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_us = solid_context.get_elem_jacobian(lambda_y,u_var);
@@ -378,8 +384,11 @@ namespace GRINS
               (this->_fluid_context)->get_elem_residual(this->_flow_vars.v());
 
             // For computing numerical Jacobians
-            libMesh::DenseSubVector<libMesh::Number> Fufp(Fuf), Fufm(Fuf);
-            libMesh::DenseSubVector<libMesh::Number> Fvfp(Fvf), Fvfm(Fvf);
+            libMesh::DenseVector<libMesh::Number> Fufp_dummy(n_fluid_dofs), Fvfp_dummy(n_fluid_dofs);
+            libMesh::DenseVector<libMesh::Number> Fufm_dummy(n_fluid_dofs), Fvfm_dummy(n_fluid_dofs);
+
+            libMesh::DenseSubVector<libMesh::Number> Fufp(Fufp_dummy,0,n_fluid_dofs), Fufm(Fufm_dummy,0,n_fluid_dofs);
+            libMesh::DenseSubVector<libMesh::Number> Fvfp(Fvfp_dummy,0,n_fluid_dofs), Fvfm(Fvfm_dummy,0,n_fluid_dofs);
 
             for( unsigned int qp = 0; qp < solid_qpoints_subset.size(); qp++ )
               {
