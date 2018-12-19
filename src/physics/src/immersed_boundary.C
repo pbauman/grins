@@ -373,28 +373,14 @@ namespace GRINS
 
 	if ( compute_jacobian )
 	  {
-	    Kf_s.resize( this->_flow_vars.dim()*n_fluid_dofs, this->_disp_vars.dim()*n_solid_dofs );
-
-	    // We need to manually manage the indexing since we're working only on this particular subblock
-	    Kuf_us.reposition( 0, 0, n_fluid_dofs, n_solid_dofs );
-	    Kuf_vs.reposition( 0, n_solid_dofs, n_fluid_dofs, n_solid_dofs );
-	    Kvf_us.reposition( n_fluid_dofs, 0, n_fluid_dofs, n_solid_dofs );
-	    Kvf_vs.reposition( n_fluid_dofs, n_solid_dofs, n_fluid_dofs, n_solid_dofs );
-
-	    Klm_f.resize( this->_lambda_var.dim()*n_lambda_dofs, this->_flow_vars.dim()*n_fluid_dofs );
-
-	    Kulm_uf.reposition( 0, 0, n_lambda_dofs, n_fluid_dofs );
-	    Kulm_vf.reposition( 0, n_fluid_dofs, n_lambda_dofs, n_fluid_dofs );
-	    Kvlm_uf.reposition( n_lambda_dofs, 0, n_lambda_dofs, n_fluid_dofs );
-	    Kvlm_vf.reposition( n_lambda_dofs, n_fluid_dofs, n_lambda_dofs, n_fluid_dofs );
-
-	    Kf_lm.resize( this->_flow_vars.dim()*n_fluid_dofs, this->_lambda_var.dim()*n_lambda_dofs );
-
-	    Kuf_ulm.reposition( 0, 0, n_fluid_dofs, n_lambda_dofs );
-	    Kuf_vlm.reposition( 0, n_lambda_dofs, n_fluid_dofs, n_lambda_dofs );
-	    Kvf_ulm.reposition( n_fluid_dofs, 0, n_fluid_dofs, n_lambda_dofs );
-	    Kvf_vlm.reposition( n_fluid_dofs, n_lambda_dofs, n_fluid_dofs, n_lambda_dofs );
-	  }
+            this->prepare_jacobians(n_fluid_dofs, n_solid_dofs, n_lambda_dofs,
+                                    Kf_s,
+                                    Kuf_us,Kuf_vs,Kvf_us,Kvf_vs,
+                                    Klm_f,
+                                    Kulm_uf,Kulm_vf, Kvlm_uf,Kvlm_vf,
+                                    Kf_lm,
+                                    Kuf_ulm,Kuf_vlm,Kvf_ulm,Kvf_vlm);
+          }
 
 	for( unsigned int qp = 0; qp < solid_qpoints_subset.size(); qp++ )
 	  {
@@ -521,6 +507,49 @@ namespace GRINS
       } // end loop over overlapping fluid elements
 
     libmesh_assert_equal_to( solid_qpoints.size(), qps_visted.size() );
+  }
+
+  template<typename SolidMech>
+  void ImmersedBoundary<SolidMech>::prepare_jacobians(unsigned int n_fluid_dofs,
+                                                      unsigned int n_solid_dofs,
+                                                      unsigned int n_lambda_dofs,
+                                                      libMesh::DenseMatrix<libMesh::Number> & Kf_s,
+                                                      libMesh::DenseSubMatrix<libMesh::Number> & Kuf_us,
+                                                      libMesh::DenseSubMatrix<libMesh::Number> & Kuf_vs,
+                                                      libMesh::DenseSubMatrix<libMesh::Number> & Kvf_us,
+                                                      libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vs,
+                                                      libMesh::DenseMatrix<libMesh::Number> & Klm_f,
+                                                      libMesh::DenseSubMatrix<libMesh::Number> & Kulm_uf,
+                                                      libMesh::DenseSubMatrix<libMesh::Number> & Kulm_vf,
+                                                      libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_uf,
+                                                      libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_vf,
+                                                      libMesh::DenseMatrix<libMesh::Number> & Kf_lm,
+                                                      libMesh::DenseSubMatrix<libMesh::Number> & Kuf_ulm,
+                                                      libMesh::DenseSubMatrix<libMesh::Number> & Kuf_vlm,
+                                                      libMesh::DenseSubMatrix<libMesh::Number> & Kvf_ulm,
+                                                      libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vlm) const
+  {
+    Kf_s.resize( this->_flow_vars.dim()*n_fluid_dofs, this->_disp_vars.dim()*n_solid_dofs );
+
+    // We need to manually manage the indexing since we're working only on this particular subblock
+    Kuf_us.reposition( 0, 0, n_fluid_dofs, n_solid_dofs );
+    Kuf_vs.reposition( 0, n_solid_dofs, n_fluid_dofs, n_solid_dofs );
+    Kvf_us.reposition( n_fluid_dofs, 0, n_fluid_dofs, n_solid_dofs );
+    Kvf_vs.reposition( n_fluid_dofs, n_solid_dofs, n_fluid_dofs, n_solid_dofs );
+
+    Klm_f.resize( this->_lambda_var.dim()*n_lambda_dofs, this->_flow_vars.dim()*n_fluid_dofs );
+
+    Kulm_uf.reposition( 0, 0, n_lambda_dofs, n_fluid_dofs );
+    Kulm_vf.reposition( 0, n_fluid_dofs, n_lambda_dofs, n_fluid_dofs );
+    Kvlm_uf.reposition( n_lambda_dofs, 0, n_lambda_dofs, n_fluid_dofs );
+    Kvlm_vf.reposition( n_lambda_dofs, n_fluid_dofs, n_lambda_dofs, n_fluid_dofs );
+
+    Kf_lm.resize( this->_flow_vars.dim()*n_fluid_dofs, this->_lambda_var.dim()*n_lambda_dofs );
+
+    Kuf_ulm.reposition( 0, 0, n_fluid_dofs, n_lambda_dofs );
+    Kuf_vlm.reposition( 0, n_lambda_dofs, n_fluid_dofs, n_lambda_dofs );
+    Kvf_ulm.reposition( n_fluid_dofs, 0, n_fluid_dofs, n_lambda_dofs );
+    Kvf_vlm.reposition( n_fluid_dofs, n_lambda_dofs, n_fluid_dofs, n_lambda_dofs );
   }
 
   template<typename SolidMech>
