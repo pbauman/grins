@@ -206,6 +206,16 @@ namespace GRINS
                            libMesh::DenseSubMatrix<libMesh::Number> & Kvf_ulm,
                            libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vlm) const;
 
+    void assemble_fluid_jacobians(MultiphysicsSystem & system,
+                                  const AssemblyContext & solid_context,
+                                  const libMesh::FEMContext & fluid_context,
+                                  unsigned int n_fluid_dofs,
+                                  unsigned int n_solid_dofs,
+                                  unsigned int n_lambda_dofs,
+                                  libMesh::DenseMatrix<libMesh::Number> & Kf_s,
+                                  libMesh::DenseMatrix<libMesh::Number> & Klm_f,
+                                  libMesh::DenseMatrix<libMesh::Number> & Kf_lm) const;
+
     bool is_solid_elem( libMesh::subdomain_id_type elem_id );
 
     bool is_fluid_elem( libMesh::subdomain_id_type elem_id );
