@@ -135,8 +135,8 @@ namespace GRINS
     void prepare_fluid_context( const MultiphysicsSystem & system,
                                 const AssemblyContext & solid_context,
 				const std::vector<libMesh::Point> & solid_qpoints,
-                                unsigned int sqp, /* solid quadrature point */
-                                libMesh::dof_id_type fluid_elem_id,
+                                const unsigned int sqp, /* solid quadrature point */
+                                const libMesh::dof_id_type fluid_elem_id,
                                 libMesh::FEMContext & fluid_context );
 
     void compute_residuals( AssemblyContext & solid_context,
