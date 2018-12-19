@@ -265,9 +265,6 @@ namespace GRINS
     const std::vector<libMesh::Point> & solid_qpoints =
       solid_context.get_element_fe(u_var,2)->get_xyz();
 
-    const std::vector<libMesh::Real> & solid_JxW =
-      solid_context.get_element_fe(u_var,2)->get_JxW();
-
     libMesh::DenseSubVector<libMesh::Number> & Fus = solid_context.get_elem_residual(u_var);
     libMesh::DenseSubVector<libMesh::Number> & Fvs = solid_context.get_elem_residual(v_var);
 
@@ -384,33 +381,94 @@ namespace GRINS
 	  {
 	    unsigned int sqp = solid_qpoint_indices[qp];
 
-            libMesh::Real jac = solid_JxW[sqp];
+            this->prepare_fluid_context(system,solid_context,solid_qpoints,sqp,fluid_elem_id,
+                                        *(this->point_fluid_context));
 
-	    this->prepare_fluid_context(system,solid_context,solid_qpoints,sqp,fluid_elem_id,*(this->point_fluid_context));
+            this->compute_residuals(solid_context,*(this->point_fluid_context),sqp,
+                                    Fuf,Fvf,Fus,Fvs,Fulm,Fvlm);
 
-            libMesh::Real delta = 1.0e-8;
+            if( compute_jacobian )
+              {
+                libMesh::Real delta = 1.0e-8;
 
-	    this->fluid_residual_contribution(compute_jacobian,system,
-					      *(this->point_fluid_context),fluid_elem_id,
-					      solid_context,solid_qpoints,sqp,
-					      jac,delta,Fuf,Fvf,
-					      Kuf_us,Kuf_vs,Kvf_us,Kvf_vs,
-					      Kuf_ulm,Kuf_vlm,Kvf_ulm,Kvf_vlm);
+                // Compute lambdax derivs
+                {
+                  libMesh::DenseSubVector<libMesh::Number> & lambda_xcoeff =
+                    solid_context.get_elem_solution(this->_lambda_var.u());
 
-	    this->solid_residual_contribution(compute_jacobian,
-					      solid_context,sqp,
-					      jac,delta,Fus,Fvs,
-					      Kus_us,Kvs_us,Kus_vs,Kvs_vs,
-					      Kus_ulm,Kvs_ulm,Kus_vlm,Kvs_vlm);
+                  this->compute_lambda_derivs(solid_context,*(this->point_fluid_context),sqp,delta,
+                                              lambda_xcoeff,
+                                              Fufp,Fvfp,Fusp,Fvsp,Fulmp,Fvlmp,
+                                              Fufm,Fvfm,Fusm,Fvsm,Fulmm,Fvlmm,
+                                              Kuf_ulm,Kvf_ulm,Kus_ulm,Kvs_ulm);
+                }
 
-	    this->prepare_fluid_context(system,solid_context,solid_qpoints,sqp,fluid_elem_id,*(this->point_fluid_context));
+                // Compute lambday derivs
+                {
+                  libMesh::DenseSubVector<libMesh::Number> & lambda_ycoeff =
+                    solid_context.get_elem_solution(this->_lambda_var.v());
 
-	    this->lambda_residual_contribution(compute_jacobian,system,
-					       *(this->point_fluid_context),fluid_elem_id,
-					       solid_context,solid_qpoints,sqp,
-					       jac,delta,Fulm,Fvlm,
-					       Kulm_uf,Kvlm_uf,Kulm_vf,Kvlm_vf,
-					       Kulm_us,Kvlm_us,Kulm_vs,Kvlm_vs);
+                  this->compute_lambda_derivs(solid_context,*(this->point_fluid_context),sqp,delta,
+                                              lambda_ycoeff,
+                                              Fufp,Fvfp,Fusp,Fvsp,Fulmp,Fvlmp,
+                                              Fufm,Fvfm,Fusm,Fvsm,Fulmm,Fvlmm,
+                                              Kuf_vlm,Kvf_vlm,Kus_vlm,Kvs_vlm);
+                }
+
+                // Compute fluidx derivs
+                {
+                  libMesh::DenseSubVector<libMesh::Number> & fluid_ucoeff =
+                    (this->point_fluid_context)->get_elem_solution(this->_flow_vars.u());
+
+                  this->compute_fluid_derivs(solid_context,*(this->point_fluid_context),sqp,delta,
+                                             fluid_ucoeff,
+                                             Fufp,Fvfp,Fusp,Fvsp,Fulmp,Fvlmp,
+                                             Fufm,Fvfm,Fusm,Fvsm,Fulmm,Fvlmm,
+                                             Kulm_uf,Kvlm_uf);
+                }
+
+                // Compute fluidy derivs
+                {
+                  libMesh::DenseSubVector<libMesh::Number> & fluid_vcoeff =
+                  (this->point_fluid_context)->get_elem_solution(this->_flow_vars.v());
+
+                  this->compute_fluid_derivs(solid_context,*(this->point_fluid_context),sqp,delta,
+                                             fluid_vcoeff,
+                                             Fufp,Fvfp,Fusp,Fvsp,Fulmp,Fvlmp,
+                                             Fufm,Fvfm,Fusm,Fvsm,Fulmm,Fvlmm,
+                                             Kulm_vf,Kvlm_vf);
+                }
+
+                // Compute solidx derivs
+                {
+                  libMesh::DenseSubVector<libMesh::Number> & u_coeffs =
+                    solid_context.get_elem_solution(this->_disp_vars.u());
+
+                  this->compute_solid_derivs(system,solid_context,*(this->point_fluid_context),
+                                             sqp,delta,fluid_elem_id,solid_qpoints,
+                                             u_coeffs,
+                                             Fufp,Fvfp,Fusp,Fvsp,Fulmp,Fvlmp,
+                                             Fufm,Fvfm,Fusm,Fvsm,Fulmm,Fvlmm,
+                                             Kuf_us,Kvf_us,Kus_us,Kvs_us,Kulm_us,Kvlm_us);
+                }
+
+
+                // Compute solidy derivs
+                {
+                  libMesh::DenseSubVector<libMesh::Number> & v_coeffs =
+                    solid_context.get_elem_solution(this->_disp_vars.v());
+
+                  this->compute_solid_derivs(system,solid_context,*(this->point_fluid_context),
+                                             sqp,delta,fluid_elem_id,solid_qpoints,
+                                             v_coeffs,
+                                             Fufp,Fvfp,Fusp,Fvsp,Fulmp,Fvlmp,
+                                             Fufm,Fvfm,Fusm,Fvsm,Fulmm,Fvlmm,
+                                             Kuf_vs,Kvf_vs,Kus_vs,Kvs_vs,Kulm_vs,Kvlm_vs);
+
+                }
+
+              } // if( compute_jacobian)
+
 
 	  } // end solid_qpoints_subset loop
 
