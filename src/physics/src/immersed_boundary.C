@@ -334,9 +334,6 @@ namespace GRINS
          fluid_elem_map_it != fluid_elem_map.end();
          ++fluid_elem_map_it )
       {
-
-	libMesh::Real delta = 1.0e-8;
-
         // Grab the current fluid element id
         libMesh::dof_id_type fluid_elem_id = fluid_elem_map_it->first;
 
@@ -359,17 +356,7 @@ namespace GRINS
 
         libmesh_assert_equal_to( solid_qpoint_indices.size(), solid_qpoints_subset.size() );
 
-	libMesh::DenseSubVector<libMesh::Number> & Fuf =
-          (this->_fluid_context)->get_elem_residual(this->_flow_vars.u());
-
-	libMesh::DenseSubVector<libMesh::Number> & Fvf =
-          (this->_fluid_context)->get_elem_residual(this->_flow_vars.v());
-
-        // For computing numerical Jacobians
-        libMesh::DenseSubVector<libMesh::Number> Fufp(Fuf), Fufm(Fuf);
-        libMesh::DenseSubVector<libMesh::Number> Fvfp(Fvf), Fvfm(Fvf);
-
-	unsigned int n_fluid_dofs = (this->_fluid_context)->get_dof_indices(this->_flow_vars.u()).size();
+        unsigned int n_fluid_dofs = (this->_fluid_context)->get_dof_indices(this->_flow_vars.u()).size();
 
 	if ( compute_jacobian )
 	  {
@@ -382,6 +369,17 @@ namespace GRINS
                                     Kuf_ulm,Kuf_vlm,Kvf_ulm,Kvf_vlm);
           }
 
+        // Fluid residual data structures
+	libMesh::DenseSubVector<libMesh::Number> & Fuf =
+          (this->_fluid_context)->get_elem_residual(this->_flow_vars.u());
+
+	libMesh::DenseSubVector<libMesh::Number> & Fvf =
+          (this->_fluid_context)->get_elem_residual(this->_flow_vars.v());
+
+        // For computing numerical Jacobians
+        libMesh::DenseSubVector<libMesh::Number> Fufp(Fuf), Fufm(Fuf);
+        libMesh::DenseSubVector<libMesh::Number> Fvfp(Fvf), Fvfm(Fvf);
+
 	for( unsigned int qp = 0; qp < solid_qpoints_subset.size(); qp++ )
 	  {
 	    unsigned int sqp = solid_qpoint_indices[qp];
@@ -389,6 +387,8 @@ namespace GRINS
 	    libMesh::Real jac = solid_JxW[sqp];
 
 	    this->prepare_fluid_context(system,solid_context,solid_qpoints,sqp,fluid_elem_id,*(this->point_fluid_context));
+
+            libMesh::Real delta = 1.0e-8;
 
 	    this->fluid_residual_contribution(compute_jacobian,system,
 					      *(this->point_fluid_context),fluid_elem_id,
