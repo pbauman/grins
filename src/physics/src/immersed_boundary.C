@@ -271,6 +271,10 @@ namespace GRINS
     libMesh::DenseSubVector<libMesh::Number> & Fus = solid_context.get_elem_residual(u_var);
     libMesh::DenseSubVector<libMesh::Number> & Fvs = solid_context.get_elem_residual(v_var);
 
+    // For computing numerical Jacobians
+    libMesh::DenseSubVector<libMesh::Number> Fusp(Fus), Fusm(Fus);
+    libMesh::DenseSubVector<libMesh::Number> Fvsp(Fvs), Fvsm(Fvs);
+
     libMesh::DenseSubMatrix<libMesh::Number> & Kus_us = solid_context.get_elem_jacobian(u_var,u_var);
     libMesh::DenseSubMatrix<libMesh::Number> & Kvs_us = solid_context.get_elem_jacobian(v_var,u_var);
     libMesh::DenseSubMatrix<libMesh::Number> & Kus_vs = solid_context.get_elem_jacobian(u_var,v_var);
@@ -278,6 +282,10 @@ namespace GRINS
 
     libMesh::DenseSubVector<libMesh::Number> & Fulm = solid_context.get_elem_residual(lambda_x);
     libMesh::DenseSubVector<libMesh::Number> & Fvlm = solid_context.get_elem_residual(lambda_y);
+
+    // For computing numerical Jacobians
+    libMesh::DenseSubVector<libMesh::Number> Fulmp(Fulm), Fulmm(Fulm);
+    libMesh::DenseSubVector<libMesh::Number> Fvlmp(Fvlm), Fvlmm(Fvlm);
 
     libMesh::DenseSubMatrix<libMesh::Number> & Kulm_us = solid_context.get_elem_jacobian(lambda_x,u_var);
     libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_us = solid_context.get_elem_jacobian(lambda_y,u_var);
@@ -351,8 +359,15 @@ namespace GRINS
 
         libmesh_assert_equal_to( solid_qpoint_indices.size(), solid_qpoints_subset.size() );
 
-	libMesh::DenseSubVector<libMesh::Number> & Fuf = (this->_fluid_context)->get_elem_residual(this->_flow_vars.u());
-	libMesh::DenseSubVector<libMesh::Number> & Fvf = (this->_fluid_context)->get_elem_residual(this->_flow_vars.v());
+	libMesh::DenseSubVector<libMesh::Number> & Fuf =
+          (this->_fluid_context)->get_elem_residual(this->_flow_vars.u());
+
+	libMesh::DenseSubVector<libMesh::Number> & Fvf =
+          (this->_fluid_context)->get_elem_residual(this->_flow_vars.v());
+
+        // For computing numerical Jacobians
+        libMesh::DenseSubVector<libMesh::Number> Fufp(Fuf), Fufm(Fuf);
+        libMesh::DenseSubVector<libMesh::Number> Fvfp(Fvf), Fvfm(Fvf);
 
 	unsigned int n_fluid_dofs = (this->_fluid_context)->get_dof_indices(this->_flow_vars.u()).size();
 
