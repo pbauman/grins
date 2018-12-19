@@ -254,9 +254,11 @@ namespace GRINS
     // Only compute this if we are on a solid element
     if( this->is_solid_elem( context.get_elem().subdomain_id() ) )
       {
-
         // For clarity
         AssemblyContext & solid_context = context;
+
+        unsigned int n_solid_dofs = solid_context.get_dof_indices(this->_disp_vars.u()).size();
+        unsigned int n_lambda_dofs = solid_context.get_dof_indices(this->_lambda_var.u()).size();
 
         MultiphysicsSystem & system = context.get_multiphysics_system();
 
@@ -310,9 +312,6 @@ namespace GRINS
         libMesh::DenseMatrix<libMesh::Number> Kf_lm;
         libMesh::DenseSubMatrix<libMesh::Number> Kuf_ulm(Kf_lm), Kuf_vlm(Kf_lm);
         libMesh::DenseSubMatrix<libMesh::Number> Kvf_ulm(Kf_lm), Kvf_vlm(Kf_lm);
-
-        unsigned int n_solid_dofs = solid_context.get_dof_indices(this->_disp_vars.u()).size();
-        unsigned int n_lambda_dofs = solid_context.get_dof_indices(this->_lambda_var.u()).size();
 
         // We need to grab the fluid elements that are overlapping with this solid elem.
         // Then, for that fluid element, extract the indices of the *solid* quadrature points
