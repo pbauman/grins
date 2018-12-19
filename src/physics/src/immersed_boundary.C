@@ -639,12 +639,22 @@ namespace GRINS
                                                           libMesh::DenseSubMatrix<libMesh::Number> & Kus,
                                                           libMesh::DenseSubMatrix<libMesh::Number> & Kvs)
   {
-    this->zero_residuals(Fusp,Fvsp,Fulmp,Fvlmp,Fufp,Fvfp);
-    this->zero_residuals(Fusm,Fvsm,Fulmm,Fvlmm,Fufm,Fvfm);
-
     unsigned int n_solid_dofs = solid_context.get_dof_indices(this->_disp_vars.u()).size();
     unsigned int n_fluid_dofs = fluid_context.get_dof_indices(this->_flow_vars.u()).size();
     unsigned int n_lambda_dofs = solid_context.get_dof_indices(this->_lambda_var.u()).size();
+
+    libmesh_assert_equal_to(Kuf.m(),n_fluid_dofs);
+    libmesh_assert_equal_to(Kvf.m(),n_fluid_dofs);
+    libmesh_assert_equal_to(Kus.m(),n_solid_dofs);
+    libmesh_assert_equal_to(Kvs.m(),n_solid_dofs);
+
+    libmesh_assert_equal_to(Kuf.n(),n_lambda_dofs);
+    libmesh_assert_equal_to(Kvf.n(),n_lambda_dofs);
+    libmesh_assert_equal_to(Kus.n(),n_lambda_dofs);
+    libmesh_assert_equal_to(Kvs.n(),n_lambda_dofs);
+
+    this->zero_residuals(Fusp,Fvsp,Fulmp,Fvlmp,Fufp,Fvfp);
+    this->zero_residuals(Fusm,Fvsm,Fulmm,Fvlmm,Fufm,Fvfm);
 
     for( unsigned int j = 0; j < n_lambda_dofs; j++ )
       {
@@ -695,11 +705,17 @@ namespace GRINS
                                                          libMesh::DenseSubMatrix<libMesh::Number> & Kulm,
                                                          libMesh::DenseSubMatrix<libMesh::Number> & Kvlm)
   {
-    this->zero_residuals(Fusp,Fvsp,Fulmp,Fvlmp,Fufp,Fvfp);
-    this->zero_residuals(Fusm,Fvsm,Fulmm,Fvlmm,Fufm,Fvfm);
-
     unsigned int n_fluid_dofs = fluid_context.get_dof_indices(this->_flow_vars.u()).size();
     unsigned int n_lambda_dofs = solid_context.get_dof_indices(this->_lambda_var.u()).size();
+
+    libmesh_assert_equal_to(Kulm.m(),n_lambda_dofs);
+    libmesh_assert_equal_to(Kvlm.m(),n_lambda_dofs);
+
+    libmesh_assert_equal_to(Kulm.n(),n_fluid_dofs);
+    libmesh_assert_equal_to(Kvlm.n(),n_fluid_dofs);
+
+    this->zero_residuals(Fusp,Fvsp,Fulmp,Fvlmp,Fufp,Fvfp);
+    this->zero_residuals(Fusm,Fvsm,Fulmm,Fvlmm,Fufm,Fvfm);
 
     for( unsigned int j = 0; j < n_fluid_dofs; j++ )
       {
@@ -751,12 +767,26 @@ namespace GRINS
                                                          libMesh::DenseSubMatrix<libMesh::Number> & Kulm,
                                                          libMesh::DenseSubMatrix<libMesh::Number> & Kvlm)
   {
-    this->zero_residuals(Fusp,Fvsp,Fulmp,Fvlmp,Fufp,Fvfp);
-    this->zero_residuals(Fusm,Fvsm,Fulmm,Fvlmm,Fufm,Fvfm);
-
     unsigned int n_solid_dofs = solid_context.get_dof_indices(this->_disp_vars.u()).size();
     unsigned int n_fluid_dofs = fluid_context.get_dof_indices(this->_flow_vars.u()).size();
     unsigned int n_lambda_dofs = solid_context.get_dof_indices(this->_lambda_var.u()).size();
+
+    libmesh_assert_equal_to(Kuf.m(),n_fluid_dofs);
+    libmesh_assert_equal_to(Kvf.m(),n_fluid_dofs);
+    libmesh_assert_equal_to(Kus.m(),n_solid_dofs);
+    libmesh_assert_equal_to(Kvs.m(),n_solid_dofs);
+    libmesh_assert_equal_to(Kulm.m(),n_lambda_dofs);
+    libmesh_assert_equal_to(Kvlm.m(),n_lambda_dofs);
+
+    libmesh_assert_equal_to(Kuf.n(),n_solid_dofs);
+    libmesh_assert_equal_to(Kvf.n(),n_solid_dofs);
+    libmesh_assert_equal_to(Kus.n(),n_solid_dofs);
+    libmesh_assert_equal_to(Kvs.n(),n_solid_dofs);
+    libmesh_assert_equal_to(Kulm.n(),n_solid_dofs);
+    libmesh_assert_equal_to(Kvlm.n(),n_solid_dofs);
+
+    this->zero_residuals(Fusp,Fvsp,Fulmp,Fvlmp,Fufp,Fvfp);
+    this->zero_residuals(Fusm,Fvsm,Fulmm,Fvlmm,Fufm,Fvfm);
 
     for( unsigned int j = 0; j < n_solid_dofs; j++ )
       {
