@@ -94,7 +94,7 @@ namespace GRINS
 
     //! FE variables for the solid
     DisplacementVariable & _disp_vars;
-    
+
     //! FE variables for the lagrange multiplier
     LagrangeMultVectorVariable & _lambda_var;
 
@@ -123,7 +123,7 @@ namespace GRINS
 
     std::unique_ptr<libMesh::FEMContext> point_fluid_context;
 
- 
+
     void prepare_fluid_context_batch( const MultiphysicsSystem & system,
                                       libMesh::dof_id_type fluid_elem_id,
                                       const AssemblyContext & solid_context,
@@ -140,9 +140,9 @@ namespace GRINS
                                 libMesh::FEMContext & fluid_context );
 
     void fluid_residual_contribution( bool compute_jacobian, MultiphysicsSystem & system,
-				      libMesh::FEMContext & fluid_context, 
+				      libMesh::FEMContext & fluid_context,
 				      libMesh::dof_id_type fluid_elem_id,
-				      AssemblyContext & solid_context, 
+				      AssemblyContext & solid_context,
 				      const std::vector<libMesh::Point> & solid_qpoints,
 				      unsigned int sqp,
 				      libMesh::Real & jac,libMesh::Real delta,
@@ -156,8 +156,8 @@ namespace GRINS
 				      libMesh::DenseSubMatrix<libMesh::Number> & Kuf_vlm,
 				      libMesh::DenseSubMatrix<libMesh::Number> & Kvf_ulm,
 				      libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vlm);
-				
-    void solid_residual_contribution( bool compute_jacobian, 
+
+    void solid_residual_contribution( bool compute_jacobian,
 				      AssemblyContext & solid_context,unsigned int sqp,
 				      libMesh::Real & jac,libMesh::Real delta,
 				      libMesh::DenseSubVector<libMesh::Number> & Fus,
@@ -170,7 +170,7 @@ namespace GRINS
 				      libMesh::DenseSubMatrix<libMesh::Number> & Kvs_ulm,
 				      libMesh::DenseSubMatrix<libMesh::Number> & Kus_vlm,
 				      libMesh::DenseSubMatrix<libMesh::Number> & Kvs_vlm);
-      
+
     void lambda_residual_contribution( bool compute_jacobian, MultiphysicsSystem & system,
 				       libMesh::FEMContext & fluid_context,libMesh::dof_id_type fluid_elem_id,
 				       AssemblyContext & solid_context,
@@ -186,10 +186,7 @@ namespace GRINS
 				       libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_us,
 				       libMesh::DenseSubMatrix<libMesh::Number> & Kulm_vs,
 				       libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_vs);
-				       
-      
-    void assemble_solid_var_residual_contributions( bool compute_jacobian,
-                                                    AssemblyContext & context );
+
 
     bool is_solid_elem( libMesh::subdomain_id_type elem_id );
 
@@ -198,7 +195,7 @@ namespace GRINS
     void eval_first_Piola( const libMesh::Gradient & grad_u,
                       const libMesh::Gradient & grad_v,
                       libMesh::TensorValue<libMesh::Real> & F );
-  
+
     void eval_deform_gradient( const libMesh::Gradient & grad_u,
 			       const libMesh::Gradient & grad_v,
 			       libMesh::TensorValue<libMesh::Real> & F );
