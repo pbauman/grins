@@ -28,6 +28,9 @@
 // GRINS
 #include "grins/multiphysics_sys.h"
 
+// libMesh
+#include "libmesh/unsteady_solver.h"
+
 namespace GRINS
 {
   MultiphysicsSystem & AssemblyContext::get_multiphysics_system()
@@ -46,6 +49,27 @@ namespace GRINS
       libMesh::cast_ref<const MultiphysicsSystem &>( this->get_system() );
 
     return multiphysics_system;
+  }
+
+  void AssemblyContext::get_old_elem_solution( const MultiphysicsSystem & system,
+                                               libMesh::DenseVector<libMesh::Number> & old_elem_solution ) const
+  {
+    unsigned int n_dofs = this->get_elem_solution().size();
+    libmesh_assert_equal_to( old_elem_solution.size(),n_dofs);
+
+    // Extract old nonlinear solution from TimeSolver
+    // Error out if this is not an UnsteadySolver
+    const libMesh::TimeSolver & time_solver = system.get_time_solver();
+
+    const libMesh::UnsteadySolver * unsteady_solver =
+      dynamic_cast<const libMesh::UnsteadySolver*>(&time_solver);
+
+    if( !unsteady_solver )
+      libmesh_error_msg("ERROR: Can only call get_old_elem_solution when using an UnsteadySolver!");
+
+    for (unsigned int i=0; i != n_dofs; ++i)
+      old_elem_solution(i) =
+        unsteady_solver->old_nonlinear_solution(this->get_dof_indices()[i]);
   }
 
 } // end namespace GRINS
