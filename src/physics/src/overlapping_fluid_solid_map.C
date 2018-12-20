@@ -66,7 +66,7 @@ namespace GRINS
 
     std::unique_ptr<libMesh::DiffContext> raw_context = system.build_context();
     std::unique_ptr<AssemblyContext>
-      fem_context( libMesh::cast_ptr<AssemblyContext *>(raw_context.release()) );
+      context( libMesh::cast_ptr<AssemblyContext *>(raw_context.release()) );
 
     // We need to tell the context we just built to get_nothing for everything
     // except the variables we care about right now
@@ -77,7 +77,7 @@ namespace GRINS
       // FIXME: Hardcoded dimension assumption here
       for( auto var : all_vars )
         if( var != solid_disp_vars.u() || var != solid_disp_vars.v() )
-          fem_context->get_element_fe(var)->get_nothing();
+          context->get_element_fe(var)->get_nothing();
     }
 
 
@@ -93,12 +93,12 @@ namespace GRINS
         {
           // Setup FEMContext for computing solid displacements
           const std::vector<libMesh::Point>& qpoints =
-            fem_context->get_element_fe(solid_disp_vars.u(),2)->get_xyz();
+            context->get_element_fe(solid_disp_vars.u(),2)->get_xyz();
 
-          fem_context->get_element_fe(solid_disp_vars.u(),2)->get_phi();
+          context->get_element_fe(solid_disp_vars.u(),2)->get_phi();
 
-          fem_context->pre_fe_reinit(system,solid_elem);
-          fem_context->elem_fe_reinit();
+          context->pre_fe_reinit(system,solid_elem);
+          context->elem_fe_reinit();
 
           // Find what fluid element contains each of the quadrature points and cache
           for( unsigned int qp = 0; qp < qpoints.size(); qp++ )
@@ -107,11 +107,11 @@ namespace GRINS
               libMesh::Real v_disp = 0;
               libMesh::Real w_disp = 0;
 
-              fem_context->interior_value(solid_disp_vars.u(), qp, u_disp);
+              context->interior_value(solid_disp_vars.u(), qp, u_disp);
               if( solid_disp_vars.dim() >= 2 )
-                fem_context->interior_value(solid_disp_vars.v(), qp, v_disp);
+                context->interior_value(solid_disp_vars.v(), qp, v_disp);
               if( solid_disp_vars.dim() == 3 )
-                fem_context->interior_value(solid_disp_vars.w(), qp, w_disp);
+                context->interior_value(solid_disp_vars.w(), qp, w_disp);
 
               libMesh::Point U( u_disp, v_disp, w_disp );
 
