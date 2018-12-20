@@ -65,8 +65,8 @@ namespace GRINS
     const libMesh::MeshBase & mesh = system.get_mesh();
 
     std::unique_ptr<libMesh::DiffContext> raw_context = system.build_context();
-    std::unique_ptr<libMesh::FEMContext>
-      fem_context( libMesh::cast_ptr<libMesh::FEMContext *>(raw_context.release()) );
+    std::unique_ptr<AssemblyContext>
+      fem_context( libMesh::cast_ptr<AssemblyContext *>(raw_context.release()) );
 
     // We need to tell the context we just built to get_nothing for everything
     // except the variables we care about right now
