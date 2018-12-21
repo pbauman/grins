@@ -352,7 +352,7 @@ namespace GRINS
                   {
                     // Assuming rho is constant w.r.t. u, v, w
                     // and T (if Boussinesq added).
-                    libMesh::Real value = context.get_elem_solution_derivative() * JxW[qp]*this->_rho*u_phi[i][qp]*u_phi[j][qp];
+                    libMesh::Real value = context.get_elem_solution_rate_derivative() * JxW[qp]*this->_rho*u_phi[i][qp]*u_phi[j][qp];
 
                     M_uu(i,j) -= value;
                     M_vv(i,j) -= value;
