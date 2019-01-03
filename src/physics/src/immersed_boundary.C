@@ -927,6 +927,9 @@ namespace GRINS
     for( unsigned int i = 0; i < vf_dof_indices.size(); i++ )
       velocity_dof_indices[i+n_fluid_dofs] = vf_dof_indices[i];
 
+    libmesh_assert_equal_to( uf_dof_indices.size(), n_fluid_dofs );
+    libmesh_assert_equal_to( vf_dof_indices.size(), n_fluid_dofs );
+
     //Build up solid dof indices
     std::vector<libMesh::dof_id_type> solid_dof_indices;
     solid_dof_indices.resize(_disp_vars.dim()*n_solid_dofs);
@@ -943,6 +946,9 @@ namespace GRINS
     for( unsigned int i = 0; i < vs_dof_indices.size(); i++ )
       solid_dof_indices[i+n_solid_dofs] = vs_dof_indices[i];
 
+    libmesh_assert_equal_to( us_dof_indices.size(), n_solid_dofs );
+    libmesh_assert_equal_to( vs_dof_indices.size(), n_solid_dofs );
+
     //Build up lambda dof indices
     std::vector<libMesh::dof_id_type> lambda_dof_indices;
     lambda_dof_indices.resize(_lambda_var.dim()*n_lambda_dofs);
@@ -958,6 +964,9 @@ namespace GRINS
 
     for( unsigned int i = 0; i < vlm_dof_indices.size(); i++ )
       lambda_dof_indices[i+n_lambda_dofs] = vlm_dof_indices[i];
+
+    libmesh_assert_equal_to( ulm_dof_indices.size(), n_lambda_dofs );
+    libmesh_assert_equal_to( vlm_dof_indices.size(), n_lambda_dofs );
 
     // Since we manually built the fluid context, we have to manually
     // constrain and add the residuals and Jacobians.
