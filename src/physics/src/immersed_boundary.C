@@ -992,7 +992,7 @@ namespace GRINS
   template<typename SolidMech>
   void ImmersedBoundary<SolidMech>::prepare_fluid_context_batch( const MultiphysicsSystem & system,
 								 libMesh::dof_id_type fluid_elem_id,
-								 const AssemblyContext & solid_context,
+								 AssemblyContext & solid_context,
 								 const std::vector<unsigned int> & solid_qpoint_indices,
 								 const std::vector<libMesh::Point> & solid_qpoints,
 								 std::vector<libMesh::Point> & solid_qpoints_subset,
@@ -1041,7 +1041,7 @@ namespace GRINS
 
   template<typename SolidMech>
   void ImmersedBoundary<SolidMech>::prepare_fluid_context( const MultiphysicsSystem & system,
-							   const AssemblyContext & solid_context,
+							   AssemblyContext & solid_context,
 							   const std::vector<libMesh::Point> & solid_qpoints,
 							   const unsigned int sqp, /* solid quadrature point */
 							   const libMesh::dof_id_type fluid_elem_id,
