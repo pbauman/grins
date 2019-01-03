@@ -325,6 +325,7 @@ namespace GRINS
         // Then, for that fluid element, extract the indices of the *solid* quadrature points
         // that are in that fluid element
 
+        /*
         std::map<libMesh::dof_id_type,std::map<libMesh::dof_id_type,std::vector<unsigned int> > >::const_iterator
           solid_elem_map_it = _fluid_solid_overlap->solid_map().find(solid_context.get_elem().id());
 
@@ -353,18 +354,15 @@ namespace GRINS
 
             for( auto qp : solid_qpoint_indices )
               qps_visted.push_back(qp);
+        */
 
-            // Prepare the fluid context for all the things that we'll need for the current
-            // fluid element
-            this->prepare_fluid_context_batch( system,
-                                               fluid_elem_id,
-                                               solid_context,
-                                               solid_qpoint_indices,
-                                               solid_qpoints,
-                                               solid_qpoints_subset,
-                                               *(this->_fluid_context) );
+        for( unsigned int qp = 0; qp < n_qpoints; qp++ )
+          {
+            const libMesh::Point & x_qp =  solid_qpoints[qp];
 
-            libmesh_assert_equal_to( solid_qpoint_indices.size(), solid_qpoints_subset.size() );
+            // Compute displacement coordinate of solid quadrature point
+            // at previous time step and prepare fluid context at that point.
+            this->prepare_fluid_context_search(system,solid_context,x_qp,qp,*(this->_fluid_context));
 
             unsigned int n_fluid_dofs = (this->_fluid_context)->get_dof_indices(this->_flow_vars.u()).size();
 
@@ -393,100 +391,34 @@ namespace GRINS
             libMesh::DenseSubVector<libMesh::Number> Fufp(Fufp_dummy,0,n_fluid_dofs), Fufm(Fufm_dummy,0,n_fluid_dofs);
             libMesh::DenseSubVector<libMesh::Number> Fvfp(Fvfp_dummy,0,n_fluid_dofs), Fvfm(Fvfm_dummy,0,n_fluid_dofs);
 
-            for( unsigned int qp = 0; qp < solid_qpoints_subset.size(); qp++ )
+
+            this->compute_residuals(solid_context,*(this->_fluid_context),qp,
+                                    Fuf,Fvf,Fus,Fvs,Fulm,Fvlm);
+
+            if( compute_jacobian )
               {
-                unsigned int sqp = solid_qpoint_indices[qp];
 
-                this->prepare_fluid_context(system,solid_context,solid_qpoints,sqp,fluid_elem_id,
-                                            *(this->point_fluid_context));
+                this->compute_numerical_jacobians( system,solid_context,*(this->_fluid_context),
+                                                   qp,solid_qpoints,
+                                                   Fufp,Fvfp,Fusp,Fvsp,Fulmp,Fvlmp,
+                                                   Fufm,Fvfm,Fusm,Fvsm,Fulmm,Fvlmm,
+                                                   Kuf_ulm,Kuf_vlm,Kvf_ulm,Kvf_vlm,
+                                                   Kus_ulm,Kus_vlm,Kvs_ulm,Kvs_vlm,
+                                                   Kulm_uf,Kulm_vf,Kvlm_uf,Kvlm_vf,
+                                                   Kuf_us,Kuf_vs,Kvf_us,Kvf_vs,
+                                                   Kus_us,Kus_vs,Kvs_us,Kvs_vs,
+                                                   Kulm_us,Kulm_vs,Kvlm_us,Kvlm_vs);
 
-                this->compute_residuals(solid_context,*(this->point_fluid_context),sqp,
-                                        Fuf,Fvf,Fus,Fvs,Fulm,Fvlm);
-
-                if( compute_jacobian )
-                  {
-                    libMesh::Real delta = 1.0e-8;
-
-                    // Compute lambdax derivs
-                    {
-                      libMesh::DenseSubVector<libMesh::Number> & lambda_xcoeff =
-                        solid_context.get_elem_solution(this->_lambda_var.u());
-
-                      this->compute_lambda_derivs(solid_context,*(this->point_fluid_context),sqp,delta,
-                                                  lambda_xcoeff,
-                                                  Fufp,Fvfp,Fusp,Fvsp,Fulmp,Fvlmp,
-                                                  Fufm,Fvfm,Fusm,Fvsm,Fulmm,Fvlmm,
-                                                  Kuf_ulm,Kvf_ulm,Kus_ulm,Kvs_ulm);
-                    }
-
-                    // Compute lambday derivs
-                    {
-                      libMesh::DenseSubVector<libMesh::Number> & lambda_ycoeff =
-                        solid_context.get_elem_solution(this->_lambda_var.v());
-
-                      this->compute_lambda_derivs(solid_context,*(this->point_fluid_context),sqp,delta,
-                                                  lambda_ycoeff,
-                                                  Fufp,Fvfp,Fusp,Fvsp,Fulmp,Fvlmp,
-                                                  Fufm,Fvfm,Fusm,Fvsm,Fulmm,Fvlmm,
-                                                  Kuf_vlm,Kvf_vlm,Kus_vlm,Kvs_vlm);
-                    }
-
-                    // Compute fluidx derivs
-                    {
-                      libMesh::DenseSubVector<libMesh::Number> & fluid_ucoeff =
-                        (this->point_fluid_context)->get_elem_solution(this->_flow_vars.u());
-
-                      this->compute_fluid_derivs(solid_context,*(this->point_fluid_context),sqp,delta,
-                                                 fluid_ucoeff,
-                                                 Fufp,Fvfp,Fusp,Fvsp,Fulmp,Fvlmp,
-                                                 Fufm,Fvfm,Fusm,Fvsm,Fulmm,Fvlmm,
-                                                 Kulm_uf,Kvlm_uf);
-                    }
-
-                    // Compute fluidy derivs
-                    {
-                      libMesh::DenseSubVector<libMesh::Number> & fluid_vcoeff =
-                        (this->point_fluid_context)->get_elem_solution(this->_flow_vars.v());
-
-                      this->compute_fluid_derivs(solid_context,*(this->point_fluid_context),sqp,delta,
-                                                 fluid_vcoeff,
-                                                 Fufp,Fvfp,Fusp,Fvsp,Fulmp,Fvlmp,
-                                                 Fufm,Fvfm,Fusm,Fvsm,Fulmm,Fvlmm,
-                                                 Kulm_vf,Kvlm_vf);
-                    }
-
-                    // Compute solidx derivs
-                    {
-                      libMesh::DenseSubVector<libMesh::Number> & u_coeffs =
-                        solid_context.get_elem_solution(this->_disp_vars.u());
-
-                      this->compute_solid_derivs(system,solid_context,*(this->point_fluid_context),
-                                                 sqp,delta,fluid_elem_id,solid_qpoints,
-                                                 u_coeffs,
-                                                 Fufp,Fvfp,Fusp,Fvsp,Fulmp,Fvlmp,
-                                                 Fufm,Fvfm,Fusm,Fvsm,Fulmm,Fvlmm,
-                                                 Kuf_us,Kvf_us,Kus_us,Kvs_us,Kulm_us,Kvlm_us);
-                    }
-
-
-                    // Compute solidy derivs
-                    {
-                      libMesh::DenseSubVector<libMesh::Number> & v_coeffs =
-                        solid_context.get_elem_solution(this->_disp_vars.v());
-
-                      this->compute_solid_derivs(system,solid_context,*(this->point_fluid_context),
-                                                 sqp,delta,fluid_elem_id,solid_qpoints,
-                                                 v_coeffs,
-                                                 Fufp,Fvfp,Fusp,Fvsp,Fulmp,Fvlmp,
-                                                 Fufm,Fvfm,Fusm,Fvsm,Fulmm,Fvlmm,
-                                                 Kuf_vs,Kvf_vs,Kus_vs,Kvs_vs,Kulm_vs,Kvlm_vs);
-
-                    }
-
-                  } // if( compute_jacobian)
-
-
-              } // end solid_qpoints_subset loop
+                /*
+                this->compute_analytic_jacobians(solid_context,*(this->_fluid_context),qp,
+                                                 Kuf_ulm,Kuf_vlm,Kvf_ulm,Kvf_vlm,
+                                                 Kus_ulm,Kus_vlm,Kvs_ulm,Kvs_vlm,
+                                                 Kulm_uf,Kulm_vf,Kvlm_uf,Kvlm_vf,
+                                                 Kuf_us,Kuf_vs,Kvf_us,Kvf_vs,
+                                                 Kus_us,Kus_vs,Kvs_us,Kvs_vs,
+                                                 Kulm_us,Kulm_vs,Kvlm_us,Kvlm_vs);
+                */
+              }
 
 
             // Assemble fluid residual
@@ -505,9 +437,8 @@ namespace GRINS
                                                Kf_s,Klm_f,Kf_lm);
               }
 
-          } // end loop over overlapping fluid elements
+          } // end qp loop
 
-        libmesh_assert_equal_to( solid_qpoints.size(), qps_visted.size() );
 
       } // if(solid_elem)
   }
