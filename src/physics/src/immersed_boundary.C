@@ -272,6 +272,8 @@ namespace GRINS
         const std::vector<libMesh::Point> & solid_qpoints =
           solid_context.get_element_fe(u_var,2)->get_xyz();
 
+        unsigned int n_qpoints = solid_qpoints.size();
+
         libMesh::DenseSubVector<libMesh::Number> & Fus = solid_context.get_elem_residual(u_var);
         libMesh::DenseSubVector<libMesh::Number> & Fvs = solid_context.get_elem_residual(v_var);
 
