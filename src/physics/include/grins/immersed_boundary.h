@@ -139,6 +139,12 @@ namespace GRINS
                                 const libMesh::dof_id_type fluid_elem_id,
                                 libMesh::FEMContext & fluid_context );
 
+    void prepare_fluid_context_search( const MultiphysicsSystem & system,
+                                       AssemblyContext & solid_context,
+                                       const libMesh::Point & x_qp,
+                                       const unsigned int qp,
+                                       libMesh::FEMContext & fluid_context );
+
     void compute_residuals( const AssemblyContext & solid_context,
                             const libMesh::FEMContext & fluid_context,
                             unsigned int sqp,

@@ -1075,6 +1075,51 @@ namespace GRINS
   }
 
   template<typename SolidMech>
+  void ImmersedBoundary<SolidMech>::prepare_fluid_context_search( const MultiphysicsSystem & system,
+                                                                  AssemblyContext & solid_context,
+                                                                  const libMesh::Point & x_qp,
+                                                                  const unsigned int qp,
+                                                                  libMesh::FEMContext & fluid_context )
+  {
+    // Compute position of displaced quadrature point at the previous time step
+    libMesh::DenseVector<libMesh::Number> old_elem_solution(solid_context.get_elem_solution().size());
+    libMesh::DenseVector<libMesh::Number> elem_solution_copy(solid_context.get_elem_solution().size());
+
+    // This populates the old_elem_solution vector for the solid element
+    // using the solution values from the prevous timestep
+    solid_context.get_old_elem_solution(system,old_elem_solution);
+
+    // Put in the old_elem_solution so we use the previous timestep values
+    elem_solution_copy = solid_context.get_elem_solution();
+    solid_context.get_elem_solution() = old_elem_solution;
+
+    libMesh::Number u, v;
+    solid_context.interior_value(this->_disp_vars.u(), qp, u );
+    solid_context.interior_value(this->_disp_vars.v(), qp, v );
+
+    // Copy back
+    solid_context.get_elem_solution() = elem_solution_copy;
+
+    libMesh::Point x(x_qp(0) + u, x_qp(1) + v);
+
+    // Now find the fluid element that contains the point x
+    const libMesh::Elem * fluid_elem = (*_point_locator)( x, &_fluid_subdomain_set );
+
+    fluid_context.pre_fe_reinit(system,fluid_elem);
+
+    libMesh::FEBase * fe = fluid_context.get_element_fe(this->_flow_vars.u());
+    libMesh::FEType fetype = fe->get_fe_type();
+
+    // But we need to hand *reference* element points to the FEMContext to reinit
+    unsigned int dim = 2;
+    libMesh::Point x_ref = libMesh::FEInterface::inverse_map(dim,fetype,fluid_elem,x);
+
+    std::vector<libMesh::Point> x_ref_vec(1,x_ref);
+
+    fluid_context.elem_fe_reinit(&x_ref_vec);
+  }
+
+  template<typename SolidMech>
   void ImmersedBoundary<SolidMech>::fluid_residual_contribution( bool compute_jacobian, MultiphysicsSystem & system,
 								 libMesh::FEMContext & fluid_context,
 								 libMesh::dof_id_type fluid_elem_id,
