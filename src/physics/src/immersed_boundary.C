@@ -629,6 +629,241 @@ namespace GRINS
   }
 
   template<typename SolidMech>
+  void ImmersedBoundary<SolidMech>::compute_numerical_jacobians(const MultiphysicsSystem & system,
+                                                                AssemblyContext & solid_context,
+                                                                libMesh::FEMContext & fluid_context,
+                                                                const unsigned int qp,
+                                                                const std::vector<libMesh::Point> & solid_qpoints,
+                                                                libMesh::DenseSubVector<libMesh::Number> & Fufp,
+                                                                libMesh::DenseSubVector<libMesh::Number> & Fvfp,
+                                                                libMesh::DenseSubVector<libMesh::Number> & Fusp,
+                                                                libMesh::DenseSubVector<libMesh::Number> & Fvsp,
+                                                                libMesh::DenseSubVector<libMesh::Number> & Fulmp,
+                                                                libMesh::DenseSubVector<libMesh::Number> & Fvlmp,
+                                                                libMesh::DenseSubVector<libMesh::Number> & Fufm,
+                                                                libMesh::DenseSubVector<libMesh::Number> & Fvfm,
+                                                                libMesh::DenseSubVector<libMesh::Number> & Fusm,
+                                                                libMesh::DenseSubVector<libMesh::Number> & Fvsm,
+                                                                libMesh::DenseSubVector<libMesh::Number> & Fulmm,
+                                                                libMesh::DenseSubVector<libMesh::Number> & Fvlmm,
+                                                                libMesh::DenseSubMatrix<libMesh::Number> & Kuf_ulm,
+                                                                libMesh::DenseSubMatrix<libMesh::Number> & Kuf_vlm,
+                                                                libMesh::DenseSubMatrix<libMesh::Number> & Kvf_ulm,
+                                                                libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vlm,
+                                                                libMesh::DenseSubMatrix<libMesh::Number> & Kus_ulm,
+                                                                libMesh::DenseSubMatrix<libMesh::Number> & Kus_vlm,
+                                                                libMesh::DenseSubMatrix<libMesh::Number> & Kvs_ulm,
+                                                                libMesh::DenseSubMatrix<libMesh::Number> & Kvs_vlm,
+                                                                libMesh::DenseSubMatrix<libMesh::Number> & Kulm_uf,
+                                                                libMesh::DenseSubMatrix<libMesh::Number> & Kulm_vf,
+                                                                libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_uf,
+                                                                libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_vf,
+                                                                libMesh::DenseSubMatrix<libMesh::Number> & Kuf_us,
+                                                                libMesh::DenseSubMatrix<libMesh::Number> & Kuf_vs,
+                                                                libMesh::DenseSubMatrix<libMesh::Number> & Kvf_us,
+                                                                libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vs,
+                                                                libMesh::DenseSubMatrix<libMesh::Number> & Kus_us,
+                                                                libMesh::DenseSubMatrix<libMesh::Number> & Kus_vs,
+                                                                libMesh::DenseSubMatrix<libMesh::Number> & Kvs_us,
+                                                                libMesh::DenseSubMatrix<libMesh::Number> & Kvs_vs,
+                                                                libMesh::DenseSubMatrix<libMesh::Number> & Kulm_us,
+                                                                libMesh::DenseSubMatrix<libMesh::Number> & Kulm_vs,
+                                                                libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_us,
+                                                                libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_vs)
+  {
+    libMesh::Real delta = 1.0e-8;
+
+    // Compute lambdax derivs
+    {
+      libMesh::DenseSubVector<libMesh::Number> & lambda_xcoeff =
+        solid_context.get_elem_solution(this->_lambda_var.u());
+
+      this->compute_lambda_derivs(solid_context,fluid_context,qp,delta,
+                                  lambda_xcoeff,
+                                  Fufp,Fvfp,Fusp,Fvsp,Fulmp,Fvlmp,
+                                  Fufm,Fvfm,Fusm,Fvsm,Fulmm,Fvlmm,
+                                  Kuf_ulm,Kvf_ulm,Kus_ulm,Kvs_ulm);
+    }
+
+    // Compute lambday derivs
+
+    {
+      libMesh::DenseSubVector<libMesh::Number> & lambda_ycoeff =
+        solid_context.get_elem_solution(this->_lambda_var.v());
+
+      this->compute_lambda_derivs(solid_context,fluid_context,qp,delta,
+                                  lambda_ycoeff,
+                                  Fufp,Fvfp,Fusp,Fvsp,Fulmp,Fvlmp,
+                                  Fufm,Fvfm,Fusm,Fvsm,Fulmm,Fvlmm,
+                                  Kuf_vlm,Kvf_vlm,Kus_vlm,Kvs_vlm);
+    }
+
+
+    // Compute fluidx derivs
+    {
+      libMesh::DenseSubVector<libMesh::Number> & fluid_ucoeff =
+        fluid_context.get_elem_solution(this->_flow_vars.u());
+
+      this->compute_fluid_derivs(solid_context,fluid_context,qp,delta,
+                                 fluid_ucoeff,
+                                 Fufp,Fvfp,Fusp,Fvsp,Fulmp,Fvlmp,
+                                 Fufm,Fvfm,Fusm,Fvsm,Fulmm,Fvlmm,
+                                 Kulm_uf,Kvlm_uf);
+    }
+
+    // Compute fluidy derivs
+    {
+      libMesh::DenseSubVector<libMesh::Number> & fluid_vcoeff =
+        fluid_context.get_elem_solution(this->_flow_vars.v());
+
+      this->compute_fluid_derivs(solid_context,fluid_context,qp,delta,
+                                 fluid_vcoeff,
+                                 Fufp,Fvfp,Fusp,Fvsp,Fulmp,Fvlmp,
+                                 Fufm,Fvfm,Fusm,Fvsm,Fulmm,Fvlmm,
+                                 Kulm_vf,Kvlm_vf);
+    }
+
+    // Compute solidx derivs
+    {
+      libMesh::DenseSubVector<libMesh::Number> & u_coeffs =
+        solid_context.get_elem_solution(this->_disp_vars.u());
+
+      this->compute_solid_derivs(system,solid_context,fluid_context,
+                                 qp,delta,solid_qpoints,
+                                 u_coeffs,
+                                 Fufp,Fvfp,Fusp,Fvsp,Fulmp,Fvlmp,
+                                 Fufm,Fvfm,Fusm,Fvsm,Fulmm,Fvlmm,
+                                 Kuf_us,Kvf_us,Kus_us,Kvs_us,Kulm_us,Kvlm_us);
+    }
+
+
+    // Compute solidy derivs
+    {
+      libMesh::DenseSubVector<libMesh::Number> & v_coeffs =
+        solid_context.get_elem_solution(this->_disp_vars.v());
+
+      this->compute_solid_derivs(system,solid_context,fluid_context,
+                                 qp,delta,solid_qpoints,
+                                 v_coeffs,
+                                 Fufp,Fvfp,Fusp,Fvsp,Fulmp,Fvlmp,
+                                 Fufm,Fvfm,Fusm,Fvsm,Fulmm,Fvlmm,
+                                 Kuf_vs,Kvf_vs,Kus_vs,Kvs_vs,Kulm_vs,Kvlm_vs);
+
+    }
+  }
+
+  template<typename SolidMech>
+  void ImmersedBoundary<SolidMech>::compute_analytic_jacobians(AssemblyContext & solid_context,
+                                                               libMesh::FEMContext & fluid_context,
+                                                               const unsigned int qp,
+                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kuf_ulm,
+                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kuf_vlm,
+                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kvf_ulm,
+                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vlm,
+                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kus_ulm,
+                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kus_vlm,
+                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kvs_ulm,
+                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kvs_vlm,
+                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kulm_uf,
+                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kulm_vf,
+                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_uf,
+                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_vf,
+                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kuf_us,
+                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kuf_vs,
+                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kvf_us,
+                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vs,
+                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kus_us,
+                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kus_vs,
+                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kvs_us,
+                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kvs_vs,
+                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kulm_us,
+                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kulm_vs,
+                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_us,
+                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_vs)
+  {
+    unsigned int n_solid_dofs = solid_context.get_dof_indices(this->_disp_vars.u()).size();
+    unsigned int n_fluid_dofs = fluid_context.get_dof_indices(this->_flow_vars.u()).size();
+    unsigned int n_lambda_dofs = solid_context.get_dof_indices(this->_lambda_var.u()).size();
+
+    const std::vector<libMesh::Real> & solid_JxW =
+      solid_context.get_element_fe(this->_disp_vars.u(),2)->get_JxW();
+
+    libMesh::Real jac = solid_JxW[qp];
+
+    const std::vector<std::vector<libMesh::Real> > fluid_phi =
+      fluid_context.get_element_fe(this->_flow_vars.u())->get_phi();
+
+    const std::vector<std::vector<libMesh::Real> > solid_phi =
+      solid_context.get_element_fe(this->_disp_vars.u(),2)->get_phi();
+
+    const std::vector<std::vector<libMesh::RealGradient> > solid_dphi =
+      solid_context.get_element_fe(this->_disp_vars.u(),2)->get_dphi();
+
+    const std::vector<std::vector<libMesh::Real> > lambda_phi =
+      solid_context.get_element_fe(this->_lambda_var.u(),2)->get_phi();
+
+    // Solid derivatives
+    for( unsigned int j = 0; j < n_solid_dofs; j++ )
+      {
+        // Lambda residual
+        for( unsigned int i = 0; i < n_lambda_dofs; i++ )
+          {
+            const libMesh::Real value =
+              lambda_phi[i][qp]*solid_phi[j][qp]*jac*solid_context.get_elem_solution_rate_derivative();
+
+            Kulm_us(i,j) -= value;
+            Kvlm_vs(i,j) -= value;
+          }
+
+        // Solid residual
+        for (unsigned int i = 0; i != n_solid_dofs; i++)
+          {
+            const libMesh::Real value =
+              5*solid_dphi[j][qp]*solid_dphi[i][qp]*jac*solid_context.get_elem_solution_derivative();
+
+            Kus_us(i,j) -= value;
+            Kvs_vs(i,j) -= value;
+          }
+
+      }
+
+    // Fluid derivatives
+    for( unsigned int j = 0; j < n_fluid_dofs; j++ )
+      {
+        libmesh_assert_equal_to( fluid_phi[j].size(), 1 );
+
+        // Lambda residual
+        for (unsigned int i=0; i != n_lambda_dofs; i++)
+          {
+            Kulm_uf(i,j) += lambda_phi[i][qp]*fluid_phi[j][0]*jac*solid_context.get_elem_solution_derivative();
+            Kvlm_vf(i,j) += lambda_phi[i][qp]*fluid_phi[j][0]*jac*solid_context.get_elem_solution_derivative();
+          }
+      }
+
+    // Lambda deriviatives
+    for( unsigned int j = 0; j < n_lambda_dofs; j++ )
+      {
+        const libMesh::Real value = lambda_phi[j][qp]*jac*solid_context.get_elem_solution_derivative();
+
+        // Fluid residual
+        for (unsigned int i=0; i != n_fluid_dofs; i++)
+          {
+            libmesh_assert_equal_to( fluid_phi[i].size(), 1 );
+
+            Kuf_ulm(i,j) += -value*fluid_phi[i][0];
+            Kvf_vlm(i,j) += -value*fluid_phi[i][0];
+          }
+
+        // Solid residual
+        for (unsigned int i=0; i != n_solid_dofs; i++)
+          {
+            Kus_ulm(i,j) += value*solid_phi[i][qp];
+            Kvs_vlm(i,j) += value*solid_phi[i][qp];
+          }
+      }
+  }
+
+  template<typename SolidMech>
   void ImmersedBoundary<SolidMech>::compute_lambda_derivs(const AssemblyContext & solid_context,
                                                           const libMesh::FEMContext & fluid_context,
                                                           const unsigned int sqp,
@@ -2698,6 +2933,9 @@ namespace GRINS
     libMesh::TensorValue<libMesh::Real> F;
     this->eval_deform_gradient(grad_u,grad_v,F);
 
+    P = 5*F;
+
+    /*
     // We need to use F^T a few times so just cache it.
     libMesh::TensorValue<libMesh::Real> Ftrans = F.transpose();
 
@@ -2728,7 +2966,7 @@ namespace GRINS
     S(1,1) += lambda*trE;
 
     P = F*S;
-
+    */
     // The F^T comes from needing the derivative of the fluid
     // shape function w.r.t. solid coordinates
     //tau = P*Ftrans;
