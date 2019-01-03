@@ -57,7 +57,7 @@ namespace GRINS
 
     const MultiphysicsSystem & get_multiphysics_system() const;
 
-    void get_old_elem_solution( MultiphysicsSystem & system,
+    void get_old_elem_solution( const MultiphysicsSystem & system,
                                 libMesh::DenseVector<libMesh::Number> & old_elem_solution ) const;
 
   protected:

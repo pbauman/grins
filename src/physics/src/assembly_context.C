@@ -51,7 +51,7 @@ namespace GRINS
     return multiphysics_system;
   }
 
-  void AssemblyContext::get_old_elem_solution( MultiphysicsSystem & system,
+  void AssemblyContext::get_old_elem_solution( const MultiphysicsSystem & system,
                                                libMesh::DenseVector<libMesh::Number> & old_elem_solution ) const
   {
     unsigned int n_dofs = this->get_elem_solution().size();
