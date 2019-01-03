@@ -804,20 +804,20 @@ namespace GRINS
         this->zero_residuals(Fusm,Fvsm,Fulmm,Fvlmm,Fufm,Fvfm);
 
         solid_coeff(j) += delta;
-        this->prepare_fluid_context(system,solid_context,solid_qpoints,sqp,fluid_elem_id,fluid_context);
+        //this->prepare_fluid_context(system,solid_context,solid_qpoints,sqp,fluid_elem_id,fluid_context);
 
         this->compute_residuals(solid_context,fluid_context,sqp,
                                 Fufp,Fvfp,Fusp,Fvsp,Fulmp,Fvlmp);
 
         solid_coeff(j) -= 2*delta;
-        this->prepare_fluid_context(system,solid_context,solid_qpoints,sqp,fluid_elem_id,fluid_context);
+        //this->prepare_fluid_context(system,solid_context,solid_qpoints,sqp,fluid_elem_id,fluid_context);
 
         this->compute_residuals(solid_context,fluid_context,sqp,
                                 Fufm,Fvfm,Fusm,Fvsm,Fulmm,Fvlmm);
 
         solid_coeff(j) += delta;
         // IS THIS NEEDED?
-        this->prepare_fluid_context(system,solid_context,solid_qpoints,sqp,fluid_elem_id,fluid_context);
+        //this->prepare_fluid_context(system,solid_context,solid_qpoints,sqp,fluid_elem_id,fluid_context);
 
         for (unsigned int i=0; i != n_fluid_dofs; i++)
           {
@@ -1022,6 +1022,15 @@ namespace GRINS
 
     libMesh::Real u,v,w;
 
+    libMesh::DenseVector<libMesh::Number> old_elem_solution(solid_context.get_elem_solution().size());
+    libMesh::DenseVector<libMesh::Number> elem_solution_copy(solid_context.get_elem_solution().size());
+
+    solid_context.get_old_elem_solution(system,old_elem_solution);
+
+    // Put in the old_elem_solution so we use the previous timestep values
+    elem_solution_copy = solid_context.get_elem_solution();
+    solid_context.get_elem_solution() = old_elem_solution;
+
     for( unsigned int i = 0; i < solid_qpoint_indices.size(); i++ )
       {
         unsigned int qp = solid_qpoint_indices[i];
@@ -1037,6 +1046,8 @@ namespace GRINS
 
         solid_qpoints_subset_xyz[i] = xpu_qp;
       }
+
+    solid_context.get_elem_solution() = elem_solution_copy;
 
     // Prepare the fluid context for things we're evaluating on the fluid
     // element at the *deformed* solid quadrature point locations within
@@ -1063,11 +1074,22 @@ namespace GRINS
 							   const libMesh::dof_id_type fluid_elem_id,
 							   libMesh::FEMContext & fluid_context )
   {
+    libMesh::DenseVector<libMesh::Number> old_elem_solution(solid_context.get_elem_solution().size());
+    libMesh::DenseVector<libMesh::Number> elem_solution_copy(solid_context.get_elem_solution().size());
+
+    solid_context.get_old_elem_solution(system,old_elem_solution);
+
+    // Put in the old_elem_solution so we use the previous timestep values
+    elem_solution_copy = solid_context.get_elem_solution();
+    solid_context.get_elem_solution() = old_elem_solution;
+
     libMesh::Real Ux, Uy, Uz;
     solid_context.interior_value(this->_disp_vars.u(), sqp, Ux );
     solid_context.interior_value(this->_disp_vars.v(), sqp, Uy );
     if(this->_disp_vars.dim() == 3)
       solid_context.interior_value(this->_disp_vars.w(), sqp, Uz );
+
+    solid_context.get_elem_solution() = elem_solution_copy;
 
     const libMesh::Point & xqp = solid_qpoints[sqp];
 

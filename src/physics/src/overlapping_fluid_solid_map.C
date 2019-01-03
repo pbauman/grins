@@ -100,6 +100,12 @@ namespace GRINS
           context->pre_fe_reinit(system,solid_elem);
           context->elem_fe_reinit();
 
+          libMesh::DenseVector<libMesh::Number> old_elem_solution(context->get_elem_solution().size());
+          context->get_old_elem_solution(system,old_elem_solution);
+
+          // Put in the old_elem_solution so we use the previous timestep values
+          context->get_elem_solution() = old_elem_solution;
+
           // Find what fluid element contains each of the quadrature points and cache
           for( unsigned int qp = 0; qp < qpoints.size(); qp++ )
             {
