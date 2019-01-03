@@ -202,7 +202,6 @@ namespace GRINS
                               libMesh::FEMContext & fluid_context,
                               unsigned int sqp,
                               libMesh::Real delta,
-                              const libMesh::dof_id_type fluid_elem_id,
                               const std::vector<libMesh::Point> & solid_qpoints,
                               libMesh::DenseSubVector<libMesh::Number> & solid_coeff,
                               libMesh::DenseSubVector<libMesh::Number> & Fufp,
