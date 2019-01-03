@@ -341,6 +341,7 @@ namespace GRINS
              fluid_elem_map_it != fluid_elem_map.end();
              ++fluid_elem_map_it )
           {
+
             // Grab the current fluid element id
             libMesh::dof_id_type fluid_elem_id = fluid_elem_map_it->first;
 
@@ -549,6 +550,7 @@ namespace GRINS
 
     const std::vector<std::vector<libMesh::Real> > solid_phi =
       solid_context.get_element_fe(this->_disp_vars.u(),2)->get_phi();
+
     const std::vector<std::vector<libMesh::RealGradient> > solid_dphi =
       solid_context.get_element_fe(this->_disp_vars.u(),2)->get_dphi();
 
@@ -661,6 +663,7 @@ namespace GRINS
     libmesh_assert_equal_to(Kus.n(),n_lambda_dofs);
     libmesh_assert_equal_to(Kvs.n(),n_lambda_dofs);
 
+
     for( unsigned int j = 0; j < n_lambda_dofs; j++ )
       {
         this->zero_residuals(Fusp,Fvsp,Fulmp,Fvlmp,Fufp,Fvfp);
@@ -690,6 +693,7 @@ namespace GRINS
             Kvs(i,j) += (Fvsp(i) - Fvsm(i))/(2*delta);
           }
       }
+
   }
 
   template<typename SolidMech>
@@ -911,6 +915,8 @@ namespace GRINS
 
     const std::vector<libMesh::dof_id_type>& uf_dof_indices =
       fluid_context.get_dof_indices(this->_flow_vars.u());
+
+
 
     for( unsigned int i = 0; i < uf_dof_indices.size(); i++ )
       velocity_dof_indices[i] = uf_dof_indices[i];
