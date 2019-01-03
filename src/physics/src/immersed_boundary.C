@@ -683,8 +683,8 @@ namespace GRINS
 
         for (unsigned int i=0; i != n_fluid_dofs; i++)
           {
-            Kuf(i,j) += (Fufp(i) - Fufm(i))/(2*delta);
-            Kvf(i,j) += (Fvfp(i) - Fvfm(i))/(2*delta);
+            Kuf(i,j) = (Fufp(i) - Fufm(i))/(2*delta);
+            Kvf(i,j) = (Fvfp(i) - Fvfm(i))/(2*delta);
           }
 
         for (unsigned int i=0; i != n_solid_dofs; i++)
@@ -819,8 +819,8 @@ namespace GRINS
 
         for (unsigned int i=0; i != n_fluid_dofs; i++)
           {
-            Kuf(i,j) += (Fufp(i) - Fufm(i))/(2*delta);
-            Kvf(i,j) += (Fvfp(i) - Fvfm(i))/(2*delta);
+            Kuf(i,j) = (Fufp(i) - Fufm(i))/(2*delta);
+            Kvf(i,j) = (Fvfp(i) - Fvfm(i))/(2*delta);
           }
 
         for (unsigned int i=0; i != n_solid_dofs; i++)
