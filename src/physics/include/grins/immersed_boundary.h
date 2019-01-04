@@ -398,6 +398,11 @@ namespace GRINS
                                           AssemblyContext & solid_context,
                                           const libMesh::Point & x_qp,
                                           const unsigned int qp ) const;
+
+    void compute_ibm_residuals(const MultiphysicsSystem & system,
+                               AssemblyContext & solid_context,
+                               libMesh::FEMContext & fluid_context,
+                               const std::vector<unsigned int> & quad_points);
   };
 
   template<typename SolidMech>
