@@ -388,6 +388,16 @@ namespace GRINS
     void eval_deform_gradient( const libMesh::Gradient & grad_u,
 			       const libMesh::Gradient & grad_v,
 			       libMesh::TensorValue<libMesh::Real> & F );
+
+    libMesh::Point compute_displaced_point( const MultiphysicsSystem & system,
+                                            AssemblyContext & solid_context,
+                                            const libMesh::Point & x_qp,
+                                            const unsigned int qp ) const;
+
+    const libMesh::Elem * get_fluid_elem( const MultiphysicsSystem & system,
+                                          AssemblyContext & solid_context,
+                                          const libMesh::Point & x_qp,
+                                          const unsigned int qp ) const;
   };
 
   template<typename SolidMech>

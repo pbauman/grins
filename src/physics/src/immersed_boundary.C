@@ -1279,11 +1279,10 @@ namespace GRINS
   }
 
   template<typename SolidMech>
-  void ImmersedBoundary<SolidMech>::prepare_fluid_context_search( const MultiphysicsSystem & system,
-                                                                  AssemblyContext & solid_context,
-                                                                  const libMesh::Point & x_qp,
-                                                                  const unsigned int qp,
-                                                                  libMesh::FEMContext & fluid_context )
+  libMesh::Point ImmersedBoundary<SolidMech>::compute_displaced_point( const MultiphysicsSystem & system,
+                                                                       AssemblyContext & solid_context,
+                                                                       const libMesh::Point & x_qp,
+                                                                       const unsigned int qp ) const
   {
     // Compute position of displaced quadrature point at the previous time step
     libMesh::DenseVector<libMesh::Number> old_elem_solution(solid_context.get_elem_solution().size());
@@ -1304,9 +1303,30 @@ namespace GRINS
     // Copy back
     solid_context.get_elem_solution() = elem_solution_copy;
 
-    libMesh::Point x(x_qp(0) + u, x_qp(1) + v);
+    return libMesh::Point(x_qp(0) + u, x_qp(1) + v);
+  }
+
+  template<typename SolidMech>
+  const libMesh::Elem * ImmersedBoundary<SolidMech>::get_fluid_elem( const MultiphysicsSystem & system,
+                                                                     AssemblyContext & solid_context,
+                                                                     const libMesh::Point & x_qp,
+                                                                     const unsigned int qp ) const
+  {
+    libMesh::Point x = this->compute_displaced_point(system,solid_context,x_qp,qp);
 
     // Now find the fluid element that contains the point x
+    return (*_point_locator)( x, &_fluid_subdomain_set );
+  }
+
+  template<typename SolidMech>
+  void ImmersedBoundary<SolidMech>::prepare_fluid_context_search( const MultiphysicsSystem & system,
+                                                                  AssemblyContext & solid_context,
+                                                                  const libMesh::Point & x_qp,
+                                                                  const unsigned int qp,
+                                                                  libMesh::FEMContext & fluid_context )
+  {
+    libMesh::Point x = this->compute_displaced_point(system,solid_context,x_qp,qp);
+
     const libMesh::Elem * fluid_elem = (*_point_locator)( x, &_fluid_subdomain_set );
 
     fluid_context.pre_fe_reinit(system,fluid_elem);
