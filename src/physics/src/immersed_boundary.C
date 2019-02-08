@@ -720,9 +720,10 @@ namespace GRINS
   }
 
   template<typename SolidMech>
-  void ImmersedBoundary<SolidMech>::compute_analytic_jacobians(AssemblyContext & solid_context,
+  void ImmersedBoundary<SolidMech>::compute_analytic_jacobians(const MultiphysicsSystem & system,
+                                                               AssemblyContext & solid_context,
                                                                libMesh::FEMContext & fluid_context,
-                                                               const unsigned int qp,
+                                                               const std::vector<unsigned int> & quad_points,
                                                                libMesh::DenseSubMatrix<libMesh::Number> & Kuf_ulm,
                                                                libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vlm,
                                                                libMesh::DenseSubMatrix<libMesh::Number> & Kus_ulm,
@@ -738,82 +739,108 @@ namespace GRINS
     unsigned int n_fluid_dofs = fluid_context.get_dof_indices(this->_flow_vars.u()).size();
     unsigned int n_lambda_dofs = solid_context.get_dof_indices(this->_lambda_var.u()).size();
 
-    const std::vector<libMesh::Real> & solid_JxW =
-      solid_context.get_element_fe(this->_disp_vars.u(),2)->get_JxW();
+    const std::vector<libMesh::Point> & solid_qpoints =
+      solid_context.get_element_fe(this->_disp_vars.u(),2)->get_xyz();
 
-    libMesh::Real jac = solid_JxW[qp];
+    const libMesh::Elem & fluid_elem = fluid_context.get_elem();
 
-    const std::vector<std::vector<libMesh::Real> > fluid_phi =
-      fluid_context.get_element_fe(this->_flow_vars.u())->get_phi();
-
-    const std::vector<std::vector<libMesh::Real> > solid_phi =
-      solid_context.get_element_fe(this->_disp_vars.u(),2)->get_phi();
-
-    const std::vector<std::vector<libMesh::RealGradient> > solid_dphi =
-      solid_context.get_element_fe(this->_disp_vars.u(),2)->get_dphi();
-
-    const std::vector<std::vector<libMesh::Real> > lambda_phi =
-      solid_context.get_element_fe(this->_lambda_var.u(),2)->get_phi();
-
-    // Solid derivatives
-    for( unsigned int j = 0; j < n_solid_dofs; j++ )
+    for( const auto & qp : quad_points )
       {
-        // Lambda residual
-        for( unsigned int i = 0; i < n_lambda_dofs; i++ )
-          {
-            const libMesh::Real value =
-              lambda_phi[i][qp]*solid_phi[j][qp]*jac*solid_context.get_elem_solution_rate_derivative();
+        // Reinit fluid context for current solid quadrature point
+        {
+          const libMesh::Point & x_qp =  solid_qpoints[qp];
+          libMesh::Point x = this->compute_displaced_point(system,solid_context,x_qp,qp);
 
-            Kulm_us(i,j) -= value;
-            Kvlm_vs(i,j) -= value;
+          libMesh::FEBase * fe = fluid_context.get_element_fe(this->_flow_vars.u());
+          libMesh::FEType fetype = fe->get_fe_type();
+
+          //We need to hand *reference* element points to the FEMContext to reinit
+          unsigned int dim = 2;
+          libMesh::Point x_ref = libMesh::FEInterface::inverse_map(dim,fetype,&fluid_elem,x);
+
+          std::vector<libMesh::Point> x_ref_vec(1,x_ref);
+
+          fluid_context.elem_fe_reinit(&x_ref_vec);
+        }
+
+        const std::vector<libMesh::Real> & solid_JxW =
+          solid_context.get_element_fe(this->_disp_vars.u(),2)->get_JxW();
+
+        libMesh::Real jac = solid_JxW[qp];
+
+        const std::vector<std::vector<libMesh::Real> > fluid_phi =
+          fluid_context.get_element_fe(this->_flow_vars.u())->get_phi();
+
+        const std::vector<std::vector<libMesh::Real> > solid_phi =
+          solid_context.get_element_fe(this->_disp_vars.u(),2)->get_phi();
+
+        const std::vector<std::vector<libMesh::RealGradient> > solid_dphi =
+          solid_context.get_element_fe(this->_disp_vars.u(),2)->get_dphi();
+
+        const std::vector<std::vector<libMesh::Real> > lambda_phi =
+          solid_context.get_element_fe(this->_lambda_var.u(),2)->get_phi();
+
+        // Solid derivatives
+        for( unsigned int j = 0; j < n_solid_dofs; j++ )
+          {
+            // Lambda residual
+            for( unsigned int i = 0; i < n_lambda_dofs; i++ )
+              {
+                const libMesh::Real value =
+                  lambda_phi[i][qp]*solid_phi[j][qp]*jac*solid_context.get_elem_solution_rate_derivative();
+
+                Kulm_us(i,j) -= value;
+                Kvlm_vs(i,j) -= value;
+              }
+
+            // Solid residual
+            for (unsigned int i = 0; i != n_solid_dofs; i++)
+              {
+                const libMesh::Real value =
+                  5*solid_dphi[j][qp]*solid_dphi[i][qp]*jac*solid_context.get_elem_solution_derivative();
+
+                Kus_us(i,j) -= value;
+                Kvs_vs(i,j) -= value;
+              }
+
           }
 
-        // Solid residual
-        for (unsigned int i = 0; i != n_solid_dofs; i++)
+        // Fluid derivatives
+        for( unsigned int j = 0; j < n_fluid_dofs; j++ )
           {
-            const libMesh::Real value =
-              5*solid_dphi[j][qp]*solid_dphi[i][qp]*jac*solid_context.get_elem_solution_derivative();
+            libmesh_assert_equal_to( fluid_phi[j].size(), 1 );
 
-            Kus_us(i,j) -= value;
-            Kvs_vs(i,j) -= value;
+            // Lambda residual
+            for (unsigned int i=0; i != n_lambda_dofs; i++)
+              {
+                Kulm_uf(i,j) += lambda_phi[i][qp]*fluid_phi[j][0]*jac*solid_context.get_elem_solution_derivative();
+                Kvlm_vf(i,j) += lambda_phi[i][qp]*fluid_phi[j][0]*jac*solid_context.get_elem_solution_derivative();
+              }
           }
 
-      }
-
-    // Fluid derivatives
-    for( unsigned int j = 0; j < n_fluid_dofs; j++ )
-      {
-        libmesh_assert_equal_to( fluid_phi[j].size(), 1 );
-
-        // Lambda residual
-        for (unsigned int i=0; i != n_lambda_dofs; i++)
+        // Lambda deriviatives
+        for( unsigned int j = 0; j < n_lambda_dofs; j++ )
           {
-            Kulm_uf(i,j) += lambda_phi[i][qp]*fluid_phi[j][0]*jac*solid_context.get_elem_solution_derivative();
-            Kvlm_vf(i,j) += lambda_phi[i][qp]*fluid_phi[j][0]*jac*solid_context.get_elem_solution_derivative();
-          }
-      }
+            const libMesh::Real value = lambda_phi[j][qp]*jac*solid_context.get_elem_solution_derivative();
 
-    // Lambda deriviatives
-    for( unsigned int j = 0; j < n_lambda_dofs; j++ )
-      {
-        const libMesh::Real value = lambda_phi[j][qp]*jac*solid_context.get_elem_solution_derivative();
+            // Fluid residual
+            for (unsigned int i=0; i != n_fluid_dofs; i++)
+              {
+                libmesh_assert_equal_to( fluid_phi[i].size(), 1 );
 
-        // Fluid residual
-        for (unsigned int i=0; i != n_fluid_dofs; i++)
-          {
-            libmesh_assert_equal_to( fluid_phi[i].size(), 1 );
+                Kuf_ulm(i,j) += -value*fluid_phi[i][0];
+                Kvf_vlm(i,j) += -value*fluid_phi[i][0];
+              }
 
-            Kuf_ulm(i,j) += -value*fluid_phi[i][0];
-            Kvf_vlm(i,j) += -value*fluid_phi[i][0];
+            // Solid residual
+            for (unsigned int i=0; i != n_solid_dofs; i++)
+              {
+                Kus_ulm(i,j) += value*solid_phi[i][qp];
+                Kvs_vlm(i,j) += value*solid_phi[i][qp];
+              }
           }
 
-        // Solid residual
-        for (unsigned int i=0; i != n_solid_dofs; i++)
-          {
-            Kus_ulm(i,j) += value*solid_phi[i][qp];
-            Kvs_vlm(i,j) += value*solid_phi[i][qp];
-          }
-      }
+      } // end qp loop
   }
 
   template<typename SolidMech>

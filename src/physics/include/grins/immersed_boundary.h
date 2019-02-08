@@ -172,9 +172,10 @@ namespace GRINS
                                      libMesh::DenseSubMatrix<libMesh::Number> & Kvf_us,
                                      libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vs);
 
-    void compute_analytic_jacobians(AssemblyContext & solid_context,
+    void compute_analytic_jacobians(const MultiphysicsSystem & system,
+                                    AssemblyContext & solid_context,
                                     libMesh::FEMContext & fluid_context,
-                                    const unsigned int qp,
+                                    const std::vector<unsigned int> & quad_points,
                                     libMesh::DenseSubMatrix<libMesh::Number> & Kuf_ulm,
                                     libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vlm,
                                     libMesh::DenseSubMatrix<libMesh::Number> & Kus_ulm,
