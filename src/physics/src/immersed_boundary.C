@@ -376,11 +376,41 @@ namespace GRINS
             // If need be, we can now also compute numerical jacobians and assemble them
             if ( compute_jacobian )
               {
+
                  this->compute_numerical_jacobians( system,solid_context,*(this->_fluid_context),
                                                     quad_points,
                                                     Kuf_ulm,Kuf_vlm,Kvf_ulm,Kvf_vlm,
                                                     Kulm_uf,Kulm_vf,Kvlm_uf,Kvlm_vf,
                                                     Kuf_us,Kuf_vs,Kvf_us,Kvf_vs);
+
+
+                /*
+                libMesh::DenseSubMatrix<libMesh::Number> & Kus_ulm =
+                  solid_context.get_elem_jacobian(this->_disp_vars.u(),this->_lambda_var.u());
+
+                libMesh::DenseSubMatrix<libMesh::Number> & Kvs_vlm =
+                  solid_context.get_elem_jacobian(this->_disp_vars.v(),this->_lambda_var.v());
+
+                libMesh::DenseSubMatrix<libMesh::Number> & Kus_us =
+                  solid_context.get_elem_jacobian(this->_disp_vars.u(),this->_disp_vars.u());
+
+                libMesh::DenseSubMatrix<libMesh::Number> & Kvs_vs =
+                  solid_context.get_elem_jacobian(this->_disp_vars.v(),this->_disp_vars.v());
+
+                libMesh::DenseSubMatrix<libMesh::Number> & Kulm_us =
+                  solid_context.get_elem_jacobian(this->_lambda_var.u(),this->_disp_vars.u());
+
+                libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_vs =
+                  solid_context.get_elem_jacobian(this->_lambda_var.v(),this->_disp_vars.v());
+
+                this->compute_analytic_jacobians(system,solid_context,*(this->_fluid_context),
+                                                 quad_points,
+                                                 Kuf_ulm,Kvf_vlm,
+                                                 Kus_ulm,Kvs_vlm,
+                                                 Kulm_uf,Kvlm_vf,
+                                                 Kus_us,Kvs_vs,
+                                                 Kulm_us,Kvlm_vs);
+                */
 
                  this->assemble_fluid_jacobians(system,solid_context,*(this->_fluid_context),
                                                 n_fluid_dofs, n_solid_dofs, n_lambda_dofs,
@@ -446,20 +476,6 @@ namespace GRINS
 
         this->compute_residuals(solid_context,fluid_context,qp,
                                 Fuf,Fvf,Fus,Fvs,Fulm,Fvlm);
-
-        // If we're going to compute analytic jacobians, we do that here.
-        /*
-          if ( compute_jacobian )
-          {
-          this->compute_analytic_jacobians(solid_context,*(this->_fluid_context),qp,
-          Kuf_ulm,Kuf_vlm,Kvf_ulm,Kvf_vlm,
-          Kus_ulm,Kus_vlm,Kvs_ulm,Kvs_vlm,
-          Kulm_uf,Kulm_vf,Kvlm_uf,Kvlm_vf,
-          Kuf_us,Kuf_vs,Kvf_us,Kvf_vs,
-          Kus_us,Kus_vs,Kvs_us,Kvs_vs,
-          Kulm_us,Kulm_vs,Kvlm_us,Kvlm_vs);
-          }
-        */
 
       } // loop over quadrature points on the current fluid element
   }
