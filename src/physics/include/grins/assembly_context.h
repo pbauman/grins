@@ -60,6 +60,8 @@ namespace GRINS
     void get_old_elem_solution( const MultiphysicsSystem & system,
                                 libMesh::DenseVector<libMesh::Number> & old_elem_solution ) const;
 
+    void recompute_elem_solution_rate(const MultiphysicsSystem & system);
+
   protected:
 
     CachedValues _cached_values;

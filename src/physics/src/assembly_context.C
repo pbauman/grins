@@ -72,4 +72,18 @@ namespace GRINS
         unsteady_solver->old_nonlinear_solution(this->get_dof_indices()[i]);
   }
 
+  void AssemblyContext::recompute_elem_solution_rate(const MultiphysicsSystem & system)
+  {
+    unsigned int n_dofs = this->get_elem_solution().size();
+    libMesh::DenseVector<libMesh::Number> old_elem_solution(n_dofs);
+
+    this->get_old_elem_solution(system,old_elem_solution);
+
+    this->get_elem_solution_rate() = this->get_elem_solution();
+    this->get_elem_solution_rate() -= old_elem_solution;
+    this->elem_solution_rate_derivative = 1 / this->get_deltat_value();
+    this->get_elem_solution_rate() *=
+    this->elem_solution_rate_derivative;
+  }
+
 } // end namespace GRINS
