@@ -941,8 +941,8 @@ namespace GRINS
             libMesh::DenseSubVector<libMesh::Number> & Fus = solid_context.get_elem_residual(this->_disp_vars.u());
             libMesh::DenseSubVector<libMesh::Number> & Fvs = solid_context.get_elem_residual(this->_disp_vars.v());
 
-            Kus(i,j) = Fus(i);
-            Kvs(i,j) = Fvs(i);
+            Kus(i,j) += Fus(i);
+            Kvs(i,j) += Fvs(i);
           }
 
         for (unsigned int i=0; i != n_fluid_dofs; i++)
@@ -950,8 +950,8 @@ namespace GRINS
             libMesh::DenseSubVector<libMesh::Number> & Fuf = fluid_context.get_elem_residual(this->_flow_vars.u());
             libMesh::DenseSubVector<libMesh::Number> & Fvf = fluid_context.get_elem_residual(this->_flow_vars.v());
 
-            Kuf(i,j) = Fuf(i);
-            Kvf(i,j) = Fvf(i);
+            Kuf(i,j) += Fuf(i);
+            Kvf(i,j) += Fvf(i);
           }
       }
   }
@@ -993,8 +993,8 @@ namespace GRINS
             libMesh::DenseSubVector<libMesh::Number> & Fvlm =
               solid_context.get_elem_residual(this->_lambda_var.v());
 
-            Kulm(i,j) = Fulm(i);
-            Kvlm(i,j) = Fvlm(i);
+            Kulm(i,j) += Fulm(i);
+            Kvlm(i,j) += Fvlm(i);
           }
       }
   }
@@ -1046,8 +1046,8 @@ namespace GRINS
             libMesh::DenseSubVector<libMesh::Number> & Fuf = fluid_context.get_elem_residual(this->_flow_vars.u());
             libMesh::DenseSubVector<libMesh::Number> & Fvf = fluid_context.get_elem_residual(this->_flow_vars.v());
 
-            Kuf(i,j) = Fuf(i);
-            Kvf(i,j) = Fvf(i);
+            Kuf(i,j) += Fuf(i);
+            Kvf(i,j) += Fvf(i);
           }
 
         for (unsigned int i=0; i != n_solid_dofs; i++)
@@ -1055,8 +1055,8 @@ namespace GRINS
             libMesh::DenseSubVector<libMesh::Number> & Fus = solid_context.get_elem_residual(this->_disp_vars.u());
             libMesh::DenseSubVector<libMesh::Number> & Fvs = solid_context.get_elem_residual(this->_disp_vars.v());
 
-            Kus(i,j) = Fus(i);
-            Kvs(i,j) = Fvs(i);
+            Kus(i,j) += Fus(i);
+            Kvs(i,j) += Fvs(i);
           }
 
         for (unsigned int i=0; i != n_lambda_dofs; i++)
@@ -1067,8 +1067,8 @@ namespace GRINS
             libMesh::DenseSubVector<libMesh::Number> & Fvlm =
               solid_context.get_elem_residual(this->_lambda_var.v());
 
-            Kulm(i,j) = Fulm(i);
-            Kvlm(i,j) = Fvlm(i);
+            Kulm(i,j) += Fulm(i);
+            Kvlm(i,j) += Fvlm(i);
           }
       }
   }
