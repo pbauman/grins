@@ -875,6 +875,7 @@ namespace GRINS
     fluid_context.get_elem_residual().zero();
 
     coeff -= delta;
+    solid_context.recompute_elem_solution_rate(system);
 
     this->compute_ibm_residuals(system,solid_context,fluid_context,quad_points);
 
@@ -886,6 +887,7 @@ namespace GRINS
     fluid_context.get_elem_residual().zero();
 
     coeff += 2.0*delta;
+    solid_context.recompute_elem_solution_rate(system);
 
     this->compute_ibm_residuals(system,solid_context,fluid_context,quad_points);
 
@@ -898,6 +900,7 @@ namespace GRINS
 
     // Restore coeff
     coeff -= delta;
+    solid_context.recompute_elem_solution_rate(system);
   }
 
   template<typename SolidMech>
