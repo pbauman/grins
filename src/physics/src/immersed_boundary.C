@@ -270,41 +270,6 @@ namespace GRINS
 
         unsigned int n_qpoints = solid_qpoints.size();
 
-        libMesh::DenseSubVector<libMesh::Number> & Fus = solid_context.get_elem_residual(u_var);
-        libMesh::DenseSubVector<libMesh::Number> & Fvs = solid_context.get_elem_residual(v_var);
-
-        // For computing numerical Jacobians
-        libMesh::DenseVector<libMesh::Number> Fusp_dummy(n_solid_dofs), Fvsp_dummy(n_solid_dofs);
-        libMesh::DenseVector<libMesh::Number> Fusm_dummy(n_solid_dofs), Fvsm_dummy(n_solid_dofs);
-
-        libMesh::DenseSubVector<libMesh::Number> Fusp(Fusp_dummy,0,n_solid_dofs), Fusm(Fusm_dummy,0,n_solid_dofs);
-        libMesh::DenseSubVector<libMesh::Number> Fvsp(Fvsp_dummy,0,n_solid_dofs), Fvsm(Fvsm_dummy,0,n_solid_dofs);
-
-        libMesh::DenseSubMatrix<libMesh::Number> & Kus_us = solid_context.get_elem_jacobian(u_var,u_var);
-        libMesh::DenseSubMatrix<libMesh::Number> & Kvs_us = solid_context.get_elem_jacobian(v_var,u_var);
-        libMesh::DenseSubMatrix<libMesh::Number> & Kus_vs = solid_context.get_elem_jacobian(u_var,v_var);
-        libMesh::DenseSubMatrix<libMesh::Number> & Kvs_vs = solid_context.get_elem_jacobian(v_var,v_var);
-
-        libMesh::DenseSubVector<libMesh::Number> & Fulm = solid_context.get_elem_residual(lambda_x);
-        libMesh::DenseSubVector<libMesh::Number> & Fvlm = solid_context.get_elem_residual(lambda_y);
-
-        // For computing numerical Jacobians
-        libMesh::DenseVector<libMesh::Number> Fulmp_dummy(n_lambda_dofs), Fvlmp_dummy(n_lambda_dofs);
-        libMesh::DenseVector<libMesh::Number> Fulmm_dummy(n_lambda_dofs), Fvlmm_dummy(n_lambda_dofs);
-
-        libMesh::DenseSubVector<libMesh::Number> Fulmp(Fulmp_dummy,0,n_lambda_dofs), Fulmm(Fulmm_dummy,0,n_lambda_dofs);
-        libMesh::DenseSubVector<libMesh::Number> Fvlmp(Fvlmp_dummy,0,n_lambda_dofs), Fvlmm(Fvlmm_dummy,0,n_lambda_dofs);
-
-        libMesh::DenseSubMatrix<libMesh::Number> & Kulm_us = solid_context.get_elem_jacobian(lambda_x,u_var);
-        libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_us = solid_context.get_elem_jacobian(lambda_y,u_var);
-        libMesh::DenseSubMatrix<libMesh::Number> & Kulm_vs = solid_context.get_elem_jacobian(lambda_x,v_var);
-        libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_vs = solid_context.get_elem_jacobian(lambda_y,v_var);
-
-        libMesh::DenseSubMatrix<libMesh::Number> & Kus_ulm = solid_context.get_elem_jacobian(u_var,lambda_x);
-        libMesh::DenseSubMatrix<libMesh::Number> & Kvs_ulm = solid_context.get_elem_jacobian(v_var,lambda_x);
-        libMesh::DenseSubMatrix<libMesh::Number> & Kus_vlm = solid_context.get_elem_jacobian(u_var,lambda_y);
-        libMesh::DenseSubMatrix<libMesh::Number> & Kvs_vlm = solid_context.get_elem_jacobian(v_var,lambda_y);
-
         libMesh::DenseMatrix<libMesh::Number> Kf_s;
         libMesh::DenseSubMatrix<libMesh::Number> Kuf_us(Kf_s), Kuf_vs(Kf_s);
         libMesh::DenseSubMatrix<libMesh::Number> Kvf_us(Kf_s), Kvf_vs(Kf_s);
@@ -352,16 +317,35 @@ namespace GRINS
               qps_visted.push_back(qp);
         */
 
+        // First figure out which fluid elems overlap the current solid element
+        std::map<libMesh::dof_id_type, std::vector<unsigned int> > fluid_elem_ids;
+
         for( unsigned int qp = 0; qp < n_qpoints; qp++ )
           {
             const libMesh::Point & x_qp =  solid_qpoints[qp];
 
-            // Compute displacement coordinate of solid quadrature point
-            // at previous time step and prepare fluid context at that point.
-            this->prepare_fluid_context_search(system,solid_context,x_qp,qp,*(this->_fluid_context));
+            const libMesh::Elem * fluid_elem = this->get_fluid_elem(system,solid_context,x_qp,qp);
+
+            libMesh::dof_id_type elem_id = fluid_elem->id();
+
+            std::vector<unsigned int> & quad_points = fluid_elem_ids[elem_id];
+            quad_points.push_back(qp);
+          }
+
+        // Now loop over those fluid elements
+        for( const auto & it : fluid_elem_ids )
+          {
+            const libMesh::dof_id_type fluid_elem_id = it.first;
+            const std::vector<unsigned int> & quad_points = it.second;
+
+            const libMesh::Elem * fluid_elem = system.get_mesh().elem_ptr(fluid_elem_id);
+
+            (this->_fluid_context)->pre_fe_reinit(system,fluid_elem);
 
             unsigned int n_fluid_dofs = (this->_fluid_context)->get_dof_indices(this->_flow_vars.u()).size();
 
+            // Prepare the space for Jacobians first in case we're going to compute them
+            // analytically
             if ( compute_jacobian )
               {
                 this->prepare_jacobians(n_fluid_dofs, n_solid_dofs, n_lambda_dofs,
@@ -373,51 +357,14 @@ namespace GRINS
                                         Kuf_ulm,Kuf_vlm,Kvf_ulm,Kvf_vlm);
               }
 
-            // Fluid residual data structures
-            libMesh::DenseSubVector<libMesh::Number> & Fuf =
-              (this->_fluid_context)->get_elem_residual(this->_flow_vars.u());
-
-            libMesh::DenseSubVector<libMesh::Number> & Fvf =
-              (this->_fluid_context)->get_elem_residual(this->_flow_vars.v());
-
-            // For computing numerical Jacobians
-            libMesh::DenseVector<libMesh::Number> Fufp_dummy(n_fluid_dofs), Fvfp_dummy(n_fluid_dofs);
-            libMesh::DenseVector<libMesh::Number> Fufm_dummy(n_fluid_dofs), Fvfm_dummy(n_fluid_dofs);
-
-            libMesh::DenseSubVector<libMesh::Number> Fufp(Fufp_dummy,0,n_fluid_dofs), Fufm(Fufm_dummy,0,n_fluid_dofs);
-            libMesh::DenseSubVector<libMesh::Number> Fvfp(Fvfp_dummy,0,n_fluid_dofs), Fvfm(Fvfm_dummy,0,n_fluid_dofs);
+            // Compute and assemble residuals for all the quadrature points in this fluid element
+            // and also assemble analytical Jacobians if we're using analytical Jacobians
+            this->compute_ibm_residuals(system,solid_context,*(this->_fluid_context),quad_points);
 
 
-            this->compute_residuals(solid_context,*(this->_fluid_context),qp,
-                                    Fuf,Fvf,Fus,Fvs,Fulm,Fvlm);
-
-            if( compute_jacobian )
-              {
-
-                this->compute_numerical_jacobians( system,solid_context,*(this->_fluid_context),
-                                                   qp,solid_qpoints,
-                                                   Fufp,Fvfp,Fusp,Fvsp,Fulmp,Fvlmp,
-                                                   Fufm,Fvfm,Fusm,Fvsm,Fulmm,Fvlmm,
-                                                   Kuf_ulm,Kuf_vlm,Kvf_ulm,Kvf_vlm,
-                                                   Kus_ulm,Kus_vlm,Kvs_ulm,Kvs_vlm,
-                                                   Kulm_uf,Kulm_vf,Kvlm_uf,Kvlm_vf,
-                                                   Kuf_us,Kuf_vs,Kvf_us,Kvf_vs,
-                                                   Kus_us,Kus_vs,Kvs_us,Kvs_vs,
-                                                   Kulm_us,Kulm_vs,Kvlm_us,Kvlm_vs);
-
-                /*
-                this->compute_analytic_jacobians(solid_context,*(this->_fluid_context),qp,
-                                                 Kuf_ulm,Kuf_vlm,Kvf_ulm,Kvf_vlm,
-                                                 Kus_ulm,Kus_vlm,Kvs_ulm,Kvs_vlm,
-                                                 Kulm_uf,Kulm_vf,Kvlm_uf,Kvlm_vf,
-                                                 Kuf_us,Kuf_vs,Kvf_us,Kvf_vs,
-                                                 Kus_us,Kus_vs,Kvs_us,Kvs_vs,
-                                                 Kulm_us,Kulm_vs,Kvlm_us,Kvlm_vs);
-                */
-              }
-
-
-            // Assemble fluid residual
+            // Now that we've looped over all the quadrature points on this fluid element
+            // we can now assemble the fluid residual (the residuals in the solid context
+            // automatically get assembled by the FEMSystem)
             system.get_dof_map().constrain_element_vector
               ( (this->_fluid_context)->get_elem_residual(),
                 (this->_fluid_context)->get_dof_indices(), false );
@@ -426,14 +373,23 @@ namespace GRINS
                                     (this->_fluid_context)->get_dof_indices() );
 
 
-            if( compute_jacobian )
+            // If need be, we can now also compute numerical jacobians and assemble them
+            if ( compute_jacobian )
               {
-                this->assemble_fluid_jacobians(system,solid_context,*(this->_fluid_context),
-                                               n_fluid_dofs, n_solid_dofs, n_lambda_dofs,
-                                               Kf_s,Klm_f,Kf_lm);
-              }
+                 this->compute_numerical_jacobians( system,solid_context,*(this->_fluid_context),
+                                                    quad_points,
+                                                    Kuf_ulm,Kuf_vlm,Kvf_ulm,Kvf_vlm,
+                                                    Kulm_uf,Kulm_vf,Kvlm_uf,Kvlm_vf,
+                                                    Kuf_us,Kuf_vs,Kvf_us,Kvf_vs);
 
-          } // end qp loop
+                 this->assemble_fluid_jacobians(system,solid_context,*(this->_fluid_context),
+                                                n_fluid_dofs, n_solid_dofs, n_lambda_dofs,
+                                                Kf_s,Klm_f,Kf_lm);
+
+              } // if compute_jacobian
+
+
+          } // loop over fluid elems
 
 
       } // if(solid_elem)
