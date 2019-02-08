@@ -263,10 +263,6 @@ namespace GRINS
         MultiphysicsSystem & system = context.get_multiphysics_system();
 
         unsigned int u_var = this->_disp_vars.u();
-        unsigned int v_var = this->_disp_vars.v();
-
-        unsigned int lambda_x = this->_lambda_var.u();
-        unsigned int lambda_y = this->_lambda_var.v();
 
         // Prepare solid info needed
         const std::vector<libMesh::Point> & solid_qpoints =
@@ -757,28 +753,14 @@ namespace GRINS
                                                                libMesh::FEMContext & fluid_context,
                                                                const unsigned int qp,
                                                                libMesh::DenseSubMatrix<libMesh::Number> & Kuf_ulm,
-                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kuf_vlm,
-                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kvf_ulm,
                                                                libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vlm,
                                                                libMesh::DenseSubMatrix<libMesh::Number> & Kus_ulm,
-                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kus_vlm,
-                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kvs_ulm,
                                                                libMesh::DenseSubMatrix<libMesh::Number> & Kvs_vlm,
                                                                libMesh::DenseSubMatrix<libMesh::Number> & Kulm_uf,
-                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kulm_vf,
-                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_uf,
                                                                libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_vf,
-                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kuf_us,
-                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kuf_vs,
-                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kvf_us,
-                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vs,
                                                                libMesh::DenseSubMatrix<libMesh::Number> & Kus_us,
-                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kus_vs,
-                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kvs_us,
                                                                libMesh::DenseSubMatrix<libMesh::Number> & Kvs_vs,
                                                                libMesh::DenseSubMatrix<libMesh::Number> & Kulm_us,
-                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kulm_vs,
-                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_us,
                                                                libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_vs)
   {
     unsigned int n_solid_dofs = solid_context.get_dof_indices(this->_disp_vars.u()).size();
