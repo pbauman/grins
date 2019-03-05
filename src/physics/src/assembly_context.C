@@ -86,4 +86,47 @@ namespace GRINS
     this->elem_solution_rate_derivative;
   }
 
+  template<typename OutputType>
+  void AssemblyContext::interior_rate_gradient(unsigned int var, unsigned int qp, OutputType & dudot) const
+  {
+    this->grins_some_gradient<OutputType,
+                              &libMesh::FEMContext::get_element_fe<typename libMesh::TensorTools::MakeReal
+                                                                   <typename libMesh::TensorTools::DecrementRank
+                                                                    <OutputType>::type>::type>,
+                              &libMesh::DiffContext::get_elem_solution_rate>(var, qp, dudot);
+  }
+
+
+  template<typename OutputType,
+           typename libMesh::FEMContext::FENeeded<OutputType>::grad_getter fe_getter,
+           libMesh::FEMContext::diff_subsolution_getter subsolution_getter>
+  void AssemblyContext::grins_some_gradient(unsigned int var, unsigned int qp, OutputType & du) const
+  {
+    // Get local-to-global dof index lookup
+    const unsigned int n_dofs = libMesh::cast_int<unsigned int>
+      (this->get_dof_indices(var).size());
+
+    // Get current local coefficients
+    const libMesh::DenseSubVector<libMesh::Number> & coef = (this->*subsolution_getter)(var);
+
+    // Get finite element object
+    typename libMesh::FEMContext::FENeeded<OutputType>::grad_base * fe = nullptr;
+    (this->*fe_getter)( var, fe, this->get_elem_dim() );
+
+    // Get shape function values at quadrature point
+    const std::vector<std::vector
+                      <typename libMesh::FEMContext::FENeeded<OutputType>::grad_base::OutputGradient>>
+      & dphi = fe->get_dphi();
+
+    // Accumulate solution derivatives
+    du = 0;
+
+    for (unsigned int l=0; l != n_dofs; l++)
+      du.add_scaled(dphi[l][qp], coef(l));
+
+    return;
+  }
+
 } // end namespace GRINS
+
+template void GRINS::AssemblyContext::interior_rate_gradient<libMesh::Gradient>(unsigned int, unsigned int, libMesh::Gradient &) const;

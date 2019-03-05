@@ -62,7 +62,15 @@ namespace GRINS
 
     void recompute_elem_solution_rate(const MultiphysicsSystem & system);
 
+    template<typename OutputType>
+    void interior_rate_gradient(unsigned int var, unsigned int qp, OutputType & dudot) const;
+
   protected:
+
+    template<typename OutputType,
+             typename libMesh::FEMContext::FENeeded<OutputType>::grad_getter fe_getter,
+             libMesh::FEMContext::diff_subsolution_getter subsolution_getter>
+    void grins_some_gradient(unsigned int var, unsigned int qp, OutputType & u) const;
 
     CachedValues _cached_values;
 
