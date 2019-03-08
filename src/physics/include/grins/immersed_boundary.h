@@ -331,6 +331,10 @@ namespace GRINS
 			       const libMesh::Gradient & grad_v,
 			       libMesh::TensorValue<libMesh::Real> & F );
 
+    void eval_deform_grad_rate( const libMesh::Gradient & grad_udot,
+				const libMesh::Gradient & grad_vdot,
+				libMesh::TensorValue<libMesh::Real> & Fdot );
+
     libMesh::Point compute_displaced_point( const MultiphysicsSystem & system,
                                             AssemblyContext & solid_context,
                                             const libMesh::Point & x_qp,

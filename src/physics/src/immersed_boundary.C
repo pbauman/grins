@@ -495,28 +495,48 @@ namespace GRINS
     unsigned int n_fluid_dofs = fluid_context.get_dof_indices(this->_flow_vars.u()).size();
     unsigned int n_lambda_dofs = solid_context.get_dof_indices(this->_lambda_var.u()).size();
 
-    libMesh::Real lambda_x, lambda_y;
-    solid_context.interior_value(this->_lambda_var.u(), sqp, lambda_x);
-    solid_context.interior_value(this->_lambda_var.v(), sqp, lambda_y);
+    libMesh::Real udot, vdot;
+    solid_context.interior_rate(this->_disp_vars.u(), sqp, udot);
+    solid_context.interior_rate(this->_disp_vars.v(), sqp, vdot);
 
     libMesh::Gradient grad_u, grad_v;
     solid_context.interior_gradient(this->_disp_vars.u(), sqp, grad_u);
     solid_context.interior_gradient(this->_disp_vars.v(), sqp, grad_v);
 
-    libMesh::TensorValue<libMesh::Real> P;
-    this->eval_first_Piola(grad_u,grad_v,P);
+    libMesh::Gradient grad_udot, grad_vdot;
+    solid_context.interior_rate_gradient(this->_disp_vars.u(), sqp, grad_udot);
+    solid_context.interior_rate_gradient(this->_disp_vars.v(), sqp, grad_vdot);
 
-    // Compute the fluid velocity at the solid element quadrature points.
+    libMesh::Real lambda_x, lambda_y;
+    solid_context.interior_value(this->_lambda_var.u(), sqp, lambda_x);
+    solid_context.interior_value(this->_lambda_var.v(), sqp, lambda_y);
+
+    libMesh::Gradient grad_lambda_x, grad_lambda_y;
+    solid_context.interior_gradient(this->_lambda_var.u(), sqp, grad_lambda_x);
+    solid_context.interior_gradient(this->_lambda_var.v(), sqp, grad_lambda_y);
+
     libMesh::Real Vx, Vy;
     fluid_context.interior_value(this->_flow_vars.u(), 0, Vx);
     fluid_context.interior_value(this->_flow_vars.v(), 0, Vy);
 
-    libMesh::Real udot, vdot;
-    solid_context.interior_rate(this->_disp_vars.u(), sqp, udot);
-    solid_context.interior_rate(this->_disp_vars.v(), sqp, vdot);
+    libMesh::Gradient grad_Vx, grad_Vy;
+    fluid_context.interior_gradient(this->_flow_vars.u(), 0, grad_Vx);
+    fluid_context.interior_gradient(this->_flow_vars.v(), 0, grad_Vy);
+
+    libMesh::TensorValue<libMesh::Real> F;
+    this->eval_deform_gradient(grad_u,grad_v,F);
+
+    libMesh::TensorValue<libMesh::Real> Fdot;
+    this->eval_deform_grad_rate(grad_udot,grad_vdot,Fdot);
+
+    libMesh::TensorValue<libMesh::Real> P;
+    this->eval_first_Piola(grad_u,grad_v,P);
 
     const std::vector<std::vector<libMesh::Real> > fluid_phi =
       fluid_context.get_element_fe(this->_flow_vars.u())->get_phi();
+
+    const std::vector<std::vector<libMesh::RealGradient> > fluid_dphi =
+      fluid_context.get_element_fe(this->_flow_vars.u())->get_dphi();
 
     const std::vector<std::vector<libMesh::Real> > solid_phi =
       solid_context.get_element_fe(this->_disp_vars.u(),2)->get_phi();
@@ -527,10 +547,15 @@ namespace GRINS
     const std::vector<std::vector<libMesh::Real> > lambda_phi =
       solid_context.get_element_fe(this->_lambda_var.u(),2)->get_phi();
 
+    const std::vector<std::vector<libMesh::RealGradient> > & lambda_dphi =
+      solid_context.get_element_fe(this->_lambda_var.u(),2)->get_dphi();
+
     const std::vector<libMesh::Real> & solid_JxW =
       solid_context.get_element_fe(this->_disp_vars.u(),2)->get_JxW();
 
     libMesh::Real jac = solid_JxW[sqp];
+
+    libMesh::TensorValue<libMesh::Real> fdphi_times_F;
 
     // Fluid residual
     for (unsigned int i=0; i != n_fluid_dofs; i++)
@@ -541,26 +566,26 @@ namespace GRINS
 	Fuf(i) -= lambda_x*fluid_phi[i][0]*jac;
 	Fvf(i) -= lambda_y*fluid_phi[i][0]*jac;
 
-        /*
 	//Computing fdphi_times_F
 	for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 	  {
 	    for( unsigned int beta = 0; beta < 2; beta++ )
 	      {
-		fdphi_times_F(0,alpha) += fluid_dphi[i][0](beta)*F(beta,alpha);
-		fdphi_times_F(1,alpha) += fluid_dphi[i][0](beta)*F(beta,alpha);
+		fdphi_times_F(0,alpha) += fluid_dphi[i][0](beta)*Fold(beta,alpha);
+		fdphi_times_F(1,alpha) += fluid_dphi[i][0](beta)*Fold(beta,alpha);
 	      }
    	  }
-	*/
+
 	// Zero index for fluid dphi/JxW since we only requested one quad. point.
-	/*
+
 	// H1 Norm
+
 	for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 	  {
 	    Fuf(i) -= (grad_lambda_x(alpha)*fdphi_times_F(0,alpha))*jac;
 	    Fvf(i) -= (grad_lambda_y(alpha)*fdphi_times_F(1,alpha))*jac;
 	  }
-	*/
+
       }
 
     // Solid residual
@@ -575,7 +600,15 @@ namespace GRINS
 	    Fus(i) -= P(0,alpha)*solid_dphi[i][sqp](alpha)*jac;
 	    Fvs(i) -= P(1,alpha)*solid_dphi[i][sqp](alpha)*jac;
 	  }
+	//H1 Norm
+	for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
+	  {
+	    Fus(i) += grad_lambda_x(alpha)*solid_dphi[i][sqp](alpha)*jac;
+	    Fvs(i) += grad_lambda_y(alpha)*solid_dphi[i][sqp](alpha)*jac;
+	  }
       }
+
+    libMesh::TensorValue<libMesh::Real> gradV_times_F;
 
     // Lambda residual
     for( unsigned int i = 0; i < n_lambda_dofs; i++ )
@@ -584,15 +617,23 @@ namespace GRINS
         Fulm(i) += lambda_phi[i][sqp]*(Vx - udot)*jac;
 	Fvlm(i) += lambda_phi[i][sqp]*(Vy - vdot)*jac;
 
-        /*
-	//H1 Norm
+	//Computing gradV_times_F
 	for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 	  {
-	    Fulm(i) += (lambda_dphi[i][sqp](alpha)*(gradV_times_F(0,alpha) - Fdot(0,alpha))))*jac;
-
-	    Fvlm(i) += (lambda_dphi[i][sqp](alpha)*(gradV_times_F(1,alpha) - Fdot(1,alpha)))*jac;
+	    for( unsigned int beta = 0; beta < 2; beta++ )
+	      {
+		gradV_times_F(0,alpha) += grad_Vx(beta)*Fold(beta,alpha);
+		gradV_times_F(1,alpha) += grad_Vy(beta)*Fold(beta,alpha);
+	      }
 	  }
-	*/
+
+	//H1 Norm
+	for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
+	{
+	  Fulm(i) += (lambda_dphi[i][sqp](alpha)*(gradV_times_F(0,alpha) - Fdot(0,alpha)))*jac;
+	  Fvlm(i) += (lambda_dphi[i][sqp](alpha)*(gradV_times_F(1,alpha) - Fdot(1,alpha)))*jac;
+	}
+
       }
   }
 
@@ -2916,7 +2957,7 @@ namespace GRINS
   }
 
  template<typename SolidMech>
-  void ImmersedBoundary<SolidMech>::eval_deform_gradient( const libMesh::Gradient & grad_u,
+ void ImmersedBoundary<SolidMech>::eval_deform_gradient( const libMesh::Gradient & grad_u,
 							  const libMesh::Gradient & grad_v,
 							  libMesh::TensorValue<libMesh::Real> & F )
   {
