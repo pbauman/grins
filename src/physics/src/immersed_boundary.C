@@ -526,6 +526,9 @@ namespace GRINS
     libMesh::TensorValue<libMesh::Real> F;
     this->eval_deform_gradient(grad_u,grad_v,F);
 
+    libMesh::TensorValue<libMesh::Real> Fold;
+    this->compute_prev_timestep_deform_gradient(solid_context,sqp,Fold);
+
     libMesh::TensorValue<libMesh::Real> Fdot;
     this->eval_deform_grad_rate(grad_udot,grad_vdot,Fdot);
 
@@ -2971,6 +2974,50 @@ namespace GRINS
 
     F(0,0) += 1;
     F(1,1) += 1;
+  }
+
+  template<typename SolidMech>
+  void ImmersedBoundary<SolidMech>::compute_prev_timestep_deform_gradient
+  (const AssemblyContext & solid_context_const,
+   const unsigned int qp,
+   libMesh::TensorValue<libMesh::Real> & Fold)
+  {
+    AssemblyContext & solid_context = const_cast<AssemblyContext &>(solid_context_const);
+
+    MultiphysicsSystem & system = solid_context.get_multiphysics_system();
+
+    libMesh::DenseVector<libMesh::Number> old_elem_solution(solid_context.get_elem_solution().size());
+    libMesh::DenseVector<libMesh::Number> elem_solution_copy(solid_context.get_elem_solution().size());
+
+    // This populates the old_elem_solution vector for the solid element
+    // using the solution values from the prevous timestep
+    solid_context.get_old_elem_solution(system,old_elem_solution);
+
+    // Put in the old_elem_solution so we use the previous timestep values
+    elem_solution_copy = solid_context.get_elem_solution();
+    solid_context.get_elem_solution() = old_elem_solution;
+
+    libMesh::Gradient grad_u, grad_v;
+    solid_context.interior_gradient(this->_disp_vars.u(), qp, grad_u);
+    solid_context.interior_gradient(this->_disp_vars.v(), qp, grad_v);
+
+    this->eval_deform_gradient(grad_u,grad_v,Fold);
+
+    // Copy back
+    solid_context.get_elem_solution() = elem_solution_copy;
+  }
+
+ template<typename SolidMech>
+  void ImmersedBoundary<SolidMech>::eval_deform_grad_rate( const libMesh::Gradient & grad_udot,
+							   const libMesh::Gradient & grad_vdot,
+							   libMesh::TensorValue<libMesh::Real> & Fdot )
+  {
+
+    Fdot(0,0) = grad_udot(0);
+    Fdot(0,1) = grad_udot(1);
+    Fdot(1,0) = grad_vdot(0);
+    Fdot(1,1) = grad_vdot(1);
+
   }
 
   template<typename SolidMech>

@@ -331,6 +331,10 @@ namespace GRINS
 			       const libMesh::Gradient & grad_v,
 			       libMesh::TensorValue<libMesh::Real> & F );
 
+    void compute_prev_timestep_deform_gradient( const AssemblyContext & solid_context_const,
+                                                const unsigned int qp,
+                                                libMesh::TensorValue<libMesh::Real> & Fold );
+
     void eval_deform_grad_rate( const libMesh::Gradient & grad_udot,
 				const libMesh::Gradient & grad_vdot,
 				libMesh::TensorValue<libMesh::Real> & Fdot );
