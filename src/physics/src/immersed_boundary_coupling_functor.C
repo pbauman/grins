@@ -41,31 +41,53 @@ namespace GRINS
       libMesh::processor_id_type p,
       std::unordered_map<const libMesh::Elem *,const libMesh::CouplingMatrix*> & coupled_elements )
   {
-    const std::map<libMesh::dof_id_type,std::map<libMesh::dof_id_type,std::vector<unsigned int>>> &
-      solid_map = _overlapping_map.solid_map();
+    const auto & solid_map = _overlapping_map.solid_map();
+    const auto & fluid_map = _overlapping_map.fluid_map();
 
     for( const auto & elem : libMesh::as_range(range_begin,range_end) )
       {
         libMesh::dof_id_type elem_id = elem->id();
 
         auto solid_map_it = solid_map.find(elem_id);
+        auto fluid_map_it = fluid_map.find(elem_id);
 
         // If this element is a solid element, then we need to populate
         // the coupled_elements with all the fluid elements associated with
         // this solid element. We use the same coupling matrix for all of them.
         if( solid_map_it != solid_map.end() )
           {
-            const auto & fluid_map = solid_map_it->second;
+            const auto & fluid_group = solid_map_it->second;
 
-            for( const auto & fluid_it : fluid_map )
+            for( const auto & fluid_it : fluid_group )
               {
                 const libMesh::Elem * fluid_elem = _mesh.elem_ptr(fluid_it.first);
 
-                if(!elem)
+                if(!fluid_elem)
                   libmesh_error_msg("ERROR: fluid_elem is NULL!");
 
                 if( fluid_elem->processor_id() != p )
-                  coupled_elements.insert( std::make_pair(fluid_elem,nullptr) );
+                  coupled_elements.insert( std::make_pair(fluid_elem,&_coupling_matrix) );
+              }
+          }
+
+        // If this element is a fluid element, then we need to populate
+        // the coupled_elements with all the solid elements associated with
+        // this fluid element. While we don't need the algebraic coupling
+        // this will generate, it is needed to get the correct sparsity
+        // pattern.
+        if( fluid_map_it != fluid_map.end() )
+          {
+            const auto & solid_group = fluid_map_it->second;
+
+            for( const auto & solid_it : solid_group )
+              {
+                const libMesh::Elem * solid_elem = _mesh.elem_ptr(solid_it.first);
+
+                if(!solid_elem)
+                  libmesh_error_msg("ERROR: fluid_elem is NULL!");
+
+                if( solid_elem->processor_id() != p )
+                  coupled_elements.insert( std::make_pair(solid_elem,&_coupling_matrix) );
               }
           }
       }
