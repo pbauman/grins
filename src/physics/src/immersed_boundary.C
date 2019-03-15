@@ -246,16 +246,6 @@ namespace GRINS
     libmesh_assert(dof_map.is_attached(matrix));
     matrix.init();
     matrix.zero();
-
-    libMesh::PetscMatrix<libMesh::Number> & petsc_matrix =
-      libMesh::cast_ref<libMesh::PetscMatrix<libMesh::Number> &>(matrix);
-
-    Mat A = petsc_matrix.mat();
-
-    PetscErrorCode ierr =0;
-    ierr = MatSetOption(A, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE);
-    CHKERRABORT(system.comm().get(), ierr);
-
   }
 
   template<typename SolidMech>
