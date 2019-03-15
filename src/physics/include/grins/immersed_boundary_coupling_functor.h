@@ -41,11 +41,11 @@ namespace GRINS
   {
   public:
 
-    ImmersedBoundaryCouplingFunctor( const MultiphysicsSystem & system,
+    ImmersedBoundaryCouplingFunctor( libMesh::MeshBase & mesh,
                                      const libMesh::CouplingMatrix & coupling_matrix,
                                      const OverlappingFluidSolidMap & overlapping_map )
       : libMesh::GhostingFunctor(),
-        _system(system),
+        _mesh(mesh),
         _overlapping_map(overlapping_map),
         _coupling_matrix(coupling_matrix)
     {}
@@ -60,7 +60,7 @@ namespace GRINS
 
   private:
 
-    const MultiphysicsSystem & _system;
+    const libMesh::MeshBase & _mesh;
 
     const OverlappingFluidSolidMap & _overlapping_map;
 

@@ -32,7 +32,6 @@
 // libMesh
 #include "libmesh/elem.h"
 #include "libmesh/mesh_base.h"
-#include "libmesh/dof_map.h"
 
 namespace GRINS
 {
@@ -42,8 +41,6 @@ namespace GRINS
       libMesh::processor_id_type /*p*/,
       std::unordered_map<const libMesh::Elem *,const libMesh::CouplingMatrix*> & coupled_elements )
   {
-    const libMesh::MeshBase & mesh = _system.get_mesh();
-
     const std::map<libMesh::dof_id_type,std::map<libMesh::dof_id_type,std::vector<unsigned int>>> &
       solid_map = _overlapping_map.solid_map();
 
@@ -62,7 +59,7 @@ namespace GRINS
 
             for( const auto & fluid_it : fluid_group )
               {
-                const libMesh::Elem * fluid_elem = mesh.elem_ptr(fluid_it.first);
+                const libMesh::Elem * fluid_elem = _mesh.elem_ptr(fluid_it.first);
 
                 if(!elem)
                   libmesh_error_msg("ERROR: fluid_elem is NULL!");
