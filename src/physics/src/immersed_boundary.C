@@ -222,17 +222,26 @@ namespace GRINS
                                                              _fluid_subdomain_set,
                                                              _disp_vars) );
 
-    // Since we need to rebuild the overlap, we need to rebuild the sparsity too
-    _ibm_sparsity.reset( new ImmersedBoundaryAugmentedSparsity(system,
-                                                               _disp_vars,
-                                                               _flow_vars,
-                                                               *_fluid_solid_overlap) );
+
+
     libMesh::DofMap & dof_map = system.get_dof_map();
+
+    if(_coupling_functor)
+      dof_map.remove_coupling_functor(*_coupling_functor);
+
+    _coupling_functor.reset( new ImmersedBoundaryCouplingFunctor(system.get_mesh(),
+                                                                 *_coupling_matrix,
+                                                                 *_fluid_solid_overlap) );
+
+    dof_map.add_coupling_functor(*_coupling_functor);
+
+
+    // Handle full coupling (sparsity pattern)
     dof_map.clear_sparsity();
-    dof_map.attach_extra_sparsity_object(*_ibm_sparsity);
     dof_map.compute_sparsity(system.get_mesh());
 
-    // New to reinit the matrix since we changed the sparsity pattern
+
+    // Now to reinit the matrix since we changed the sparsity pattern
     libMesh::SparseMatrix<libMesh::Number> & matrix = system.get_matrix("System Matrix");
     libmesh_assert(dof_map.is_attached(matrix));
     matrix.init();
@@ -246,6 +255,7 @@ namespace GRINS
     PetscErrorCode ierr =0;
     ierr = MatSetOption(A, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE);
     CHKERRABORT(system.comm().get(), ierr);
+
   }
 
   template<typename SolidMech>

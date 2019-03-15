@@ -32,11 +32,10 @@
 #include "grins/common.h"
 #include "grins/solid_mechanics_abstract.h"
 #include "grins/overlapping_fluid_solid_map.h"
-#include "grins/immersed_boundary_augmented_sparsity.h"
+#include "grins/immersed_boundary_coupling_functor.h"
 
 //libMesh
 #include "libmesh/fem_context.h"
-
 
 namespace GRINS
 {
@@ -117,7 +116,7 @@ namespace GRINS
 
     std::unique_ptr<OverlappingFluidSolidMap> _fluid_solid_overlap;
 
-    std::unique_ptr<ImmersedBoundaryAugmentedSparsity> _ibm_sparsity;
+    std::unique_ptr<ImmersedBoundaryCouplingFunctor> _coupling_functor;
 
     std::unique_ptr<libMesh::CouplingMatrix> _coupling_matrix;
 
