@@ -119,10 +119,24 @@ namespace GRINS
 
     std::unique_ptr<ImmersedBoundaryAugmentedSparsity> _ibm_sparsity;
 
+    std::unique_ptr<libMesh::CouplingMatrix> _coupling_matrix;
+
     std::unique_ptr<libMesh::FEMContext> _fluid_context;
 
     std::unique_ptr<libMesh::FEMContext> point_fluid_context;
 
+    void setup_coupling_matrix( const VelocityVariable & flow_vars,
+                                const DisplacementVariable & disp_vars,
+                                const LagrangeMultVectorVariable & lambda_var,
+                                libMesh::CouplingMatrix & coupling_matrix );
+
+    void diagonally_coupled_vars( const MultcomponentVectorVariable & var1,
+                                  const MultcomponentVectorVariable & var2,
+                                  libMesh::CouplingMatrix & coupling_matrix );
+
+    void fully_coupled_vars( const MultcomponentVectorVariable & var1,
+                             const MultcomponentVectorVariable & var2,
+                             libMesh::CouplingMatrix & coupling_matrix );
 
     void prepare_fluid_context_batch( const MultiphysicsSystem & system,
                                       libMesh::dof_id_type fluid_elem_id,

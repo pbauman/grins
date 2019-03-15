@@ -56,6 +56,7 @@
 #include "libmesh/petsc_matrix.h"
 #include "libmesh/petsc_macro.h"
 #include "libmesh/petsc_solver_exception.h"
+#include "libmesh/coupling_matrix.h"
 
 // PETSc includes
 # include <petscsnes.h>
@@ -73,9 +74,12 @@ namespace GRINS
       _lambda_var(GRINSPrivate::VariableWarehouse::get_variable_subclass<LagrangeMultVectorVariable>(VariablesParsing::lagrange_mult_variable_name(input,physics_name,VariablesParsing::PHYSICS))),
       _solid_mech(std::move(solid_mech_ptr)),
       _fluid_mechanics(input("Physics/ImmersedBoundary/fluid_mechanics","DIE!")),
-      _solid_mechanics(input("Physics/ImmersedBoundary/solid_mechanics","DIE!"))
+      _solid_mechanics(input("Physics/ImmersedBoundary/solid_mechanics","DIE!")),
+      _coupling_matrix(nullptr)
   {
     _lambda_var.set_is_constraint_var(true);
+
+    // Need to sanity check the dim() of the Variables
 
     // Get the fluid mechanics from the input, this is needed to query the fluid subdomain ids
     if( !input.have_variable( "Physics/ImmersedBoundary/fluid_mechanics" ) )
@@ -111,6 +115,11 @@ namespace GRINS
   template<typename SolidMech>
   void ImmersedBoundary<SolidMech>::auxiliary_init( MultiphysicsSystem & system )
   {
+    // Setup the CouplingMatrix that will be used repeatedly in the
+    // CouplingFunctor
+    _coupling_matrix.reset( new libMesh::CouplingMatrix(system.n_vars()) );
+    this->setup_coupling_matrix( _flow_vars, _disp_vars, _lambda_var, *_coupling_matrix );
+
     // Get the point locator object that will find the right fluid element
     _point_locator = system.get_mesh().sub_point_locator();
 
@@ -3080,6 +3089,72 @@ namespace GRINS
     // The F^T comes from needing the derivative of the fluid
     // shape function w.r.t. solid coordinates
     //tau = P*Ftrans;
+  }
+
+  template<typename SolidMech>
+  void ImmersedBoundary<SolidMech>::setup_coupling_matrix( const VelocityVariable & flow_vars,
+                                                           const DisplacementVariable & disp_vars,
+                                                           const LagrangeMultVectorVariable & lambda_vars,
+                                                           libMesh::CouplingMatrix & coupling_matrix )
+  {
+    libmesh_assert_equal_to(flow_vars.dim(),disp_vars.dim());
+    libmesh_assert_equal_to(flow_vars.dim(),lambda_vars.dim());
+    libmesh_assert_greater_equal( flow_vars.dim(), 2 );
+    libmesh_assert_greater_equal( disp_vars.dim(), 2 );
+    libmesh_assert_greater_equal( lambda_vars.dim(), 2 );
+
+    // All the default coupling will be present, so we just need to indicate
+    // the extra coupling from the ImmersedBoundary terms.
+
+    // Fluid-lambda
+    // Only "diagonally" coupled
+    this->diagonally_coupled_vars(flow_vars,lambda_vars,coupling_matrix);
+
+    // Fluid-solid
+    // "Fully" coupled
+    this->fully_coupled_vars(flow_vars,disp_vars,coupling_matrix);
+
+    // Solid-lambda
+    // Only "diagonally" coupled
+    this->diagonally_coupled_vars(disp_vars,lambda_vars,coupling_matrix);
+
+    // lambda-fluid
+    // Only "diagonally" coupled
+    this->diagonally_coupled_vars(lambda_vars,flow_vars,coupling_matrix);
+
+    // lambda-solid
+    // "Fully" coupled
+    this->fully_coupled_vars(lambda_vars,disp_vars,coupling_matrix);
+  }
+
+  template<typename SolidMech>
+  void ImmersedBoundary<SolidMech>::diagonally_coupled_vars( const MultcomponentVectorVariable & var1,
+                                                             const MultcomponentVectorVariable & var2,
+                                                             libMesh::CouplingMatrix & coupling_matrix )
+  {
+    coupling_matrix( var1.u(), var2.u() ) = true;
+    coupling_matrix( var1.v(), var2.v() ) = true;
+    if( var1.dim() == 3 )
+      coupling_matrix( var1.w(), var2.w() ) = true;
+  }
+
+  template<typename SolidMech>
+  void ImmersedBoundary<SolidMech>::fully_coupled_vars( const MultcomponentVectorVariable & var1,
+                                                        const MultcomponentVectorVariable & var2,
+                                                        libMesh::CouplingMatrix & coupling_matrix )
+  {
+    coupling_matrix( var1.u(), var2.u() ) = true;
+    coupling_matrix( var1.u(), var2.v() ) = true;
+    coupling_matrix( var1.v(), var2.u() ) = true;
+    coupling_matrix( var1.v(), var2.v() ) = true;
+    if( var1.dim() == 3 )
+      {
+        coupling_matrix( var1.u(), var2.w() ) = true;
+        coupling_matrix( var1.v(), var2.w() ) = true;
+        coupling_matrix( var1.w(), var2.u() ) = true;
+        coupling_matrix( var1.w(), var2.v() ) = true;
+        coupling_matrix( var1.w(), var2.w() ) = true;
+      }
   }
 
   //instantiate IBM classes
