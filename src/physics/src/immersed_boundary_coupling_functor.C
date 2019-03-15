@@ -38,7 +38,7 @@ namespace GRINS
   void ImmersedBoundaryCouplingFunctor::operator()
     ( const libMesh::MeshBase::const_element_iterator & range_begin,
       const libMesh::MeshBase::const_element_iterator & range_end,
-      libMesh::processor_id_type /*p*/,
+      libMesh::processor_id_type p,
       std::unordered_map<const libMesh::Elem *,const libMesh::CouplingMatrix*> & coupled_elements )
   {
     const std::map<libMesh::dof_id_type,std::map<libMesh::dof_id_type,std::vector<unsigned int>>> &
@@ -55,16 +55,17 @@ namespace GRINS
         // this solid element. We use the same coupling matrix for all of them.
         if( solid_map_it != solid_map.end() )
           {
-            std::map<libMesh::dof_id_type,std::vector<unsigned int>> fluid_group;
+            const auto & fluid_map = solid_map_it->second;
 
-            for( const auto & fluid_it : fluid_group )
+            for( const auto & fluid_it : fluid_map )
               {
                 const libMesh::Elem * fluid_elem = _mesh.elem_ptr(fluid_it.first);
 
                 if(!elem)
                   libmesh_error_msg("ERROR: fluid_elem is NULL!");
 
-                coupled_elements.insert( std::make_pair(fluid_elem,&_coupling_matrix) );
+                if( fluid_elem->processor_id() != p )
+                  coupled_elements.insert( std::make_pair(fluid_elem,nullptr) );
               }
           }
       }
