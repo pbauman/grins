@@ -3177,6 +3177,24 @@ namespace GRINS
       }
   }
 
+  template<typename SolidMech>
+  void ImmersedBoundary<SolidMech>::print_coupling_matrix( const libMesh::CouplingMatrix & coupling_matrix,
+                                                           const unsigned int n )
+  {
+    libMesh::out << std::endl << "Coupling Matrix:" << std::endl;
+
+    for( unsigned int i = 0; i < n; i++ )
+      {
+        for( unsigned int j = 0; j < n; j++ )
+          libMesh::out << coupling_matrix(i,j) << " ";
+
+        libMesh::out << std::endl;
+      }
+
+    libMesh::out << std::endl << std::endl;
+  }
+
+
   //instantiate IBM classes
   template class ImmersedBoundary<ElasticCable<HookesLaw1D> >;
   template class ImmersedBoundary<ElasticMembrane<HookesLaw> >;

@@ -370,6 +370,8 @@ namespace GRINS
                                AssemblyContext & solid_context,
                                libMesh::FEMContext & fluid_context,
                                const std::vector<unsigned int> & quad_points);
+
+    void print_coupling_matrix( const libMesh::CouplingMatrix & coupling_matrix, const unsigned int n );
   };
 
   template<typename SolidMech>
