@@ -57,6 +57,7 @@
 #include "libmesh/petsc_macro.h"
 #include "libmesh/petsc_solver_exception.h"
 #include "libmesh/coupling_matrix.h"
+#include "libmesh/unsteady_solver.h"
 
 // PETSc includes
 # include <petscsnes.h>
@@ -247,6 +248,40 @@ namespace GRINS
     libmesh_assert(dof_map.is_attached(matrix));
     matrix.init();
     matrix.zero();
+
+  template<typename SolidMech>
+  void ImmersedBoundary<SolidMech>::reinit_ghosted_vectors( MultiphysicsSystem & system )
+  {
+    const libMesh::DofMap & dof_map = system.get_dof_map();
+
+    // Update current local solution
+    system.current_local_solution = libMesh::NumericVector<libMesh::Number>::build(system.comm());
+
+    system.current_local_solution->init(system.n_dofs(), system.n_local_dofs(),
+                                        dof_map.get_send_list(), false,
+                                        libMesh::GHOSTED);
+
+    system.solution->localize(*(system.current_local_solution),dof_map.get_send_list());
+
+    // Also need to update unsteady system vectors
+    libMesh::TimeSolver & time_solver_raw = system.get_time_solver();
+
+    libMesh::UnsteadySolver * unsteady_solver = dynamic_cast<libMesh::UnsteadySolver *>(&time_solver_raw);
+    if( unsteady_solver)
+      {
+        unsteady_solver->old_local_nonlinear_solution =
+          libMesh::NumericVector<libMesh::Number>::build(system.comm());
+
+        unsteady_solver->old_local_nonlinear_solution->init(system.n_dofs(), system.n_local_dofs(),
+                                                            dof_map.get_send_list(), false,
+                                                            libMesh::GHOSTED);
+
+        libMesh::NumericVector<libMesh::Number> & old_nonlinear_soln =
+          system.get_vector("_old_nonlinear_solution");
+
+        old_nonlinear_soln.localize(*(unsteady_solver->old_local_nonlinear_solution), dof_map.get_send_list());
+      }
+
   }
 
   template<typename SolidMech>

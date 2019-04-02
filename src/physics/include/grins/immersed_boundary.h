@@ -371,6 +371,8 @@ namespace GRINS
                                libMesh::FEMContext & fluid_context,
                                const std::vector<unsigned int> & quad_points);
 
+    void reinit_ghosted_vectors( MultiphysicsSystem & system );
+
     void print_coupling_matrix( const libMesh::CouplingMatrix & coupling_matrix, const unsigned int n );
   };
 
