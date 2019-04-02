@@ -1237,62 +1237,63 @@ namespace GRINS
                                                              libMesh::DenseMatrix<libMesh::Number> & Kf_lm) const
   {
     std::vector<libMesh::dof_id_type> velocity_dof_indices;
-    velocity_dof_indices.resize(_flow_vars.dim()*n_fluid_dofs);
 
     const std::vector<libMesh::dof_id_type>& uf_dof_indices =
       fluid_context.get_dof_indices(this->_flow_vars.u());
 
-
-
-    for( unsigned int i = 0; i < uf_dof_indices.size(); i++ )
-      velocity_dof_indices[i] = uf_dof_indices[i];
-
     const std::vector<libMesh::dof_id_type>& vf_dof_indices =
       fluid_context.get_dof_indices(this->_flow_vars.v());
-
-    for( unsigned int i = 0; i < vf_dof_indices.size(); i++ )
-      velocity_dof_indices[i+n_fluid_dofs] = vf_dof_indices[i];
 
     libmesh_assert_equal_to( uf_dof_indices.size(), n_fluid_dofs );
     libmesh_assert_equal_to( vf_dof_indices.size(), n_fluid_dofs );
 
+    velocity_dof_indices.insert( velocity_dof_indices.end(),
+                                 uf_dof_indices.begin(),
+                                 uf_dof_indices.end() );
+
+    velocity_dof_indices.insert( velocity_dof_indices.end(),
+                                 vf_dof_indices.begin(),
+                                 vf_dof_indices.end() );
+
     //Build up solid dof indices
     std::vector<libMesh::dof_id_type> solid_dof_indices;
-    solid_dof_indices.resize(_disp_vars.dim()*n_solid_dofs);
 
     const std::vector<libMesh::dof_id_type>& us_dof_indices =
       solid_context.get_dof_indices(this->_disp_vars.u());
 
-    for( unsigned int i = 0; i < us_dof_indices.size(); i++ )
-      solid_dof_indices[i] = us_dof_indices[i];
-
     const std::vector<libMesh::dof_id_type>& vs_dof_indices =
       solid_context.get_dof_indices(this->_disp_vars.v());
-
-    for( unsigned int i = 0; i < vs_dof_indices.size(); i++ )
-      solid_dof_indices[i+n_solid_dofs] = vs_dof_indices[i];
 
     libmesh_assert_equal_to( us_dof_indices.size(), n_solid_dofs );
     libmesh_assert_equal_to( vs_dof_indices.size(), n_solid_dofs );
 
+    solid_dof_indices.insert( solid_dof_indices.end(),
+                                 us_dof_indices.begin(),
+                                 us_dof_indices.end() );
+
+    solid_dof_indices.insert( solid_dof_indices.end(),
+                                 vs_dof_indices.begin(),
+                                 vs_dof_indices.end() );
+
     //Build up lambda dof indices
     std::vector<libMesh::dof_id_type> lambda_dof_indices;
-    lambda_dof_indices.resize(_lambda_var.dim()*n_lambda_dofs);
 
     const std::vector<libMesh::dof_id_type>& ulm_dof_indices =
       solid_context.get_dof_indices(this->_lambda_var.u());
 
-    for( unsigned int i = 0; i < ulm_dof_indices.size(); i++ )
-      lambda_dof_indices[i] = ulm_dof_indices[i];
-
     const std::vector<libMesh::dof_id_type>& vlm_dof_indices =
       solid_context.get_dof_indices(this->_lambda_var.v());
 
-    for( unsigned int i = 0; i < vlm_dof_indices.size(); i++ )
-      lambda_dof_indices[i+n_lambda_dofs] = vlm_dof_indices[i];
-
     libmesh_assert_equal_to( ulm_dof_indices.size(), n_lambda_dofs );
     libmesh_assert_equal_to( vlm_dof_indices.size(), n_lambda_dofs );
+
+    lambda_dof_indices.insert( lambda_dof_indices.end(),
+                                 ulm_dof_indices.begin(),
+                                 ulm_dof_indices.end() );
+
+    lambda_dof_indices.insert( lambda_dof_indices.end(),
+                                 vlm_dof_indices.begin(),
+                                 vlm_dof_indices.end() );
 
     // Since we manually built the fluid context, we have to manually
     // constrain and add the residuals and Jacobians.
