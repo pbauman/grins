@@ -74,7 +74,7 @@ namespace GRINS
     virtual void element_time_derivative( bool compute_jacobian, AssemblyContext& context );
 
     //! Cache mesh information needed for residual computation
-    virtual void preassembly( MultiphysicsSystem & system );
+    virtual void presolve( MultiphysicsSystem & system );
 
     //! We need to reinit the point locator when libMesh::System::reinit is called.
     virtual void reinit( MultiphysicsSystem & system );

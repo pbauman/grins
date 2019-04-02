@@ -214,7 +214,7 @@ namespace GRINS
   }
 
   template<typename SolidMech>
-  void ImmersedBoundary<SolidMech>::preassembly( MultiphysicsSystem & system )
+  void ImmersedBoundary<SolidMech>::presolve( MultiphysicsSystem & system )
   {
     // We need to rebuild the overlap map each time because the position
     // of the solid can change in between each Newton step.
