@@ -228,15 +228,27 @@ namespace GRINS
 
     libMesh::DofMap & dof_map = system.get_dof_map();
 
-    if(_coupling_functor)
-      dof_map.remove_coupling_functor(*_coupling_functor);
 
-    _coupling_functor.reset( new ImmersedBoundaryCouplingFunctor(system.get_mesh(),
-                                                                 *_coupling_matrix,
-                                                                 *_fluid_solid_overlap) );
 
-    dof_map.add_coupling_functor(*_coupling_functor);
 
+
+    if(!_coupling_functor)
+      {
+        libMesh::out << "Building NEW copuling functor!" << std::endl;
+        _coupling_functor.reset( new ImmersedBoundaryCouplingFunctor(system.get_mesh(),
+                                                                     *_coupling_matrix,
+                                                                     *_fluid_solid_overlap) );
+        dof_map.add_coupling_functor(*_coupling_functor);
+      }
+    else
+      {
+        libMesh::out << "Replacing old copuling functor!" << std::endl;
+        dof_map.remove_coupling_functor(*_coupling_functor);
+        _coupling_functor.reset( new ImmersedBoundaryCouplingFunctor(system.get_mesh(),
+                                                                     *_coupling_matrix,
+                                                                     *_fluid_solid_overlap) );
+        dof_map.add_coupling_functor(*_coupling_functor);
+      }
 
     // Handle full coupling (sparsity pattern)
     dof_map.clear_sparsity();
@@ -247,6 +259,8 @@ namespace GRINS
     libMesh::SparseMatrix<libMesh::Number> & matrix = system.get_matrix("System Matrix");
     libmesh_assert(dof_map.is_attached(matrix));
     matrix.init();
+
+  }
 
   template<typename SolidMech>
   void ImmersedBoundary<SolidMech>::reinit_ghosted_vectors( MultiphysicsSystem & system )
