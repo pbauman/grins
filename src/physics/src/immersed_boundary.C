@@ -247,7 +247,6 @@ namespace GRINS
     libMesh::SparseMatrix<libMesh::Number> & matrix = system.get_matrix("System Matrix");
     libmesh_assert(dof_map.is_attached(matrix));
     matrix.init();
-    matrix.zero();
 
   template<typename SolidMech>
   void ImmersedBoundary<SolidMech>::reinit_ghosted_vectors( MultiphysicsSystem & system )
