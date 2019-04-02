@@ -169,6 +169,9 @@ namespace GRINS
      */
     virtual void presolve( MultiphysicsSystem & /*system*/ ){};
 
+    //! Perform  any necessary setup before solve begins.
+    virtual void presolve( MultiphysicsSystem & /*system*/ ){};
+
     //! Perform any necessary setup before element assembly begins
     /*!
      * API hook to do any (re)initialization before each assembly for each
