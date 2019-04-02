@@ -72,6 +72,7 @@ namespace GRINS
       _flow_vars(GRINSPrivate::VariableWarehouse::get_variable_subclass<VelocityVariable>(VariablesParsing::velocity_variable_name(input,physics_name,VariablesParsing::PHYSICS))),
       _disp_vars(GRINSPrivate::VariableWarehouse::get_variable_subclass<DisplacementVariable>(VariablesParsing::disp_variable_name(input,physics_name,VariablesParsing::PHYSICS))),
       _lambda_var(GRINSPrivate::VariableWarehouse::get_variable_subclass<LagrangeMultVectorVariable>(VariablesParsing::lagrange_mult_variable_name(input,physics_name,VariablesParsing::PHYSICS))),
+      _press_var(GRINSPrivate::VariableWarehouse::get_variable_subclass<PressureFEVariable>(VariablesParsing::press_variable_name(input,physics_name,VariablesParsing::PHYSICS))),
       _solid_mech(std::move(solid_mech_ptr)),
       _fluid_mechanics(input("Physics/ImmersedBoundary/fluid_mechanics","DIE!")),
       _solid_mechanics(input("Physics/ImmersedBoundary/solid_mechanics","DIE!")),
@@ -118,7 +119,7 @@ namespace GRINS
     // Setup the CouplingMatrix that will be used repeatedly in the
     // CouplingFunctor
     _coupling_matrix.reset( new libMesh::CouplingMatrix(system.n_vars()) );
-    this->setup_coupling_matrix( _flow_vars, _disp_vars, _lambda_var, *_coupling_matrix );
+    this->setup_coupling_matrix( _flow_vars, _disp_vars, _lambda_var, _press_var, *_coupling_matrix );
 
     // Get the point locator object that will find the right fluid element
     _point_locator = system.get_mesh().sub_point_locator();
@@ -3095,6 +3096,7 @@ namespace GRINS
   void ImmersedBoundary<SolidMech>::setup_coupling_matrix( const VelocityVariable & flow_vars,
                                                            const DisplacementVariable & disp_vars,
                                                            const LagrangeMultVectorVariable & lambda_vars,
+                                                           const PressureFEVariable & press_var,
                                                            libMesh::CouplingMatrix & coupling_matrix )
   {
     libmesh_assert_equal_to(flow_vars.dim(),disp_vars.dim());
@@ -3117,6 +3119,32 @@ namespace GRINS
     // lambda-fluid
     // Only "diagonally" coupled
     this->fully_coupled_vars(lambda_vars,flow_vars,coupling_matrix);
+
+    this->fully_coupled_vars(disp_vars,flow_vars,coupling_matrix);
+
+    this->fully_coupled_vars(disp_vars,lambda_vars,coupling_matrix);
+    this->fully_coupled_vars(lambda_vars,disp_vars,coupling_matrix);
+
+    this->fully_coupled_vars(disp_vars, disp_vars,coupling_matrix);
+    this->fully_coupled_vars(flow_vars, flow_vars,coupling_matrix);
+    this->fully_coupled_vars(lambda_vars, lambda_vars,coupling_matrix);
+
+
+    coupling_matrix(disp_vars.u(), press_var.var()) = true;
+    coupling_matrix(disp_vars.v(), press_var.var()) = true;
+    coupling_matrix(lambda_vars.u(), press_var.var()) = true;
+    coupling_matrix(lambda_vars.v(), press_var.var()) = true;
+    coupling_matrix(flow_vars.u(), press_var.var()) = true;
+    coupling_matrix(flow_vars.v(), press_var.var()) = true;
+
+    coupling_matrix(press_var.var(), disp_vars.u() ) = true;
+    coupling_matrix(press_var.var(), disp_vars.v()) = true;
+    coupling_matrix(press_var.var(), lambda_vars.u()) = true;
+    coupling_matrix(press_var.var(), lambda_vars.v()) = true;
+    coupling_matrix(press_var.var(), flow_vars.u()) = true;
+    coupling_matrix(press_var.var(), flow_vars.v()) = true;
+
+    coupling_matrix(press_var.var(), press_var.var()) = true;
   }
 
   template<typename SolidMech>

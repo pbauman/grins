@@ -29,6 +29,7 @@
 //GRINS
 #include "grins/physics.h"
 #include "grins/multi_component_vector_variable.h"
+#include "grins/single_variable.h"
 #include "grins/common.h"
 #include "grins/solid_mechanics_abstract.h"
 #include "grins/overlapping_fluid_solid_map.h"
@@ -97,6 +98,8 @@ namespace GRINS
     //! FE variables for the lagrange multiplier
     LagrangeMultVectorVariable & _lambda_var;
 
+    PressureFEVariable & _press_var;
+
     //! Solid Mechanics from the ibm factory
     std::unique_ptr<SolidMech> _solid_mech;
 
@@ -127,6 +130,7 @@ namespace GRINS
     void setup_coupling_matrix( const VelocityVariable & flow_vars,
                                 const DisplacementVariable & disp_vars,
                                 const LagrangeMultVectorVariable & lambda_var,
+                                const PressureFEVariable & press_var,
                                 libMesh::CouplingMatrix & coupling_matrix );
 
     void diagonally_coupled_vars( const MultcomponentVectorVariable & var1,
