@@ -141,27 +141,6 @@ namespace GRINS
                              const MultcomponentVectorVariable & var2,
                              libMesh::CouplingMatrix & coupling_matrix );
 
-    void prepare_fluid_context_batch( const MultiphysicsSystem & system,
-                                      libMesh::dof_id_type fluid_elem_id,
-                                      AssemblyContext & solid_context,
-                                      const std::vector<unsigned int> & solid_qpoint_indices,
-                                      const std::vector<libMesh::Point> & solid_qpoints,
-                                      std::vector<libMesh::Point> & solid_qpoints_subset,
-                                      libMesh::FEMContext & fluid_context );
-
-    void prepare_fluid_context( const MultiphysicsSystem & system,
-                                AssemblyContext & solid_context,
-				const std::vector<libMesh::Point> & solid_qpoints,
-                                const unsigned int sqp, /* solid quadrature point */
-                                const libMesh::dof_id_type fluid_elem_id,
-                                libMesh::FEMContext & fluid_context );
-
-    void prepare_fluid_context_search( const MultiphysicsSystem & system,
-                                       AssemblyContext & solid_context,
-                                       const libMesh::Point & x_qp,
-                                       const unsigned int qp,
-                                       libMesh::FEMContext & fluid_context );
-
     void compute_residuals( const AssemblyContext & solid_context,
                             const libMesh::FEMContext & fluid_context,
                             unsigned int sqp,
