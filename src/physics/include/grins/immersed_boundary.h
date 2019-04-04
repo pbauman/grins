@@ -259,24 +259,6 @@ namespace GRINS
                         libMesh::DenseSubVector<libMesh::Number> & Fulm,
                         libMesh::DenseSubVector<libMesh::Number> & Fvlm);
 
-    void fluid_residual_contribution( bool compute_jacobian, MultiphysicsSystem & system,
-				      libMesh::FEMContext & fluid_context,
-				      libMesh::dof_id_type fluid_elem_id,
-				      AssemblyContext & solid_context,
-				      const std::vector<libMesh::Point> & solid_qpoints,
-				      unsigned int sqp,
-				      libMesh::Real & jac,libMesh::Real delta,
-				      libMesh::DenseSubVector<libMesh::Number> & Fuf,
-				      libMesh::DenseSubVector<libMesh::Number> & Fvf,
-				      libMesh::DenseSubMatrix<libMesh::Number> & Kuf_us,
-				      libMesh::DenseSubMatrix<libMesh::Number> & Kuf_vs,
-				      libMesh::DenseSubMatrix<libMesh::Number> & Kvf_us,
-				      libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vs,
-				      libMesh::DenseSubMatrix<libMesh::Number> & Kuf_ulm,
-				      libMesh::DenseSubMatrix<libMesh::Number> & Kuf_vlm,
-				      libMesh::DenseSubMatrix<libMesh::Number> & Kvf_ulm,
-				      libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vlm);
-
     void prepare_jacobians(unsigned int n_fluid_dofs,
                            unsigned int n_solid_dofs,
                            unsigned int n_lambda_dofs,
