@@ -277,20 +277,6 @@ namespace GRINS
 				      libMesh::DenseSubMatrix<libMesh::Number> & Kvf_ulm,
 				      libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vlm);
 
-    void solid_residual_contribution( bool compute_jacobian,
-				      AssemblyContext & solid_context,unsigned int sqp,
-				      libMesh::Real & jac,libMesh::Real delta,
-				      libMesh::DenseSubVector<libMesh::Number> & Fus,
-				      libMesh::DenseSubVector<libMesh::Number> & Fvs,
-				      libMesh::DenseSubMatrix<libMesh::Number> & Kus_us,
-				      libMesh::DenseSubMatrix<libMesh::Number> & Kvs_us,
-				      libMesh::DenseSubMatrix<libMesh::Number> & Kus_vs,
-				      libMesh::DenseSubMatrix<libMesh::Number> & Kvs_vs,
-				      libMesh::DenseSubMatrix<libMesh::Number> & Kus_ulm,
-				      libMesh::DenseSubMatrix<libMesh::Number> & Kvs_ulm,
-				      libMesh::DenseSubMatrix<libMesh::Number> & Kus_vlm,
-				      libMesh::DenseSubMatrix<libMesh::Number> & Kvs_vlm);
-
     void prepare_jacobians(unsigned int n_fluid_dofs,
                            unsigned int n_solid_dofs,
                            unsigned int n_lambda_dofs,
