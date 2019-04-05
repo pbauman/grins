@@ -1447,42 +1447,20 @@ namespace GRINS
     // the extra coupling from the ImmersedBoundary terms.
 
     // Fluid-lambda
-    // Only "diagonally" coupled
     this->fully_coupled_vars(flow_vars,lambda_vars,coupling_matrix);
 
     // Fluid-solid
-    // "Fully" coupled
     this->fully_coupled_vars(flow_vars,disp_vars,coupling_matrix);
 
     // lambda-fluid
-    // Only "diagonally" coupled
     this->fully_coupled_vars(lambda_vars,flow_vars,coupling_matrix);
 
-    this->fully_coupled_vars(disp_vars,flow_vars,coupling_matrix);
 
-    this->fully_coupled_vars(disp_vars,lambda_vars,coupling_matrix);
-    this->fully_coupled_vars(lambda_vars,disp_vars,coupling_matrix);
-
-    this->fully_coupled_vars(disp_vars, disp_vars,coupling_matrix);
-    this->fully_coupled_vars(flow_vars, flow_vars,coupling_matrix);
-    this->fully_coupled_vars(lambda_vars, lambda_vars,coupling_matrix);
-
-
+    // We need this for algebraic ghosting. Currently, when we build the FEMContext
+    // for the fluid element, it will build all variables so we need to ghost the
+    // pressure even though we don't ever use it. If we someday update the FEMContext
+    // to only build for a subset of variables, we should be able to remove this.
     coupling_matrix(disp_vars.u(), press_var.var()) = true;
-    coupling_matrix(disp_vars.v(), press_var.var()) = true;
-    coupling_matrix(lambda_vars.u(), press_var.var()) = true;
-    coupling_matrix(lambda_vars.v(), press_var.var()) = true;
-    coupling_matrix(flow_vars.u(), press_var.var()) = true;
-    coupling_matrix(flow_vars.v(), press_var.var()) = true;
-
-    coupling_matrix(press_var.var(), disp_vars.u() ) = true;
-    coupling_matrix(press_var.var(), disp_vars.v()) = true;
-    coupling_matrix(press_var.var(), lambda_vars.u()) = true;
-    coupling_matrix(press_var.var(), lambda_vars.v()) = true;
-    coupling_matrix(press_var.var(), flow_vars.u()) = true;
-    coupling_matrix(press_var.var(), flow_vars.v()) = true;
-
-    coupling_matrix(press_var.var(), press_var.var()) = true;
   }
 
   template<typename SolidMech>
