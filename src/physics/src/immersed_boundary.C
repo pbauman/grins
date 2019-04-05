@@ -376,20 +376,18 @@ namespace GRINS
             // If need be, we can now also compute numerical jacobians and assemble them
             if ( compute_jacobian )
               {
-
-                /*
                  this->compute_numerical_jacobians( system,solid_context,*(this->_fluid_context),
                                                     quad_points,
                                                     Kuf_ulm,Kuf_vlm,Kvf_ulm,Kvf_vlm,
                                                     Kulm_uf,Kulm_vf,Kvlm_uf,Kvlm_vf,
                                                     Kuf_us,Kuf_vs,Kvf_us,Kvf_vs);
-                */
 
+                 /*
                 this->compute_analytic_jacobians(system,solid_context,*(this->_fluid_context),
                                                  quad_points,
                                                  Kuf_ulm,Kvf_vlm,
                                                  Kulm_uf,Kvlm_vf);
-
+                 */
 
                  this->assemble_fluid_jacobians(system,solid_context,*(this->_fluid_context),
                                                 n_fluid_dofs, n_solid_dofs, n_lambda_dofs,
@@ -561,13 +559,11 @@ namespace GRINS
 	// Zero index for fluid dphi/JxW since we only requested one quad. point.
 
 	// H1 Norm
-        /*
 	for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 	  {
 	    Fuf(i) -= (grad_lambda_x(alpha)*fdphi_times_F(0,alpha))*jac;
 	    Fvf(i) -= (grad_lambda_y(alpha)*fdphi_times_F(1,alpha))*jac;
 	  }
-        */
       }
 
     // Solid residual
@@ -583,13 +579,11 @@ namespace GRINS
 	    Fvs(i) -= P(1,alpha)*solid_dphi[i][sqp](alpha)*jac;
 	  }
 	//H1 Norm
-        /*
 	for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 	  {
 	    Fus(i) += grad_lambda_x(alpha)*solid_dphi[i][sqp](alpha)*jac;
 	    Fvs(i) += grad_lambda_y(alpha)*solid_dphi[i][sqp](alpha)*jac;
 	  }
-        */
       }
 
     libMesh::TensorValue<libMesh::Real> gradV_times_F;
@@ -612,13 +606,11 @@ namespace GRINS
 	  }
 
 	//H1 Norm
-        /*
 	for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 	{
 	  Fulm(i) += (lambda_dphi[i][sqp](alpha)*(gradV_times_F(0,alpha) - Fdot(0,alpha)))*jac;
 	  Fvlm(i) += (lambda_dphi[i][sqp](alpha)*(gradV_times_F(1,alpha) - Fdot(1,alpha)))*jac;
 	}
-        */
       }
   }
 
