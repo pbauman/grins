@@ -319,14 +319,6 @@ namespace GRINS
 
         MultiphysicsSystem & system = context.get_multiphysics_system();
 
-        unsigned int u_var = this->_disp_vars.u();
-
-        // Prepare solid info needed
-        const std::vector<libMesh::Point> & solid_qpoints =
-          solid_context.get_element_fe(u_var,2)->get_xyz();
-
-        unsigned int n_qpoints = solid_qpoints.size();
-
         libMesh::DenseMatrix<libMesh::Number> Kf_s;
         libMesh::DenseSubMatrix<libMesh::Number> Kuf_us(Kf_s), Kuf_vs(Kf_s);
         libMesh::DenseSubMatrix<libMesh::Number> Kvf_us(Kf_s), Kvf_vs(Kf_s);
