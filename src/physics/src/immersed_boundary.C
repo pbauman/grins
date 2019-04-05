@@ -398,32 +398,10 @@ namespace GRINS
                                                     Kuf_us,Kuf_vs,Kvf_us,Kvf_vs);
                 */
 
-
-                libMesh::DenseSubMatrix<libMesh::Number> & Kus_ulm =
-                  solid_context.get_elem_jacobian(this->_disp_vars.u(),this->_lambda_var.u());
-
-                libMesh::DenseSubMatrix<libMesh::Number> & Kvs_vlm =
-                  solid_context.get_elem_jacobian(this->_disp_vars.v(),this->_lambda_var.v());
-
-                libMesh::DenseSubMatrix<libMesh::Number> & Kus_us =
-                  solid_context.get_elem_jacobian(this->_disp_vars.u(),this->_disp_vars.u());
-
-                libMesh::DenseSubMatrix<libMesh::Number> & Kvs_vs =
-                  solid_context.get_elem_jacobian(this->_disp_vars.v(),this->_disp_vars.v());
-
-                libMesh::DenseSubMatrix<libMesh::Number> & Kulm_us =
-                  solid_context.get_elem_jacobian(this->_lambda_var.u(),this->_disp_vars.u());
-
-                libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_vs =
-                  solid_context.get_elem_jacobian(this->_lambda_var.v(),this->_disp_vars.v());
-
                 this->compute_analytic_jacobians(system,solid_context,*(this->_fluid_context),
                                                  quad_points,
                                                  Kuf_ulm,Kvf_vlm,
-                                                 Kus_ulm,Kvs_vlm,
-                                                 Kulm_uf,Kvlm_vf,
-                                                 Kus_us,Kvs_vs,
-                                                 Kulm_us,Kvlm_vs);
+                                                 Kulm_uf,Kvlm_vf);
 
 
                  this->assemble_fluid_jacobians(system,solid_context,*(this->_fluid_context),
@@ -803,18 +781,30 @@ namespace GRINS
                                                                const std::vector<unsigned int> & quad_points,
                                                                libMesh::DenseSubMatrix<libMesh::Number> & Kuf_ulm,
                                                                libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vlm,
-                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kus_ulm,
-                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kvs_vlm,
                                                                libMesh::DenseSubMatrix<libMesh::Number> & Kulm_uf,
-                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_vf,
-                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kus_us,
-                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kvs_vs,
-                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kulm_us,
-                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_vs)
+                                                               libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_vf)
   {
     unsigned int n_solid_dofs = solid_context.get_dof_indices(this->_disp_vars.u()).size();
     unsigned int n_fluid_dofs = fluid_context.get_dof_indices(this->_flow_vars.u()).size();
     unsigned int n_lambda_dofs = solid_context.get_dof_indices(this->_lambda_var.u()).size();
+
+    libMesh::DenseSubMatrix<libMesh::Number> & Kus_ulm =
+      solid_context.get_elem_jacobian(this->_disp_vars.u(),this->_lambda_var.u());
+
+    libMesh::DenseSubMatrix<libMesh::Number> & Kvs_vlm =
+      solid_context.get_elem_jacobian(this->_disp_vars.v(),this->_lambda_var.v());
+
+    libMesh::DenseSubMatrix<libMesh::Number> & Kus_us =
+      solid_context.get_elem_jacobian(this->_disp_vars.u(),this->_disp_vars.u());
+
+    libMesh::DenseSubMatrix<libMesh::Number> & Kvs_vs =
+      solid_context.get_elem_jacobian(this->_disp_vars.v(),this->_disp_vars.v());
+
+    libMesh::DenseSubMatrix<libMesh::Number> & Kulm_us =
+      solid_context.get_elem_jacobian(this->_lambda_var.u(),this->_disp_vars.u());
+
+    libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_vs =
+      solid_context.get_elem_jacobian(this->_lambda_var.v(),this->_disp_vars.v());
 
     const std::vector<libMesh::Point> & solid_qpoints =
       solid_context.get_element_fe(this->_disp_vars.u(),2)->get_xyz();

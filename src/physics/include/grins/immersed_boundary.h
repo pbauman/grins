@@ -174,14 +174,8 @@ namespace GRINS
                                     const std::vector<unsigned int> & quad_points,
                                     libMesh::DenseSubMatrix<libMesh::Number> & Kuf_ulm,
                                     libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vlm,
-                                    libMesh::DenseSubMatrix<libMesh::Number> & Kus_ulm,
-                                    libMesh::DenseSubMatrix<libMesh::Number> & Kvs_vlm,
                                     libMesh::DenseSubMatrix<libMesh::Number> & Kulm_uf,
-                                    libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_vf,
-                                    libMesh::DenseSubMatrix<libMesh::Number> & Kus_us,
-                                    libMesh::DenseSubMatrix<libMesh::Number> & Kvs_vs,
-                                    libMesh::DenseSubMatrix<libMesh::Number> & Kulm_us,
-                                    libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_vs);
+                                    libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_vf);
 
     void finite_difference_residuals(const MultiphysicsSystem & system,
                                      const std::vector<unsigned int> & quad_points,
