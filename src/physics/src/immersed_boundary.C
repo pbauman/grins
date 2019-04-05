@@ -133,11 +133,6 @@ namespace GRINS
       libMesh::FEMContext * context = libMesh::cast_ptr<libMesh::FEMContext *>(raw_context.release());
       _fluid_context.reset(context);
     }
-    {
-      std::unique_ptr<libMesh::DiffContext> raw_context = system.build_context();
-      libMesh::FEMContext * context = libMesh::cast_ptr<libMesh::FEMContext *>(raw_context.release());
-      point_fluid_context.reset(context);
-    }
   }
 
   template<typename SolidMech>
