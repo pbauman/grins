@@ -1120,24 +1120,6 @@ namespace GRINS
   }
 
   template<typename SolidMech>
-  void ImmersedBoundary<SolidMech>::zero_residuals(libMesh::DenseSubVector<libMesh::Number> & Fuf,
-                                                   libMesh::DenseSubVector<libMesh::Number> & Fvf,
-                                                   libMesh::DenseSubVector<libMesh::Number> & Fus,
-                                                   libMesh::DenseSubVector<libMesh::Number> & Fvs,
-                                                   libMesh::DenseSubVector<libMesh::Number> & Fulm,
-                                                   libMesh::DenseSubVector<libMesh::Number> & Fvlm)
-  {
-    Fuf.zero();
-    Fvf.zero();
-    Fus.zero();
-    Fvs.zero();
-    Fulm.zero();
-    Fvlm.zero();
-  }
-
-
-
-  template<typename SolidMech>
   void ImmersedBoundary<SolidMech>::prepare_jacobians(unsigned int n_fluid_dofs,
                                                       unsigned int n_solid_dofs,
                                                       unsigned int n_lambda_dofs,
