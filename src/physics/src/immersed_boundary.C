@@ -305,9 +305,11 @@ namespace GRINS
   void ImmersedBoundary<SolidMech>::element_time_derivative( bool compute_jacobian,
                                                              AssemblyContext & context )
   {
+    const libMesh::Elem & solid_elem = context.get_elem();
 
     // Only compute this if we are on a solid element
-    if( this->is_solid_elem( context.get_elem().subdomain_id() ) )
+    if( this->is_solid_elem( solid_elem.subdomain_id() ) &&
+        this->_fluid_solid_overlap->has_overlapping_fluid_elem(solid_elem.id()) )
       {
         // For clarity
         AssemblyContext & solid_context = context;
@@ -340,60 +342,16 @@ namespace GRINS
         // We need to grab the fluid elements that are overlapping with this solid elem.
         // Then, for that fluid element, extract the indices of the *solid* quadrature points
         // that are in that fluid element
+        const std::set<libMesh::dof_id_type> & fluid_elem_ids =
+          _fluid_solid_overlap->get_overlapping_fluid_elems(solid_elem.id());
 
-        /*
-        std::map<libMesh::dof_id_type,std::map<libMesh::dof_id_type,std::vector<unsigned int> > >::const_iterator
-          solid_elem_map_it = _fluid_solid_overlap->solid_map().find(solid_context.get_elem().id());
-
-        // We should've had at least one overlapping fluid element
-        libmesh_assert( solid_elem_map_it != _fluid_solid_overlap->solid_map().end() );
-
-        const std::map<libMesh::dof_id_type,std::vector<unsigned int> > &
-          fluid_elem_map = solid_elem_map_it->second;
-
-        std::vector<libMesh::Point> solid_qpoints_subset;
-
-        std::vector<unsigned int> qps_visted;
-
-        for( std::map<libMesh::dof_id_type,std::vector<unsigned int> >::const_iterator
-               fluid_elem_map_it = fluid_elem_map.begin();
-             fluid_elem_map_it != fluid_elem_map.end();
-             ++fluid_elem_map_it )
+        // Loop over those fluid elements
+        for( const auto & fluid_id : fluid_elem_ids )
           {
+            const libMesh::Elem * fluid_elem = system.get_mesh().elem_ptr(fluid_id);
 
-            // Grab the current fluid element id
-            libMesh::dof_id_type fluid_elem_id = fluid_elem_map_it->first;
-
-            // Extract out the subset of solid quadrature points we're dealing with on
-            // this fluid element
-            const std::vector<unsigned int> & solid_qpoint_indices = fluid_elem_map_it->second;
-
-            for( auto qp : solid_qpoint_indices )
-              qps_visted.push_back(qp);
-        */
-
-        // First figure out which fluid elems overlap the current solid element
-        std::map<libMesh::dof_id_type, std::vector<unsigned int> > fluid_elem_ids;
-
-        for( unsigned int qp = 0; qp < n_qpoints; qp++ )
-          {
-            const libMesh::Point & x_qp =  solid_qpoints[qp];
-
-            const libMesh::Elem * fluid_elem = this->get_fluid_elem(system,solid_context,x_qp,qp);
-
-            libMesh::dof_id_type elem_id = fluid_elem->id();
-
-            std::vector<unsigned int> & quad_points = fluid_elem_ids[elem_id];
-            quad_points.push_back(qp);
-          }
-
-        // Now loop over those fluid elements
-        for( const auto & it : fluid_elem_ids )
-          {
-            const libMesh::dof_id_type fluid_elem_id = it.first;
-            const std::vector<unsigned int> & quad_points = it.second;
-
-            const libMesh::Elem * fluid_elem = system.get_mesh().elem_ptr(fluid_elem_id);
+            const std::vector<unsigned int> & quad_points =
+              _fluid_solid_overlap->get_solid_qps(solid_elem.id(), fluid_elem->id() );
 
             (this->_fluid_context)->pre_fe_reinit(system,fluid_elem);
 

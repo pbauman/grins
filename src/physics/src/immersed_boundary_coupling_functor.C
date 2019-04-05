@@ -41,26 +41,28 @@ namespace GRINS
       libMesh::processor_id_type p,
       std::unordered_map<const libMesh::Elem *,const libMesh::CouplingMatrix*> & coupled_elements )
   {
-    const auto & solid_map = _overlapping_map.solid_map();
-    const auto & fluid_map = _overlapping_map.fluid_map();
-
     for( const auto & elem : libMesh::as_range(range_begin,range_end) )
       {
         libMesh::dof_id_type elem_id = elem->id();
 
-        auto solid_map_it = solid_map.find(elem_id);
-        auto fluid_map_it = fluid_map.find(elem_id);
+        bool is_solid_elem_with_overlapping_fluid_elem =
+          _overlapping_map.has_overlapping_fluid_elem(elem_id);
+
+        bool is_fluid_elem_with_overlapping_solid_elem =
+          _overlapping_map.has_overlapping_solid_elem(elem_id);
+
 
         // If this element is a solid element, then we need to populate
         // the coupled_elements with all the fluid elements associated with
         // this solid element. We use the same coupling matrix for all of them.
-        if( solid_map_it != solid_map.end() )
+        if( is_solid_elem_with_overlapping_fluid_elem )
           {
-            const auto & fluid_group = solid_map_it->second;
+            const std::set<libMesh::dof_id_type> & fluid_set =
+              _overlapping_map.get_overlapping_fluid_elems(elem_id);
 
-            for( const auto & fluid_it : fluid_group )
+            for( const auto & fluid_id : fluid_set )
               {
-                const libMesh::Elem * fluid_elem = _mesh.elem_ptr(fluid_it.first);
+                const libMesh::Elem * fluid_elem = _mesh.elem_ptr(fluid_id);
 
                 if(!fluid_elem)
                   libmesh_error_msg("ERROR: fluid_elem is NULL!");
@@ -70,18 +72,19 @@ namespace GRINS
               }
           }
 
-        // If this element is a fluid element, then we need to populate
-        // the coupled_elements with all the solid elements associated with
-        // this fluid element. While we don't need the algebraic coupling
-        // this will generate, it is needed to get the correct sparsity
+        // If this element is a fluid element with an overlapping solid element,
+        // then we need to populate the coupled_elements with all the solid elements
+        // associated with this fluid element. While we don't need the algebraic
+        // coupling this will generate, it is needed to get the correct sparsity
         // pattern.
-        if( fluid_map_it != fluid_map.end() )
+        if( is_fluid_elem_with_overlapping_solid_elem )
           {
-            const auto & solid_group = fluid_map_it->second;
+            const std::set<libMesh::dof_id_type> & solid_set =
+              _overlapping_map.get_overlapping_solid_elems(elem_id);
 
-            for( const auto & solid_it : solid_group )
+            for( const auto & solid_id : solid_set )
               {
-                const libMesh::Elem * solid_elem = _mesh.elem_ptr(solid_it.first);
+                const libMesh::Elem * solid_elem = _mesh.elem_ptr(solid_id);
 
                 if(!solid_elem)
                   libmesh_error_msg("ERROR: fluid_elem is NULL!");
@@ -90,7 +93,8 @@ namespace GRINS
                   coupled_elements.insert( std::make_pair(solid_elem,nullptr) );
               }
           }
-      }
+
+      } // end element loop
   }
 
 } // end namespace GRINS
