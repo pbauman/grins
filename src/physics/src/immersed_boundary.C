@@ -537,16 +537,37 @@ namespace GRINS
 
     libMesh::TensorValue<libMesh::Real> fdphi_times_F;
 
+    libMesh::Tensor grad_lam( grad_lambda_x(0), grad_lambda_x(1), 0,
+                              grad_lambda_y(0), grad_lambda_y(1), 0,
+                              0, 0, 0);
+
+    libMesh::Tensor grad_lam_timesFT( grad_lam*(Fold.transpose()) );
+
+    libMesh::Tensor gradV( grad_Vx(0),  grad_Vx(1), 0,
+                           grad_Vy(0), grad_Vy(1), 0,
+                           0, 0, 0);
+
+    libMesh::TensorValue<libMesh::Real> gradV_times_F( gradV*Fold );
+
+    libMesh::Tensor FT_times_gradV( (Fold.transpose())*gradV );
+
     // Fluid residual
     for (unsigned int i=0; i != n_fluid_dofs; i++)
       {
 	libmesh_assert_equal_to( fluid_phi[i].size(), 1 );
 
+        libMesh::Gradient fluid_term = grad_lam_timesFT*fluid_dphi[i][0];
+
         // L2 Norm
 	Fuf(i) -= lambda_x*fluid_phi[i][0]*jac;
 	Fvf(i) -= lambda_y*fluid_phi[i][0]*jac;
 
+        // H1 Term
+        Fuf(i) -= fluid_term(0)*jac;
+        Fvf(i) -= fluid_term(1)*jac;
+
 	//Computing fdphi_times_F
+        /*
 	for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 	  {
 	    for( unsigned int beta = 0; beta < 2; beta++ )
@@ -555,15 +576,16 @@ namespace GRINS
 		fdphi_times_F(1,alpha) += fluid_dphi[i][0](beta)*Fold(beta,alpha);
 	      }
    	  }
-
-	// Zero index for fluid dphi/JxW since we only requested one quad. point.
+        */
 
 	// H1 Norm
+        /*
 	for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 	  {
 	    Fuf(i) -= (grad_lambda_x(alpha)*fdphi_times_F(0,alpha))*jac;
 	    Fvf(i) -= (grad_lambda_y(alpha)*fdphi_times_F(1,alpha))*jac;
 	  }
+        */
       }
 
     // Solid residual
@@ -586,8 +608,6 @@ namespace GRINS
 	  }
       }
 
-    libMesh::TensorValue<libMesh::Real> gradV_times_F;
-
     // Lambda residual
     for( unsigned int i = 0; i < n_lambda_dofs; i++ )
       {
@@ -595,7 +615,14 @@ namespace GRINS
         Fulm(i) += lambda_phi[i][sqp]*(Vx - udot)*jac;
 	Fvlm(i) += lambda_phi[i][sqp]*(Vy - vdot)*jac;
 
+        //libMesh::Gradient fluid_term = (FT_times_gradV - Fdot)*lambda_dphi[i][sqp];
+        libMesh::Gradient fluid_term = (gradV_times_F-Fdot)*lambda_dphi[i][sqp];
+
+        Fulm(i) += fluid_term(0)*jac;
+        Fvlm(i) += fluid_term(1)*jac;
+
 	//Computing gradV_times_F
+        /*
 	for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 	  {
 	    for( unsigned int beta = 0; beta < 2; beta++ )
@@ -604,13 +631,17 @@ namespace GRINS
 		gradV_times_F(1,alpha) += grad_Vy(beta)*Fold(beta,alpha);
 	      }
 	  }
+        */
 
 	//H1 Norm
+        /*
 	for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 	{
 	  Fulm(i) += (lambda_dphi[i][sqp](alpha)*(gradV_times_F(0,alpha) - Fdot(0,alpha)))*jac;
 	  Fvlm(i) += (lambda_dphi[i][sqp](alpha)*(gradV_times_F(1,alpha) - Fdot(1,alpha)))*jac;
 	}
+        */
+
       }
   }
 
