@@ -1340,6 +1340,7 @@ namespace GRINS
 
     F(0,0) += 1;
     F(1,1) += 1;
+    F(2,2) = 1;
   }
 
   template<typename SolidMech>
@@ -1409,7 +1410,15 @@ namespace GRINS
     libMesh::TensorValue<libMesh::Real> F;
     this->eval_deform_gradient(grad_u,grad_v,F);
 
-    P = 5*F;
+    libMesh::Tensor Finv( F.inverse() );
+
+    libMesh::Number lndetF = std::log(F.det());
+
+    libMesh::Real nus = 0.4;
+    libMesh::Real mus = 5;
+    libMesh::Real kappas = 2*mus*(1+nus)/(3*(1-2*nus));
+
+    P = mus*F + kappas*lndetF*(Finv.transpose());
 
     /*
     // We need to use F^T a few times so just cache it.
