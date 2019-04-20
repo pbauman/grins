@@ -571,6 +571,7 @@ namespace GRINS
     libMesh::TensorValue<libMesh::Real> Cinv = C.inverse();
     libMesh::TensorValue<libMesh::Real> I(1,0,0,0,1,0,0,0,1);
     libMesh::Number J = F.det();
+    libMesh::Number lnJ = std::log(F.det());
 
     libMesh::Tensor F_times_Cinv( F*Cinv );
 
@@ -686,6 +687,12 @@ namespace GRINS
 	}
         */
 
+      }
+
+    // Solid pressure residual
+    for( unsigned int i = 0; i < n_press_dofs; i++ )
+      {
+        Fp(i) += ((lnJ/J)-(p/kappas))*p_phi[i][sqp]*jac;
       }
   }
 
