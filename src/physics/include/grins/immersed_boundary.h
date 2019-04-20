@@ -149,7 +149,8 @@ namespace GRINS
                             libMesh::DenseSubVector<libMesh::Number> & Fus,
                             libMesh::DenseSubVector<libMesh::Number> & Fvs,
                             libMesh::DenseSubVector<libMesh::Number> & Fulm,
-                            libMesh::DenseSubVector<libMesh::Number> & Fvlm);
+                            libMesh::DenseSubVector<libMesh::Number> & Fvlm,
+                            libMesh::DenseSubVector<libMesh::Number> & Fp);
 
     void compute_numerical_jacobians(const MultiphysicsSystem & system,
                                      AssemblyContext & solid_context,
@@ -223,7 +224,8 @@ namespace GRINS
                               libMesh::DenseSubMatrix<libMesh::Number> & Kus,
                               libMesh::DenseSubMatrix<libMesh::Number> & Kvs,
                               libMesh::DenseSubMatrix<libMesh::Number> & Kulm,
-                              libMesh::DenseSubMatrix<libMesh::Number> & Kvlm);
+                              libMesh::DenseSubMatrix<libMesh::Number> & Kvlm,
+                              libMesh::DenseSubMatrix<libMesh::Number> & Kp);
 
     void prepare_jacobians(unsigned int n_fluid_dofs,
                            unsigned int n_solid_dofs,

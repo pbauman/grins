@@ -416,6 +416,8 @@ namespace GRINS
     unsigned int lambda_x = this->_lambda_var.u();
     unsigned int lambda_y = this->_lambda_var.v();
 
+    unsigned int p_var = this->_solid_press_var.p();
+
     // Fluid residual data structures
     libMesh::DenseSubVector<libMesh::Number> & Fuf =
       fluid_context.get_elem_residual(this->_flow_vars.u());
@@ -428,6 +430,8 @@ namespace GRINS
 
     libMesh::DenseSubVector<libMesh::Number> & Fulm = solid_context.get_elem_residual(lambda_x);
     libMesh::DenseSubVector<libMesh::Number> & Fvlm = solid_context.get_elem_residual(lambda_y);
+
+    libMesh::DenseSubVector<libMesh::Number> & Fp = solid_context.get_elem_residual(p_var);
 
     const std::vector<libMesh::Point> & solid_qpoints = solid_context.get_element_fe(u_var,2)->get_xyz();
 
@@ -454,7 +458,7 @@ namespace GRINS
         }
 
         this->compute_residuals(solid_context,fluid_context,qp,
-                                Fuf,Fvf,Fus,Fvs,Fulm,Fvlm);
+                                Fuf,Fvf,Fus,Fvs,Fulm,Fvlm,Fp);
 
       } // loop over quadrature points on the current fluid element
   }
@@ -468,7 +472,8 @@ namespace GRINS
                                                        libMesh::DenseSubVector<libMesh::Number> & Fus,
                                                        libMesh::DenseSubVector<libMesh::Number> & Fvs,
                                                        libMesh::DenseSubVector<libMesh::Number> & Fulm,
-                                                       libMesh::DenseSubVector<libMesh::Number> & Fvlm)
+                                                       libMesh::DenseSubVector<libMesh::Number> & Fvlm,
+                                                       libMesh::DenseSubVector<libMesh::Number> & Fp)
   {
     unsigned int n_solid_dofs = solid_context.get_dof_indices(this->_disp_vars.u()).size();
     unsigned int n_fluid_dofs = fluid_context.get_dof_indices(this->_flow_vars.u()).size();
@@ -757,10 +762,13 @@ namespace GRINS
       libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_us =
         solid_context.get_elem_jacobian(this->_lambda_var.v(),this->_disp_vars.u());
 
+      libMesh::DenseSubMatrix<libMesh::Number> & Kp_us =
+        solid_context.get_elem_jacobian(this->_solid_press_var.p(),this->_disp_vars.u());
+
       this->compute_solid_derivs(system,quad_points,solid_context,fluid_context,delta,
                                  backwards_solid_residual,backwards_fluid_residual,
                                  u_coeffs,
-                                 Kuf_us,Kvf_us,Kus_us,Kvs_us,Kulm_us,Kvlm_us);
+                                 Kuf_us,Kvf_us,Kus_us,Kvs_us,Kulm_us,Kvlm_us,Kp_us);
     }
 
 
@@ -781,10 +789,29 @@ namespace GRINS
       libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_vs =
         solid_context.get_elem_jacobian(this->_lambda_var.v(),this->_disp_vars.v());
 
+      libMesh::DenseSubMatrix<libMesh::Number> & Kp_vs =
+        solid_context.get_elem_jacobian(this->_solid_press_var.p(),this->_disp_vars.v());
+
       this->compute_solid_derivs(system,quad_points,solid_context,fluid_context,delta,
                                  backwards_solid_residual,backwards_fluid_residual,
                                  v_coeffs,
-                                 Kuf_vs,Kvf_vs,Kus_vs,Kvs_vs,Kulm_vs,Kvlm_vs);
+                                 Kuf_vs,Kvf_vs,Kus_vs,Kvs_vs,Kulm_vs,Kvlm_vs,Kp_vs);
+
+    }
+
+    // Compute p derivs
+    {
+      libMesh::DenseSubVector<libMesh::Number> & p_coeffs =
+        solid_context.get_elem_solution(this->_solid_press_var.p());
+
+      libMesh::DenseSubMatrix<libMesh::Number> & Kus_p =
+        solid_context.get_elem_jacobian(this->_disp_vars.u(),this->_solid_press_var.p());
+
+      libMesh::DenseSubMatrix<libMesh::Number> & Kvs_p =
+        solid_context.get_elem_jacobian(this->_disp_vars.v(),this->_solid_press_var.p());
+
+      libMesh::DenseSubMatrix<libMesh::Number> & Kp_p =
+        solid_context.get_elem_jacobian(this->_solid_press_var.p(),this->_solid_press_var.p());
 
     }
 
@@ -1087,11 +1114,13 @@ namespace GRINS
    libMesh::DenseSubMatrix<libMesh::Number> & Kus,
    libMesh::DenseSubMatrix<libMesh::Number> & Kvs,
    libMesh::DenseSubMatrix<libMesh::Number> & Kulm,
-   libMesh::DenseSubMatrix<libMesh::Number> & Kvlm)
+   libMesh::DenseSubMatrix<libMesh::Number> & Kvlm,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kp)
   {
     unsigned int n_solid_dofs = solid_context.get_dof_indices(this->_disp_vars.u()).size();
     unsigned int n_fluid_dofs = fluid_context.get_dof_indices(this->_flow_vars.u()).size();
     unsigned int n_lambda_dofs = solid_context.get_dof_indices(this->_lambda_var.u()).size();
+    unsigned int n_press_dofs = solid_context.get_dof_indices(this->_solid_press_var.p()).size();
 
     libmesh_assert_equal_to(Kuf.m(),n_fluid_dofs);
     libmesh_assert_equal_to(Kvf.m(),n_fluid_dofs);
@@ -1099,6 +1128,7 @@ namespace GRINS
     libmesh_assert_equal_to(Kvs.m(),n_solid_dofs);
     libmesh_assert_equal_to(Kulm.m(),n_lambda_dofs);
     libmesh_assert_equal_to(Kvlm.m(),n_lambda_dofs);
+    libmesh_assert_equal_to(Kp.m(),n_press_dofs);
 
     libmesh_assert_equal_to(Kuf.n(),n_solid_dofs);
     libmesh_assert_equal_to(Kvf.n(),n_solid_dofs);
@@ -1106,6 +1136,7 @@ namespace GRINS
     libmesh_assert_equal_to(Kvs.n(),n_solid_dofs);
     libmesh_assert_equal_to(Kulm.n(),n_solid_dofs);
     libmesh_assert_equal_to(Kvlm.n(),n_solid_dofs);
+    libmesh_assert_equal_to(Kp.n(),n_solid_dofs);
 
     for( unsigned int j = 0; j < n_solid_dofs; j++ )
       {
@@ -1142,6 +1173,13 @@ namespace GRINS
 
             Kulm(i,j) += Fulm(i);
             Kvlm(i,j) += Fvlm(i);
+          }
+
+	for (unsigned int i=0; i != n_press_dofs; i++)
+          {
+            libMesh::DenseSubVector<libMesh::Number> & Fp = solid_context.get_elem_residual(this->_solid_press_var.p());
+
+            Kus(i,j) += Fp(i);
           }
       }
   }
