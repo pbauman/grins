@@ -227,6 +227,18 @@ namespace GRINS
                               libMesh::DenseSubMatrix<libMesh::Number> & Kvlm,
                               libMesh::DenseSubMatrix<libMesh::Number> & Kp);
 
+    void compute_press_derivs(const MultiphysicsSystem & system,
+			      const std::vector<unsigned int> & quad_points,
+			      AssemblyContext & solid_context,
+                              libMesh::FEMContext & fluid_context,
+			      const libMesh::Real delta,
+			      libMesh::DenseVector<libMesh::Number> & backwards_solid_residual,
+			      libMesh::DenseVector<libMesh::Number> & backwards_fluid_residual,
+			      libMesh::DenseSubVector<libMesh::Number> & press_coeff,
+			      libMesh::DenseSubMatrix<libMesh::Number> & Kus,
+			      libMesh::DenseSubMatrix<libMesh::Number> & Kvs,
+			      libMesh::DenseSubMatrix<libMesh::Number> & Kp);
+
     void prepare_jacobians(unsigned int n_fluid_dofs,
                            unsigned int n_solid_dofs,
                            unsigned int n_lambda_dofs,

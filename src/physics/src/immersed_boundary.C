@@ -813,6 +813,10 @@ namespace GRINS
       libMesh::DenseSubMatrix<libMesh::Number> & Kp_p =
         solid_context.get_elem_jacobian(this->_solid_press_var.p(),this->_solid_press_var.p());
 
+      this->compute_press_derivs(system,quad_points,solid_context,fluid_context,delta,
+                                 backwards_solid_residual,backwards_fluid_residual,
+                                 p_coeffs,Kus_p,Kvs_p,Kp_p);
+
     }
 
     // Restore original residuals
@@ -1179,7 +1183,57 @@ namespace GRINS
           {
             libMesh::DenseSubVector<libMesh::Number> & Fp = solid_context.get_elem_residual(this->_solid_press_var.p());
 
-            Kus(i,j) += Fp(i);
+            Kp(i,j) += Fp(i);
+          }
+      }
+  }
+
+template<typename SolidMech>
+  void ImmersedBoundary<SolidMech>::compute_press_derivs
+  (const MultiphysicsSystem & system,
+   const std::vector<unsigned int> & quad_points,
+   AssemblyContext & solid_context,
+   libMesh::FEMContext & fluid_context,
+   const libMesh::Real delta,
+   libMesh::DenseVector<libMesh::Number> & backwards_solid_residual,
+   libMesh::DenseVector<libMesh::Number> & backwards_fluid_residual,
+   libMesh::DenseSubVector<libMesh::Number> & press_coeff,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kus,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kvs,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kp)
+  {
+    unsigned int n_solid_dofs = solid_context.get_dof_indices(this->_disp_vars.u()).size();
+    unsigned int n_press_dofs = solid_context.get_dof_indices(this->_solid_press_var.p()).size();
+
+    libmesh_assert_equal_to(Kus.m(),n_solid_dofs);
+    libmesh_assert_equal_to(Kvs.m(),n_solid_dofs);
+    libmesh_assert_equal_to(Kp.m(),n_press_dofs);
+
+    libmesh_assert_equal_to(Kus.n(),n_press_dofs);
+    libmesh_assert_equal_to(Kvs.n(),n_press_dofs);
+    libmesh_assert_equal_to(Kp.n(),n_press_dofs);
+
+    for( unsigned int j = 0; j < n_press_dofs; j++ )
+      {
+        // Finite differenced residual is sitting in the solid and fluid context elem_residuals
+        // after this call
+        this->finite_difference_residuals(system,quad_points,solid_context,fluid_context,delta,press_coeff(j),
+                                          backwards_solid_residual,backwards_fluid_residual);
+
+        for (unsigned int i=0; i != n_solid_dofs; i++)
+          {
+            libMesh::DenseSubVector<libMesh::Number> & Fus = solid_context.get_elem_residual(this->_disp_vars.u());
+            libMesh::DenseSubVector<libMesh::Number> & Fvs = solid_context.get_elem_residual(this->_disp_vars.v());
+
+            Kus(i,j) += Fus(i);
+            Kvs(i,j) += Fvs(i);
+          }
+
+        for (unsigned int i=0; i != n_press_dofs; i++)
+          {
+            libMesh::DenseSubVector<libMesh::Number> & Fp = solid_context.get_elem_residual(this->_solid_press_var.p());
+
+            Kp(i,j) += Fp(i);
           }
       }
   }
