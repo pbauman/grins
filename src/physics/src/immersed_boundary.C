@@ -478,6 +478,7 @@ namespace GRINS
     unsigned int n_solid_dofs = solid_context.get_dof_indices(this->_disp_vars.u()).size();
     unsigned int n_fluid_dofs = fluid_context.get_dof_indices(this->_flow_vars.u()).size();
     unsigned int n_lambda_dofs = solid_context.get_dof_indices(this->_lambda_var.u()).size();
+    unsigned int n_press_dofs = solid_context.get_dof_indices(this->_solid_press_var.p()).size();
 
     libMesh::Real udot, vdot;
     solid_context.interior_rate(this->_disp_vars.u(), sqp, udot);
@@ -565,6 +566,19 @@ namespace GRINS
 
     libMesh::Tensor FT_times_gradV( (Fold.transpose())*gradV );
 
+    libMesh::TensorValue<libMesh::Real> Ftrans = F.transpose();
+    libMesh::TensorValue<libMesh::Real> C(Ftrans*F);
+    libMesh::TensorValue<libMesh::Real> Cinv = C.inverse();
+    libMesh::TensorValue<libMesh::Real> I(1,0,0,0,1,0,0,0,1);
+    libMesh::Number J = F.det();
+
+    libMesh::Tensor F_times_Cinv( F*Cinv );
+
+    libMesh::Real J23 = std::pow(J,2/3);
+    libMesh::Real nus = 0.4;
+    libMesh::Real mus = 5;
+    libMesh::Real kappas = 2*mus*(1+nus)/(3*(1-2*nus));
+
     // Fluid residual
     for (unsigned int i=0; i != n_fluid_dofs; i++)
       {
@@ -608,12 +622,28 @@ namespace GRINS
         //L2 Norm
 	Fus(i) += lambda_x*solid_phi[i][sqp]*jac;
 	Fvs(i) += lambda_y*solid_phi[i][sqp]*jac;
-
+	/*
 	for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 	  {
 	    Fus(i) -= P(0,alpha)*solid_dphi[i][sqp](alpha)*jac;
 	    Fvs(i) -= P(1,alpha)*solid_dphi[i][sqp](alpha)*jac;
 	  }
+	*/
+
+	//pressure term
+	for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
+	  {
+	    Fus(i) -= p*J*F_times_Cinv(0,alpha)*solid_dphi[i][sqp](alpha)*jac;
+	    Fvs(i) -= p*J*F_times_Cinv(1,alpha)*solid_dphi[i][sqp](alpha)*jac;
+	  }
+
+	//dWdC term
+	for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
+	  {
+	    Fus(i) -= mus*J23*I(0,alpha)*solid_dphi[i][sqp](alpha)*jac;
+	    Fvs(i) -= mus*J23*I(1,alpha)*solid_dphi[i][sqp](alpha)*jac;
+	  }
+
 	//H1 Norm
 	for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 	  {
