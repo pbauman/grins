@@ -502,6 +502,13 @@ namespace GRINS
     fluid_context.interior_gradient(this->_flow_vars.u(), 0, grad_Vx);
     fluid_context.interior_gradient(this->_flow_vars.v(), 0, grad_Vy);
 
+    //Solid Pressure value and shape function
+    libMesh::Real p;
+    solid_context.interior_value(this->_solid_press_var.p(), sqp, p);
+
+    const std::vector<std::vector<libMesh::Real> > p_phi =
+      solid_context.get_element_fe(this->_solid_press_var.p())->get_phi();
+
     libMesh::TensorValue<libMesh::Real> F;
     this->eval_deform_gradient(grad_u,grad_v,F);
 
