@@ -15,17 +15,17 @@
       solver_type = 'libmesh_euler_solver'
       theta='1.0'
       delta_t = '0.05'
-      n_timesteps = '100'
+      n_timesteps = '200'
    [../]
 []
 
 # Mesh related options
 [Mesh]
   [./Read]
-    filename = 'stick.e'
+    filename = 'ellipsehs8hx16.e'
   [../]
   [./Refinement]
-     uniformly_refine = '2'
+     uniformly_refine = '1'
   [../]
 []
 
@@ -35,10 +35,10 @@
 
 # Options related to all Physics
 [Physics]
-  enabled_physics = 'IncompressibleNavierStokes
+  enabled_physics = 'Stokes
                      ImmersedBoundary'
 
-  [./IncompressibleNavierStokes]
+  [./Stokes]
     enabled_subdomains = '1'
     material = 'Fluid'
   [../]
@@ -46,13 +46,13 @@
   [./ImmersedBoundary]
     enabled_subdomains = '1 2'
     solid_mechanics = 'ElasticMembrane'
-    fluid_mechanics = 'IncompressibleNavierStokes'
+    fluid_mechanics = 'Stokes'
     pressure_var_name = 'SolidPressure'
 
-    #ic_ids = '2'
-    #ic_types = 'parsed'
-    #ic_variables = 'Ux'
-    #ic_values = '(0.01*y)'
+    ic_ids = '2'
+    ic_types = 'parsed'
+    ic_variables = 'Ux:Uy'
+    ic_values = '{(1/32)*(x+0.3)*x}{(1/32)*(y+0.4)*y}'
 
   [../]
 
@@ -86,7 +86,7 @@
     [../]
     [./Viscosity]
       model = 'constant'
-      value = '0.01'
+      value = '0.05'
     [../]
   [../]
 []
@@ -111,7 +111,7 @@
       order = 'FIRST'
       enabled_subdomains = '1'
   [../]
-[./SolidPressure]
+  [./SolidPressure]
       type = 'Pressure'
       names = 'ps'
       fe_family = 'LAGRANGE'
@@ -130,24 +130,22 @@
 
 [BoundaryConditions]
 
-   bc_ids = '1 2 3 4 5'
-   bc_id_name_map = 'Inflow Walls Outflow Membrane ContactWall'
+   bc_ids = '1 3 2:4 5 6 7'
+   bc_id_name_map = 'LeftWall BottomWall OuterWalls Membrane LeftContact BottomContact'
 
-   [./Inflow]
+   [./LeftWall]
       [./Velocity]
-         type = 'parsed_dirichlet'
-         Vx = 'y*(2-y)'
-         Vy = '0.0'
+         type = 'roller_y'
       [../]
    [../]
-   [./Walls]
+   [./BottomWall]
+      [./Velocity]
+         type = 'roller_x'
+      [../]
+   [../]
+   [./OuterWalls]
       [./Velocity]
          type = 'no_slip'
-      [../]
-   [../]
-   [./Outflow]
-      [./Velocity]
-         type = 'homogeneous_neumann'
       [../]
    [../]
    [./Membrane]
@@ -155,17 +153,23 @@
         type = 'homogeneous_neumann'
       [../]
    [../]
-   [./ContactWall]
+   [./LeftContact]
       [./Displacement]
-        type = 'pinned'
+        type = 'roller_y'
       [../]
    [../]
+   [./BottomContact]
+      [./Displacement]
+        type = 'roller_x'
+      [../]
+   [../]
+
 []
 
 # Visualization options #
 [vis-options]
 output_vis = 'true'
-vis_output_file_prefix = 'stick_out'
+vis_output_file_prefix = 'ellipse_out'
 output_residual = 'false'
 output_format = 'ExodusII'
 []
