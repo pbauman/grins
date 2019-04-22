@@ -571,14 +571,12 @@ namespace GRINS
     libMesh::TensorValue<libMesh::Real> Cinv = C.inverse();
     libMesh::TensorValue<libMesh::Real> I(1,0,0,0,1,0,0,0,1);
     libMesh::Number J = F.det();
-    libMesh::Number lnJ = std::log(F.det());
+    libMesh::Number Up = std::log(J)/J;
 
     libMesh::Tensor F_times_Cinv( F*Cinv );
 
     libMesh::Real J23 = std::pow(J,2/3);
-    libMesh::Real nus = 0.4;
     libMesh::Real mus = 5;
-    libMesh::Real kappas = 2*mus*(1+nus)/(3*(1-2*nus));
 
     // Fluid residual
     for (unsigned int i=0; i != n_fluid_dofs; i++)
@@ -692,7 +690,7 @@ namespace GRINS
     // Solid pressure residual
     for( unsigned int i = 0; i < n_press_dofs; i++ )
       {
-        Fp(i) += ((lnJ/J)-(p/kappas))*p_phi[i][sqp]*jac;
+        Fp(i) += Up*p_phi[i][sqp]*jac;
       }
   }
 
@@ -847,12 +845,9 @@ namespace GRINS
       libMesh::DenseSubMatrix<libMesh::Number> & Kvs_p =
         solid_context.get_elem_jacobian(this->_disp_vars.v(),this->_solid_press_var.p());
 
-      libMesh::DenseSubMatrix<libMesh::Number> & Kp_p =
-        solid_context.get_elem_jacobian(this->_solid_press_var.p(),this->_solid_press_var.p());
-
       this->compute_press_derivs(system,quad_points,solid_context,fluid_context,delta,
                                  backwards_solid_residual,backwards_fluid_residual,
-                                 p_coeffs,Kus_p,Kvs_p,Kp_p);
+                                 p_coeffs,Kus_p,Kvs_p);
 
     }
 
@@ -1236,19 +1231,16 @@ template<typename SolidMech>
    libMesh::DenseVector<libMesh::Number> & backwards_fluid_residual,
    libMesh::DenseSubVector<libMesh::Number> & press_coeff,
    libMesh::DenseSubMatrix<libMesh::Number> & Kus,
-   libMesh::DenseSubMatrix<libMesh::Number> & Kvs,
-   libMesh::DenseSubMatrix<libMesh::Number> & Kp)
+   libMesh::DenseSubMatrix<libMesh::Number> & Kvs)
   {
     unsigned int n_solid_dofs = solid_context.get_dof_indices(this->_disp_vars.u()).size();
     unsigned int n_press_dofs = solid_context.get_dof_indices(this->_solid_press_var.p()).size();
 
     libmesh_assert_equal_to(Kus.m(),n_solid_dofs);
     libmesh_assert_equal_to(Kvs.m(),n_solid_dofs);
-    libmesh_assert_equal_to(Kp.m(),n_press_dofs);
 
     libmesh_assert_equal_to(Kus.n(),n_press_dofs);
     libmesh_assert_equal_to(Kvs.n(),n_press_dofs);
-    libmesh_assert_equal_to(Kp.n(),n_press_dofs);
 
     for( unsigned int j = 0; j < n_press_dofs; j++ )
       {
@@ -1264,13 +1256,6 @@ template<typename SolidMech>
 
             Kus(i,j) += Fus(i);
             Kvs(i,j) += Fvs(i);
-          }
-
-        for (unsigned int i=0; i != n_press_dofs; i++)
-          {
-            libMesh::DenseSubVector<libMesh::Number> & Fp = solid_context.get_elem_residual(this->_solid_press_var.p());
-
-            Kp(i,j) += Fp(i);
           }
       }
   }

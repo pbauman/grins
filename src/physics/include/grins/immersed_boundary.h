@@ -236,8 +236,7 @@ namespace GRINS
 			      libMesh::DenseVector<libMesh::Number> & backwards_fluid_residual,
 			      libMesh::DenseSubVector<libMesh::Number> & press_coeff,
 			      libMesh::DenseSubMatrix<libMesh::Number> & Kus,
-			      libMesh::DenseSubMatrix<libMesh::Number> & Kvs,
-			      libMesh::DenseSubMatrix<libMesh::Number> & Kp);
+			      libMesh::DenseSubMatrix<libMesh::Number> & Kvs);
 
     void prepare_jacobians(unsigned int n_fluid_dofs,
                            unsigned int n_solid_dofs,
