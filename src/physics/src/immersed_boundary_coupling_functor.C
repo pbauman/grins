@@ -68,7 +68,7 @@ namespace GRINS
                   libmesh_error_msg("ERROR: fluid_elem is NULL!");
 
                 if( fluid_elem->processor_id() != p )
-                  coupled_elements.insert( std::make_pair(fluid_elem,&_coupling_matrix) );
+                  coupled_elements.insert( std::make_pair(fluid_elem,nullptr) );
               }
           }
 
@@ -90,7 +90,7 @@ namespace GRINS
                   libmesh_error_msg("ERROR: fluid_elem is NULL!");
 
                 if( solid_elem->processor_id() != p )
-                  coupled_elements.insert( std::make_pair(solid_elem,&_coupling_matrix) );
+                  coupled_elements.insert( std::make_pair(solid_elem,nullptr) );
               }
           }
 
