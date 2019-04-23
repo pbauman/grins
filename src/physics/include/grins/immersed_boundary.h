@@ -100,6 +100,8 @@ namespace GRINS
 
     PressureFEVariable & _press_var;
 
+    PressureFEVariable & _solid_press_var;
+
     //! Solid Mechanics from the ibm factory
     std::unique_ptr<SolidMech> _solid_mech;
 
