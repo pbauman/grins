@@ -208,6 +208,13 @@ namespace GRINS
         std::string err = "ERROR: solid_mechanics not properly specified";
         libmesh_error_msg(err);
       }
+
+    context.get_element_fe(_solid_press_var.p(),2)->get_JxW();
+    context.get_element_fe(_solid_press_var.p(),2)->get_phi();
+
+    context.get_element_fe( _lambda_var.u(),2)->get_dphi();
+    context.get_element_fe( _lambda_var.u(),2)->get_phi();
+    context.get_element_fe( _lambda_var.u(),2)->get_JxW();
   }
 
   template<typename SolidMech>
