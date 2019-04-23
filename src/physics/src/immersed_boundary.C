@@ -576,13 +576,12 @@ namespace GRINS
     libMesh::TensorValue<libMesh::Real> Ftrans = F.transpose();
     libMesh::TensorValue<libMesh::Real> C(Ftrans*F);
     libMesh::TensorValue<libMesh::Real> Cinv = C.inverse();
-    libMesh::TensorValue<libMesh::Real> I(1,0,0,0,1,0,0,0,1);
     libMesh::Number J = F.det();
     libMesh::Number Up = std::log(J)/J;
 
     libMesh::Tensor F_times_Cinv( F*Cinv );
 
-    libMesh::Real J23 = std::pow(J,2/3);
+    libMesh::Real J23 = std::pow(J,-2/3);
     libMesh::Real mus = 5;
 
     // Fluid residual
@@ -646,8 +645,8 @@ namespace GRINS
 	//dWdC term
 	for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 	  {
-	    Fus(i) -= mus*J23*I(0,alpha)*solid_dphi[i][sqp](alpha)*jac;
-	    Fvs(i) -= mus*J23*I(1,alpha)*solid_dphi[i][sqp](alpha)*jac;
+	    Fus(i) -= mus*J23*F(0,alpha)*solid_dphi[i][sqp](alpha)*jac;
+	    Fvs(i) -= mus*J23*F(1,alpha)*solid_dphi[i][sqp](alpha)*jac;
 	  }
 
 	//H1 Norm
