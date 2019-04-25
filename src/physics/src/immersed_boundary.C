@@ -576,6 +576,7 @@ namespace GRINS
     libMesh::TensorValue<libMesh::Real> Ftrans = F.transpose();
     libMesh::TensorValue<libMesh::Real> C(Ftrans*F);
     libMesh::TensorValue<libMesh::Real> Cinv = C.inverse();
+    libMesh::Number I1 = C.tr();
     libMesh::Number J = F.det();
     libMesh::Number Up = std::log(J)/J;
 
@@ -645,8 +646,8 @@ namespace GRINS
 	//dWdC term
 	for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 	  {
-	    Fus(i) -= mus*J23*F(0,alpha)*solid_dphi[i][sqp](alpha)*jac;
-	    Fvs(i) -= mus*J23*F(1,alpha)*solid_dphi[i][sqp](alpha)*jac;
+	    Fus(i) -= mus*J23*(F(0,alpha)-(1/3)*I1*F_times_Cinv(0,alpha))*solid_dphi[i][sqp](alpha)*jac;
+	    Fvs(i) -= mus*J23*(F(1,alpha)-(1/3)*I1*F_times_Cinv(1,alpha))*solid_dphi[i][sqp](alpha)*jac;
 	  }
 
 	//H1 Norm
