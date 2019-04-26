@@ -179,6 +179,13 @@ namespace GRINS
      */
     virtual void preassembly( MultiphysicsSystem & /*system*/ ){};
 
+    //! Perform any steps necessary before TimeSolver::advance_timestep() is called
+    /*!
+     * This may be needed, for example, if adding system vectors that are needed outside
+     * of those managed by the TimeSolver.
+     */
+    virtual void preadvance_timestep( MultiphysicsSystem & /*system*/ ){};
+
     //! Any reinitialization that needs to be done
     /*! This is called through libMesh::FEMSystem::reinit, which is called e.g.
       after adaptive mesh refinement/coarsening. So, for Physics that need to
