@@ -234,8 +234,8 @@ namespace GRINS
     virtual void nonlocal_mass_residual( bool /*compute_jacobian*/,
                                          AssemblyContext & /*context*/ ){}
 
-    void init_ics( libMesh::FEMSystem* system,
-                   libMesh::CompositeFunction<libMesh::Number>& all_ics );
+    virtual void init_ics( libMesh::FEMSystem* system,
+                           libMesh::CompositeFunction<libMesh::Number>& all_ics );
 
     virtual void compute_element_time_derivative_cache( AssemblyContext & /*context*/ ){}
 

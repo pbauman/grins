@@ -85,7 +85,7 @@ namespace GRINS
         file. But, since that Physics doesn't actually get added, only this
         ImmersedBoundary, then we need to internally point to the solids ics function.*/
     virtual void init_ics( libMesh::FEMSystem* system,
-                           libMesh::CompositeFunction<libMesh::Number>& all_ics );
+                           libMesh::CompositeFunction<libMesh::Number>& all_ics ) override;
 
   private:
 
