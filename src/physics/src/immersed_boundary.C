@@ -136,6 +136,12 @@ namespace GRINS
       libMesh::FEMContext * context = libMesh::cast_ptr<libMesh::FEMContext *>(raw_context.release());
       _fluid_context.reset(context);
     }
+
+    libMesh::NumericVector<libMesh::Number> & old_old_nonlinear_soln =
+      system.add_vector("_old_old_nonlinear_solution");
+
+    if(!old_old_nonlinear_soln.initialized())
+      old_old_nonlinear_soln.init(system.n_dofs(), system.n_local_dofs(), false, libMesh::PARALLEL);
   }
 
   template<typename SolidMech>
