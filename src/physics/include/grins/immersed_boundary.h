@@ -127,6 +127,8 @@ namespace GRINS
 
     std::unique_ptr<libMesh::FEMContext> _fluid_context;
 
+    std::unique_ptr<libMesh::NumericVector<libMesh::Number>> _old_old_local_nonlinear_solution;
+
     void setup_coupling_matrix( const VelocityVariable & flow_vars,
                                 const DisplacementVariable & disp_vars,
                                 const LagrangeMultVectorVariable & lambda_var,

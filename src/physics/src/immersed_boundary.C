@@ -78,7 +78,8 @@ namespace GRINS
       _solid_mech(std::move(solid_mech_ptr)),
       _fluid_mechanics(input("Physics/ImmersedBoundary/fluid_mechanics","DIE!")),
       _solid_mechanics(input("Physics/ImmersedBoundary/solid_mechanics","DIE!")),
-      _coupling_matrix(nullptr)
+      _coupling_matrix(nullptr),
+      _old_old_local_nonlinear_solution(nullptr)
   {
     _lambda_var.set_is_constraint_var(true);
     _solid_press_var.set_is_constraint_var(true);
