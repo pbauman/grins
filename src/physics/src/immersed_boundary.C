@@ -1515,12 +1515,10 @@ template<typename SolidMech>
 
   template<typename SolidMech>
   void ImmersedBoundary<SolidMech>::compute_prev_timestep_deform_gradient
-  (const AssemblyContext & solid_context_const,
+  (AssemblyContext & solid_context,
    const unsigned int qp,
    libMesh::TensorValue<libMesh::Real> & Fold)
   {
-    AssemblyContext & solid_context = const_cast<AssemblyContext &>(solid_context_const);
-
     MultiphysicsSystem & system = solid_context.get_multiphysics_system();
 
     libMesh::DenseVector<libMesh::Number> old_elem_solution(solid_context.get_elem_solution().size());
