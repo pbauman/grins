@@ -571,6 +571,9 @@ namespace GRINS
     libMesh::TensorValue<libMesh::Real> Fdot;
     this->eval_deform_grad_rate(grad_udot,grad_vdot,Fdot);
 
+    libMesh::Gradient d2Udt2;
+    this->compute_displacement_accel(solid_context,sqp,d2Udt2);
+
     libMesh::TensorValue<libMesh::Real> P;
     this->eval_first_Piola(grad_u,grad_v,P);
 
