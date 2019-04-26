@@ -287,6 +287,10 @@ namespace GRINS
                                                 const unsigned int qp,
                                                 libMesh::TensorValue<libMesh::Real> & Fold );
 
+    void compute_displacement_accel( AssemblyContext & solid_context,
+                                     const unsigned int qp,
+                                     libMesh::Gradient & d2Udt2 /*\ddot{U}*/ );
+
     void get_old_old_elem_solution( AssemblyContext & solid_context,
                                     libMesh::DenseVector<libMesh::Number> & old_elem_solution ) const;
 

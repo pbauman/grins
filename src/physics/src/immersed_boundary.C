@@ -1543,6 +1543,56 @@ template<typename SolidMech>
   }
 
   template<typename SolidMech>
+  void ImmersedBoundary<SolidMech>::compute_displacement_accel( AssemblyContext & solid_context,
+                                                                const unsigned int qp,
+                                                                libMesh::Gradient & d2Udt2 /*\ddot{U}*/ )
+  {
+    const MultiphysicsSystem & system = solid_context.get_multiphysics_system();
+
+    // Compute U_{n+1}
+    libMesh::Gradient Unp1;
+    solid_context.interior_value(this->_disp_vars.u(), qp, Unp1(0));
+    solid_context.interior_value(this->_disp_vars.v(), qp, Unp1(1));
+
+    libMesh::DenseVector<libMesh::Number> old_elem_solution(solid_context.get_elem_solution().size());
+    libMesh::DenseVector<libMesh::Number> elem_solution_copy(solid_context.get_elem_solution().size());
+    elem_solution_copy = solid_context.get_elem_solution();
+
+    // Compute U_{n}
+    libMesh::Gradient Un;
+    {
+      // This populates the old_elem_solution vector for the solid element
+      // using the solution values from the prevous timestep
+      solid_context.get_old_elem_solution(system,old_elem_solution);
+
+      // Put in the old_elem_solution so we use the previous timestep values
+      solid_context.get_elem_solution() = old_elem_solution;
+
+      solid_context.interior_value(this->_disp_vars.u(), qp, Un(0));
+      solid_context.interior_value(this->_disp_vars.v(), qp, Un(1));
+    }
+
+    // Compute U_{n-1}
+    libMesh::Gradient Unm1;
+    {
+      this->get_old_old_elem_solution(solid_context,old_elem_solution);
+
+      // Put in the old_old_elem_solution so we use the previous timestep values
+      solid_context.get_elem_solution() = old_elem_solution;
+
+      solid_context.interior_value(this->_disp_vars.u(), qp, Unm1(0));
+      solid_context.interior_value(this->_disp_vars.v(), qp, Unm1(1));
+    }
+
+    // Copy back
+    solid_context.get_elem_solution() = elem_solution_copy;
+
+    libMesh::Real dt = solid_context.get_deltat_value();
+
+    d2Udt2 = (Unp1 -2*Un + Unm1)/(dt*dt);
+  }
+
+  template<typename SolidMech>
   void ImmersedBoundary<SolidMech>::get_old_old_elem_solution
   ( AssemblyContext & context, libMesh::DenseVector<libMesh::Number> & old_elem_solution ) const
   {
