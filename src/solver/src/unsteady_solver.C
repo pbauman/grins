@@ -172,6 +172,7 @@ namespace GRINS
           this->print_scalar_vars(context);
 
         // Advance to the next timestep
+        context.system->preadvance_timestep();
         context.system->time_solver->advance_timestep();
       }
 
