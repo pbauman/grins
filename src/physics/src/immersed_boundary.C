@@ -290,19 +290,36 @@ namespace GRINS
     libMesh::UnsteadySolver * unsteady_solver = dynamic_cast<libMesh::UnsteadySolver *>(&time_solver_raw);
     if( unsteady_solver)
       {
-        unsteady_solver->old_local_nonlinear_solution =
-          libMesh::NumericVector<libMesh::Number>::build(system.comm());
+        // Old nonlinear solution
+        {
+          unsteady_solver->old_local_nonlinear_solution =
+            libMesh::NumericVector<libMesh::Number>::build(system.comm());
 
-        unsteady_solver->old_local_nonlinear_solution->init(system.n_dofs(), system.n_local_dofs(),
-                                                            dof_map.get_send_list(), false,
-                                                            libMesh::GHOSTED);
+          unsteady_solver->old_local_nonlinear_solution->init(system.n_dofs(), system.n_local_dofs(),
+                                                              dof_map.get_send_list(), false,
+                                                              libMesh::GHOSTED);
 
-        libMesh::NumericVector<libMesh::Number> & old_nonlinear_soln =
-          system.get_vector("_old_nonlinear_solution");
+          libMesh::NumericVector<libMesh::Number> & old_nonlinear_soln =
+            system.get_vector("_old_nonlinear_solution");
 
-        old_nonlinear_soln.localize(*(unsteady_solver->old_local_nonlinear_solution), dof_map.get_send_list());
+          old_nonlinear_soln.localize(*(unsteady_solver->old_local_nonlinear_solution), dof_map.get_send_list());
+        }
+
+        // Old Old nonlinear solution
+        {
+          _old_old_local_nonlinear_solution =
+            libMesh::NumericVector<libMesh::Number>::build(system.comm());
+
+          _old_old_local_nonlinear_solution->init(system.n_dofs(), system.n_local_dofs(),
+                                                  dof_map.get_send_list(), false,
+                                                  libMesh::GHOSTED);
+
+          libMesh::NumericVector<libMesh::Number> & old_old_nonlinear_soln =
+            system.get_vector("_old_old_nonlinear_solution");
+
+          old_old_nonlinear_soln.localize(*_old_old_local_nonlinear_solution, dof_map.get_send_list());
+        }
       }
-
   }
 
   template<typename SolidMech>
