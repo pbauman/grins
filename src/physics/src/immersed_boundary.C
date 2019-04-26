@@ -1542,7 +1542,19 @@ template<typename SolidMech>
     solid_context.get_elem_solution() = elem_solution_copy;
   }
 
- template<typename SolidMech>
+  template<typename SolidMech>
+  void ImmersedBoundary<SolidMech>::get_old_old_elem_solution
+  ( AssemblyContext & context, libMesh::DenseVector<libMesh::Number> & old_elem_solution ) const
+  {
+    unsigned int n_dofs = context.get_elem_solution().size();
+    libmesh_assert_equal_to( old_elem_solution.size(),n_dofs);
+
+    for (unsigned int i=0; i != n_dofs; ++i)
+      old_elem_solution(i) =
+        (*(this->_old_old_local_nonlinear_solution))(context.get_dof_indices()[i]);
+  }
+
+  template<typename SolidMech>
   void ImmersedBoundary<SolidMech>::eval_deform_grad_rate( const libMesh::Gradient & grad_udot,
 							   const libMesh::Gradient & grad_vdot,
 							   libMesh::TensorValue<libMesh::Real> & Fdot )

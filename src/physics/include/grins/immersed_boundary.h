@@ -287,6 +287,9 @@ namespace GRINS
                                                 const unsigned int qp,
                                                 libMesh::TensorValue<libMesh::Real> & Fold );
 
+    void get_old_old_elem_solution( AssemblyContext & solid_context,
+                                    libMesh::DenseVector<libMesh::Number> & old_elem_solution ) const;
+
     void eval_deform_grad_rate( const libMesh::Gradient & grad_udot,
 				const libMesh::Gradient & grad_vdot,
 				libMesh::TensorValue<libMesh::Real> & Fdot );
