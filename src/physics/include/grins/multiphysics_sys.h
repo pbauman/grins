@@ -133,6 +133,9 @@ namespace GRINS
 
     virtual void solve() override;
 
+    //! Do any updates that need to happen before advanceing the timestep
+    void preadvance_timestep();
+
     // residual and jacobian calculations
     // element_*, side_* as *time_derivative, *constraint, *mass_residual
 
