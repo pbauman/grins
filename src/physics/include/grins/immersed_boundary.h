@@ -62,22 +62,22 @@ namespace GRINS
     virtual ~ImmersedBoundary() = default;
 
     //! Sets velocity variables to be time-evolving
-    virtual void set_time_evolving_vars( libMesh::FEMSystem* system );
+    virtual void set_time_evolving_vars( libMesh::FEMSystem* system ) override;
 
     //! Init point locator and local FEMContext
-    virtual void auxiliary_init( MultiphysicsSystem & system );
+    virtual void auxiliary_init( MultiphysicsSystem & system ) override;
 
     //! Context initialization
-    virtual void init_context( AssemblyContext& context );
+    virtual void init_context( AssemblyContext& context ) override;
 
     //! Residual contributions from the solid in the flow
-    virtual void element_time_derivative( bool compute_jacobian, AssemblyContext& context );
+    virtual void element_time_derivative( bool compute_jacobian, AssemblyContext& context ) override;
 
     //! Cache mesh information needed for residual computation
-    virtual void presolve( MultiphysicsSystem & system );
+    virtual void presolve( MultiphysicsSystem & system ) override;
 
     //! We need to reinit the point locator when libMesh::System::reinit is called.
-    virtual void reinit( MultiphysicsSystem & system );
+    virtual void reinit( MultiphysicsSystem & system ) override;
 
     //! Override to point to solid Physics for displacement initial conditions
     /*! It would make sense for the user, under the current schema, to put the
