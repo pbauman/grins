@@ -145,7 +145,7 @@ namespace GRINS
                              const MultcomponentVectorVariable & var2,
                              libMesh::CouplingMatrix & coupling_matrix );
 
-    void compute_residuals( const AssemblyContext & solid_context,
+    void compute_residuals( AssemblyContext & solid_context,
                             const libMesh::FEMContext & fluid_context,
                             unsigned int sqp,
                             libMesh::DenseSubVector<libMesh::Number> & Fuf,
