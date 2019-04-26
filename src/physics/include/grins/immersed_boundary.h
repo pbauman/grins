@@ -113,6 +113,11 @@ namespace GRINS
     //! The solid mechanics associated with the IBM method from the input
     std::string _solid_mechanics;
 
+    std::string _fluid_material;
+    std::string _solid_material;
+
+    libMesh::Real _delta_rho;
+
     //! The subdomain ids for the solid that is read from input
     std::set<libMesh::subdomain_id_type> _solid_subdomain_set;
 
@@ -136,6 +141,10 @@ namespace GRINS
                                 const LagrangeMultVectorVariable & lambda_var,
                                 const PressureFEVariable & press_var,
                                 libMesh::CouplingMatrix & coupling_matrix );
+
+    libMesh::Real compute_delta_rho( const GetPot& input,
+                                     const std::string & fluid_material,
+                                     const std::string & solid_material ) const;
 
     void diagonally_coupled_vars( const MultcomponentVectorVariable & var1,
                                   const MultcomponentVectorVariable & var2,

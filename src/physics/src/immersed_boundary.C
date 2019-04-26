@@ -33,6 +33,7 @@
 #include "grins/variable_warehouse.h"
 #include "grins/multiphysics_sys.h"
 #include "grins/generic_ic_handler.h"
+#include "grins/materials_parsing.h"
 
 // includes for IBM instantiation
 #include "grins/elastic_membrane.h"
@@ -78,6 +79,8 @@ namespace GRINS
       _solid_mech(std::move(solid_mech_ptr)),
       _fluid_mechanics(input("Physics/ImmersedBoundary/fluid_mechanics","DIE!")),
       _solid_mechanics(input("Physics/ImmersedBoundary/solid_mechanics","DIE!")),
+      _fluid_material(input("Physics/ImmersedBoundary/fluid_material","DIE!")),
+      _solid_material(input("Physics/ImmersedBoundary/solid_material","DIE!")),
       _coupling_matrix(nullptr),
       _old_old_local_nonlinear_solution(nullptr)
   {
@@ -113,6 +116,8 @@ namespace GRINS
       _fluid_subdomain_set.insert( input(fluid_id_str, -1, i) );
 
     // TODO: Need to check that Mesh has all the fluid and solid subdomain ids
+
+    _delta_rho = this->compute_delta_rho(input,_fluid_material,_solid_material);
 
     this->_ic_handler = new GenericICHandler(physics_name, input);
   }
@@ -1770,6 +1775,29 @@ template<typename SolidMech>
     libMesh::out << std::endl << std::endl;
   }
 
+  template<typename SolidMech>
+  libMesh::Real ImmersedBoundary<SolidMech>::compute_delta_rho( const GetPot& input,
+                                                                const std::string & fluid_material,
+                                                                const std::string & solid_material ) const
+  {
+    libMesh::Real rho_fluid, rho_solid;
+
+    // Fluid density
+    {
+      std::string option("Materials/"+fluid_material+"/Density/value");
+      MaterialsParsing::check_for_input_option(input,option);
+      rho_fluid = input(option,0.0);
+    }
+
+    // Solid density
+    {
+      std::string option("Materials/"+solid_material+"/Density/value");
+      MaterialsParsing::check_for_input_option(input,option);
+      rho_solid = input(option,0.0);
+    }
+
+    return rho_solid-rho_fluid;
+  }
 
   //instantiate IBM classes
   template class ImmersedBoundary<ElasticCable<HookesLaw1D> >;
