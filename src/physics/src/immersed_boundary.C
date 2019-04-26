@@ -673,9 +673,6 @@ namespace GRINS
     // Solid residual
     for (unsigned int i=0; i != n_solid_dofs; i++)
       {
-        //L2 Norm
-	Fus(i) += lambda_x*solid_phi[i][sqp]*jac;
-	Fvs(i) += lambda_y*solid_phi[i][sqp]*jac;
 	/*
 	for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
 	  {
@@ -697,6 +694,14 @@ namespace GRINS
 	    Fus(i) -= mus*J23*(F(0,alpha)-(1/3)*I1*F_times_Cinv(0,alpha))*solid_dphi[i][sqp](alpha)*jac;
 	    Fvs(i) -= mus*J23*(F(1,alpha)-(1/3)*I1*F_times_Cinv(1,alpha))*solid_dphi[i][sqp](alpha)*jac;
 	  }
+
+        // Acceleration term
+        Fus(i) -= _delta_rho*d2Udt2(0)*solid_phi[i][sqp]*jac;
+        Fvs(i) -= _delta_rho*d2Udt2(1)*solid_phi[i][sqp]*jac;
+
+        //L2 Norm
+        Fus(i) += lambda_x*solid_phi[i][sqp]*jac;
+        Fvs(i) += lambda_y*solid_phi[i][sqp]*jac;
 
 	//H1 Norm
 	for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
