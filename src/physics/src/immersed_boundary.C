@@ -271,6 +271,22 @@ namespace GRINS
   }
 
   template<typename SolidMech>
+  void ImmersedBoundary<SolidMech>::preadvance_timestep( MultiphysicsSystem & system )
+  {
+    libMesh::NumericVector<libMesh::Number> & old_old_nonlinear_soln =
+      system.get_vector("_old_old_nonlinear_solution");
+
+    libMesh::NumericVector<libMesh::Number> & old_nonlinear_soln =
+      system.get_vector("_old_nonlinear_solution");
+
+    // timestep n copied to timestep n-1 now
+    old_old_nonlinear_soln = old_nonlinear_soln;
+
+    old_old_nonlinear_soln.localize( *_old_old_local_nonlinear_solution,
+                                     system.get_dof_map().get_send_list() );
+  }
+
+  template<typename SolidMech>
   void ImmersedBoundary<SolidMech>::reinit_ghosted_vectors( MultiphysicsSystem & system )
   {
     const libMesh::DofMap & dof_map = system.get_dof_map();
