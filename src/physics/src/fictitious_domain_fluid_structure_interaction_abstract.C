@@ -374,4 +374,171 @@ namespace GRINS
     Kwf_wlm.reposition( 2*n_fluid_dofs, 2*n_lambda_dofs, n_fluid_dofs, n_lambda_dofs );
   }
 
+  template<unsigned int Dim>
+  void FictitiousDomainFluidStructureInteractionAbstract::assemble_coupled_terms
+  ( bool compute_jacobian,
+    MultiphysicsSystem & system,
+    const AssemblyContext & solid_context,
+    AssemblyContext & fluid_context,
+    unsigned int n_fluid_dofs,
+    unsigned int n_solid_dofs,
+    unsigned int n_lambda_dofs,
+    libMesh::DenseMatrix<libMesh::Number> & Kf_s,
+    libMesh::DenseMatrix<libMesh::Number> & Klm_f,
+    libMesh::DenseMatrix<libMesh::Number> & Kf_lm )
+  {
+    // Now that we've looped over all the quadrature points on this fluid element
+    // we can now assemble the fluid residual (the residuals in the solid context
+    // automatically get assembled by the FEMSystem)
+    system.get_dof_map().constrain_element_vector
+      ( fluid_context.get_elem_residual(),
+        fluid_context.get_dof_indices(), false );
+
+    system.rhs->add_vector( fluid_context.get_elem_residual(),
+                            fluid_context.get_dof_indices() );
+
+    if( compute_jacobian )
+      {
+        std::vector<libMesh::dof_id_type> velocity_dof_indices;
+
+        const std::vector<libMesh::dof_id_type> & uf_dof_indices =
+          fluid_context.get_dof_indices(this->_flow_vars.u());
+
+        const std::vector<libMesh::dof_id_type> & vf_dof_indices =
+          fluid_context.get_dof_indices(this->_flow_vars.v());
+
+        const std::vector<libMesh::dof_id_type> * wf_dof_indices = nullptr;
+        if(Dim==3)
+          wf_dof_indices = &fluid_context.get_dof_indices(this->_flow_vars.w());
+
+        libmesh_assert_equal_to( uf_dof_indices.size(), n_fluid_dofs );
+        libmesh_assert_equal_to( vf_dof_indices.size(), n_fluid_dofs );
+        if(Dim==3)
+          libmesh_assert_equal_to( wf_dof_indices->size(), n_fluid_dofs );
+
+        velocity_dof_indices.insert( velocity_dof_indices.end(),
+                                     uf_dof_indices.begin(),
+                                     uf_dof_indices.end() );
+
+        velocity_dof_indices.insert( velocity_dof_indices.end(),
+                                     vf_dof_indices.begin(),
+                                     vf_dof_indices.end() );
+
+        if(Dim==3)
+          velocity_dof_indices.insert( velocity_dof_indices.end(),
+                                       wf_dof_indices->begin(),
+                                       wf_dof_indices->end() );
+
+        //Build up solid dof indices
+        std::vector<libMesh::dof_id_type> solid_dof_indices;
+
+        const std::vector<libMesh::dof_id_type>& us_dof_indices =
+          solid_context.get_dof_indices(this->_disp_vars.u());
+
+        const std::vector<libMesh::dof_id_type>& vs_dof_indices =
+          solid_context.get_dof_indices(this->_disp_vars.v());
+
+        const std::vector<libMesh::dof_id_type> * ws_dof_indices = nullptr;
+        if(Dim==3)
+          ws_dof_indices = &solid_context.get_dof_indices(this->_disp_vars.w());
+
+        libmesh_assert_equal_to( us_dof_indices.size(), n_solid_dofs );
+        libmesh_assert_equal_to( vs_dof_indices.size(), n_solid_dofs );
+        if(Dim==3)
+          libmesh_assert_equal_to( ws_dof_indices->size(), n_solid_dofs );
+
+        solid_dof_indices.insert( solid_dof_indices.end(),
+                                  us_dof_indices.begin(),
+                                  us_dof_indices.end() );
+
+        solid_dof_indices.insert( solid_dof_indices.end(),
+                                  vs_dof_indices.begin(),
+                                  vs_dof_indices.end() );
+
+        if(Dim==3)
+          solid_dof_indices.insert( solid_dof_indices.end(),
+                                    ws_dof_indices->begin(),
+                                    ws_dof_indices->end() );
+
+        //Build up lambda dof indices
+        std::vector<libMesh::dof_id_type> lambda_dof_indices;
+
+        const std::vector<libMesh::dof_id_type>& ulm_dof_indices =
+          solid_context.get_dof_indices(this->_lambda_var.u());
+
+        const std::vector<libMesh::dof_id_type>& vlm_dof_indices =
+          solid_context.get_dof_indices(this->_lambda_var.v());
+
+        const std::vector<libMesh::dof_id_type> * wlm_dof_indices = nullptr;
+        if(Dim==3)
+          wlm_dof_indices = &solid_context.get_dof_indices(this->_lambda_var.w());
+
+        libmesh_assert_equal_to( ulm_dof_indices.size(), n_lambda_dofs );
+        libmesh_assert_equal_to( vlm_dof_indices.size(), n_lambda_dofs );
+        if(Dim==3)
+          libmesh_assert_equal_to( wlm_dof_indices->size(), n_lambda_dofs );
+
+        lambda_dof_indices.insert( lambda_dof_indices.end(),
+                                   ulm_dof_indices.begin(),
+                                   ulm_dof_indices.end() );
+
+        lambda_dof_indices.insert( lambda_dof_indices.end(),
+                                   vlm_dof_indices.begin(),
+                                   vlm_dof_indices.end() );
+
+        if(Dim==3)
+          lambda_dof_indices.insert( lambda_dof_indices.end(),
+                                     wlm_dof_indices->begin(),
+                                     wlm_dof_indices->end() );
+
+        // Since we manually built the fluid context, we have to manually
+        // constrain and add the residuals and Jacobians.
+        //! \todo  We're hardcoding to the case that the residual is always
+        //  assembled and homogeneous constraints.
+
+        system.get_dof_map().constrain_element_matrix
+          ( Kf_s,
+            velocity_dof_indices,
+            solid_dof_indices, false );
+
+        system.matrix->add_matrix( Kf_s,
+                                   velocity_dof_indices,
+                                   solid_dof_indices );
+
+        system.get_dof_map().constrain_element_matrix
+          ( Klm_f,
+            lambda_dof_indices,
+            velocity_dof_indices,
+            false );
+
+        system.matrix->add_matrix( Klm_f,
+                                   lambda_dof_indices,
+                                   velocity_dof_indices );
+
+        system.get_dof_map().constrain_element_matrix
+          ( Kf_lm,
+            velocity_dof_indices,
+            lambda_dof_indices, false );
+
+        system.matrix->add_matrix( Kf_lm,
+                                   velocity_dof_indices,
+                                   lambda_dof_indices );
+      } // compute_jacobian
+  }
+
+  // Instantiate
+  template void FictitiousDomainFluidStructureInteractionAbstract::assemble_coupled_terms<2>
+  ( bool, MultiphysicsSystem &, const AssemblyContext &, AssemblyContext &,
+    unsigned int, unsigned int, unsigned int,
+    libMesh::DenseMatrix<libMesh::Number> &,
+    libMesh::DenseMatrix<libMesh::Number> &,
+    libMesh::DenseMatrix<libMesh::Number> &);
+
+  template void FictitiousDomainFluidStructureInteractionAbstract::assemble_coupled_terms<3>
+  ( bool, MultiphysicsSystem &, const AssemblyContext &, AssemblyContext &,
+    unsigned int, unsigned int, unsigned int,
+    libMesh::DenseMatrix<libMesh::Number> &,
+    libMesh::DenseMatrix<libMesh::Number> &,
+    libMesh::DenseMatrix<libMesh::Number> &);
+
 } // end namespace GRINS
