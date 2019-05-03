@@ -50,6 +50,9 @@ namespace GRINS
     //! Set time-evolving variables as time-evovling
     virtual void set_time_evolving_vars( libMesh::FEMSystem * system ) override;
 
+    //! Need to advance U_{n-1} before the other NumericVectors are updated
+    virtual void preadvance_timestep( MultiphysicsSystem & system ) override;
+
   protected:
 
     //! FE variables for the flow

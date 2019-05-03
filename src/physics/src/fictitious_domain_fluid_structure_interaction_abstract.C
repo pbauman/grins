@@ -90,6 +90,22 @@ namespace GRINS
       system->time_evolving(_disp_vars.w(),1);
   }
 
+  void FictitiousDomainFluidStructureInteractionAbstract::preadvance_timestep( MultiphysicsSystem & system )
+  {
+    libMesh::NumericVector<libMesh::Number> & prev_time_step_nonlinear_soln =
+      system.get_vector("_prev_time_step_nonlinear_solution");
+
+    libMesh::NumericVector<libMesh::Number> & old_nonlinear_soln =
+      system.get_vector("_old_nonlinear_solution");
+
+    // timestep n copied to timestep n-1
+    prev_time_step_nonlinear_soln = old_nonlinear_soln;
+
+    prev_time_step_nonlinear_soln.localize( *_prev_time_step_local_nonlinear_solution,
+                                            system.get_dof_map().get_send_list() );
+  }
+
+
   void FictitiousDomainFluidStructureInteractionAbstract::parse_subdomain_ids
   ( const PhysicsName & physics_name,
     const GetPot & input,
