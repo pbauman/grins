@@ -266,4 +266,112 @@ namespace GRINS
     _fluid_context.reset(context);
   }
 
+  void FictitiousDomainFluidStructureInteractionAbstract::prepare_jacobians
+  (unsigned int n_fluid_dofs, unsigned int n_solid_dofs, unsigned int n_lambda_dofs,
+   libMesh::DenseMatrix<libMesh::Number> & Kf_s,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kuf_us,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kuf_vs,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kvf_us,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vs,
+   libMesh::DenseMatrix<libMesh::Number> & Klm_f,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kulm_uf,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kulm_vf,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_uf,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_vf,
+   libMesh::DenseMatrix<libMesh::Number> & Kf_lm,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kuf_ulm,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kuf_vlm,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kvf_ulm,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vlm) const
+  {
+    libmesh_assert_equal_to( this->_flow_vars.dim(),this->_disp_vars.dim() );
+    libmesh_assert_equal_to( this->_lambda_var.dim(),this->_flow_vars.dim() );
+
+    Kf_s.resize( this->_flow_vars.dim()*n_fluid_dofs, this->_disp_vars.dim()*n_solid_dofs );
+
+    // We need to manually manage the indexing since we're working only on this particular subblock
+    Kuf_us.reposition( 0, 0, n_fluid_dofs, n_solid_dofs );
+    Kuf_vs.reposition( 0, n_solid_dofs, n_fluid_dofs, n_solid_dofs );
+    Kvf_us.reposition( n_fluid_dofs, 0, n_fluid_dofs, n_solid_dofs );
+    Kvf_vs.reposition( n_fluid_dofs, n_solid_dofs, n_fluid_dofs, n_solid_dofs );
+
+    Klm_f.resize( this->_lambda_var.dim()*n_lambda_dofs, this->_flow_vars.dim()*n_fluid_dofs );
+
+    Kulm_uf.reposition( 0, 0, n_lambda_dofs, n_fluid_dofs );
+    Kulm_vf.reposition( 0, n_fluid_dofs, n_lambda_dofs, n_fluid_dofs );
+    Kvlm_uf.reposition( n_lambda_dofs, 0, n_lambda_dofs, n_fluid_dofs );
+    Kvlm_vf.reposition( n_lambda_dofs, n_fluid_dofs, n_lambda_dofs, n_fluid_dofs );
+
+    Kf_lm.resize( this->_flow_vars.dim()*n_fluid_dofs, this->_lambda_var.dim()*n_lambda_dofs );
+
+    Kuf_ulm.reposition( 0, 0, n_fluid_dofs, n_lambda_dofs );
+    Kuf_vlm.reposition( 0, n_lambda_dofs, n_fluid_dofs, n_lambda_dofs );
+    Kvf_ulm.reposition( n_fluid_dofs, 0, n_fluid_dofs, n_lambda_dofs );
+    Kvf_vlm.reposition( n_fluid_dofs, n_lambda_dofs, n_fluid_dofs, n_lambda_dofs );
+  }
+
+  void FictitiousDomainFluidStructureInteractionAbstract::prepare_jacobians
+  (unsigned int n_fluid_dofs, unsigned int n_solid_dofs, unsigned int n_lambda_dofs,
+   libMesh::DenseMatrix<libMesh::Number> & Kf_s,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kuf_us,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kuf_vs,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kuf_ws,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kvf_us,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vs,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kvf_ws,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kwf_us,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kwf_vs,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kwf_ws,
+   libMesh::DenseMatrix<libMesh::Number> & Klm_f,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kulm_uf,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kulm_vf,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kulm_wf,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_uf,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_vf,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_wf,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kwlm_uf,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kwlm_vf,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kwlm_wf,
+   libMesh::DenseMatrix<libMesh::Number> & Kf_lm,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kuf_ulm,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kuf_vlm,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kuf_wlm,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kvf_ulm,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vlm,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kvf_wlm,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kwf_ulm,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kwf_vlm,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kwf_wlm) const
+  {
+    // We can reuse all the 2-D bits and just handle the 3-D terms
+    this->prepare_jacobians(n_fluid_dofs, n_solid_dofs, n_lambda_dofs,
+                            Kf_s,
+                            Kuf_us,Kuf_vs,Kvf_us,Kvf_vs,
+                            Klm_f,
+                            Kulm_uf,Kulm_vf, Kvlm_uf,Kvlm_vf,
+                            Kf_lm,
+                            Kuf_ulm,Kuf_vlm,Kvf_ulm,Kvf_vlm);
+
+    // Fluid-Solid
+    Kuf_ws.reposition( 0,              2*n_solid_dofs, n_fluid_dofs, n_solid_dofs );
+    Kvf_ws.reposition( n_fluid_dofs,   2*n_solid_dofs, n_fluid_dofs, n_solid_dofs );
+    Kwf_us.reposition( 2*n_fluid_dofs, 0,              n_fluid_dofs, n_solid_dofs );
+    Kwf_vs.reposition( 2*n_fluid_dofs, n_solid_dofs,   n_fluid_dofs, n_solid_dofs );
+    Kwf_ws.reposition( 2*n_fluid_dofs, 2*n_solid_dofs, n_fluid_dofs, n_solid_dofs );
+
+    // Lambda-fluid
+    Kulm_wf.reposition( 0,               2*n_fluid_dofs, n_lambda_dofs, n_fluid_dofs );
+    Kvlm_wf.reposition( n_lambda_dofs,   2*n_fluid_dofs,  n_lambda_dofs, n_fluid_dofs );
+    Kwlm_uf.reposition( 2*n_lambda_dofs, 0,              n_lambda_dofs, n_fluid_dofs );
+    Kwlm_vf.reposition( 2*n_lambda_dofs, n_fluid_dofs,   n_lambda_dofs, n_fluid_dofs );
+    Kwlm_wf.reposition( 2*n_lambda_dofs, 2*n_fluid_dofs, n_lambda_dofs, n_fluid_dofs );
+
+    // Fluid-lambda
+    Kuf_wlm.reposition( 0,              2*n_lambda_dofs, n_fluid_dofs, n_lambda_dofs );
+    Kvf_wlm.reposition( n_fluid_dofs,   2*n_lambda_dofs, n_fluid_dofs, n_lambda_dofs );
+    Kwf_ulm.reposition( 2*n_fluid_dofs, 0,               n_fluid_dofs, n_lambda_dofs );
+    Kwf_vlm.reposition( 2*n_fluid_dofs, n_lambda_dofs,   n_fluid_dofs, n_lambda_dofs );
+    Kwf_wlm.reposition( 2*n_fluid_dofs, 2*n_lambda_dofs, n_fluid_dofs, n_lambda_dofs );
+  }
+
 } // end namespace GRINS
