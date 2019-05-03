@@ -28,6 +28,7 @@
 // GRINS
 #include "grins/variable_warehouse.h"
 #include "grins/materials_parsing.h"
+#include "grins/generic_ic_handler.h"
 
 // libMesh
 #include "libmesh/fem_system.h"
@@ -60,6 +61,8 @@ namespace GRINS
       this->parse_subdomain_ids(physics_name, input, subsection, _solid_subdomain_ids );
       _rho_solid = this->parse_density(physics_name, input, subsection);
     }
+
+    this->_ic_handler = new GenericICHandler(physics_name, input);
   }
 
   void FictitiousDomainFluidStructureInteractionAbstract::set_time_evolving_vars( libMesh::FEMSystem* system )
