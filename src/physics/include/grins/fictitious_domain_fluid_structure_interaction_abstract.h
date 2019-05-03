@@ -29,6 +29,7 @@
 #include "grins/physics.h"
 #include "grins/single_variable.h"
 #include "grins/multi_component_vector_variable.h"
+#include "grins/multiphysics_sys.h"
 
 namespace GRINS
 {
@@ -75,6 +76,9 @@ namespace GRINS
     //! Solid density
     libMesh::Real _rho_solid;
 
+    //! Point locator on mesh for determining overlap
+    std::unique_ptr<libMesh::PointLocatorBase> _point_locator;
+
     void parse_subdomain_ids( const PhysicsName & physics_name,
                               const GetPot & input,
                               const std::string & subsection,
@@ -84,6 +88,11 @@ namespace GRINS
                                  const GetPot & input,
                                  const std::string & subsection );
 
+    void reinit_point_locator( MultiphysicsSystem & system )
+    {
+      _point_locator.reset();
+      _point_locator = system.get_mesh().sub_point_locator();
+    }
 
   };
 
