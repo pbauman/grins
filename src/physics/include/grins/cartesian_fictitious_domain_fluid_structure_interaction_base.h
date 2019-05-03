@@ -43,6 +43,9 @@ namespace GRINS
 
     virtual ~CartesianFictitiousDomainFluidStructureInteractionBase() = default;
 
+    //! Context initialization
+    virtual void init_context( AssemblyContext & context ) override;
+
   protected:
 
     void check_variable_dim_consistency() const;

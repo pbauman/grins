@@ -40,6 +40,21 @@ namespace GRINS
   }
 
   template<unsigned int Dim, bool UseOldDisplacement>
+  void CartesianFictitiousDomainFluidStructureInteractionBase<Dim,UseOldDisplacement>::init_context( AssemblyContext & context )
+  {
+    context.get_element_fe(_disp_vars.u(),Dim)->get_JxW();
+    context.get_element_fe(_disp_vars.u(),Dim)->get_phi();
+    context.get_element_fe(_disp_vars.u(),Dim)->get_dphi();
+
+    context.get_element_fe(_solid_press_var.p(),Dim)->get_JxW();
+    context.get_element_fe(_solid_press_var.p(),Dim)->get_phi();
+
+    context.get_element_fe( _lambda_var.u(),Dim)->get_dphi();
+    context.get_element_fe( _lambda_var.u(),Dim)->get_phi();
+    context.get_element_fe( _lambda_var.u(),Dim)->get_JxW();
+  }
+
+  template<unsigned int Dim, bool UseOldDisplacement>
   void CartesianFictitiousDomainFluidStructureInteractionBase<Dim,UseOldDisplacement>::
   check_variable_dim_consistency() const
   {
