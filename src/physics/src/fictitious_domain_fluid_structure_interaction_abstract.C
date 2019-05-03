@@ -90,6 +90,12 @@ namespace GRINS
       system->time_evolving(_disp_vars.w(),1);
   }
 
+  void FictitiousDomainFluidStructureInteractionAbstract::auxiliary_init( MultiphysicsSystem & system )
+  {
+    this->reinit_point_locator(system);
+    this->add_previous_time_step_parallel_vector_to_system(system);
+  }
+
   void FictitiousDomainFluidStructureInteractionAbstract::preadvance_timestep( MultiphysicsSystem & system )
   {
     libMesh::NumericVector<libMesh::Number> & prev_time_step_nonlinear_soln =
