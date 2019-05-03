@@ -61,6 +61,9 @@ namespace GRINS
     static std::string single_var_section()
     { return "SingleVariable"; }
 
+    static std::string vector_var_section()
+    { return "VectorVariable"; }
+
     static std::string scalar_var_section()
     { return "ScalarVariable"; }
 
@@ -90,6 +93,14 @@ namespace GRINS
                                                       subsection_name,
                                                       "var_name",
                                                       VariablesParsing::single_var_section(),
+                                                      section_type); }
+
+    static std::string vector_variable_name( const GetPot& input, const std::string& subsection_name,
+                                             const SECTION_TYPE section_type )
+    { return VariablesParsing::section_parse_var_name(input,
+                                                      subsection_name,
+                                                      "var_name",
+                                                      VariablesParsing::vector_var_section(),
                                                       section_type); }
 
     static std::string scalar_variable_name( const GetPot& input, const std::string& subsection_name,
