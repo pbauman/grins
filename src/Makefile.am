@@ -149,6 +149,7 @@ libgrins_la_SOURCES += physics/src/variable_pinning.C
 libgrins_la_SOURCES += physics/src/physics_factory_initializer.C
 libgrins_la_SOURCES += physics/src/overlapping_fluid_solid_map.C
 libgrins_la_SOURCES += physics/src/overlapping_fluid_solid_coupling_functor.C
+libgrins_la_SOURCES += physics/src/fictitious_domain_fluid_structure_interaction_abstract.C
 
 # src/properties files
 libgrins_la_SOURCES += properties/src/constant_conductivity.C
@@ -476,6 +477,7 @@ include_HEADERS += physics/include/grins/variable_pinning.h
 include_HEADERS += physics/include/grins/physics_factory_initializer.h
 include_HEADERS += physics/include/grins/overlapping_fluid_solid_map.h
 include_HEADERS += physics/include/grins/overlapping_fluid_solid_coupling_functor.h
+include_HEADERS += physics/include/grins/fictitious_domain_fluid_structure_interaction_abstract.h
 
 # src/properties headers
 include_HEADERS += properties/include/grins/property_types.h
