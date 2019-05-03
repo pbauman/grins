@@ -79,6 +79,9 @@ namespace GRINS
     //! Point locator on mesh for determining overlap
     std::unique_ptr<libMesh::PointLocatorBase> _point_locator;
 
+    //! Ghosted vector to store the previous time step solution (U_{n-1})
+    std::unique_ptr<libMesh::NumericVector<libMesh::Number>> _prev_time_step_local_nonlinear_solution;
+
     void parse_subdomain_ids( const PhysicsName & physics_name,
                               const GetPot & input,
                               const std::string & subsection,
@@ -102,6 +105,9 @@ namespace GRINS
     ( MultiphysicsSystem & system,
       const libMesh::NumericVector<libMesh::Number> & parallel_vector,
       std::unique_ptr<libMesh::NumericVector<libMesh::Number>> & ghosted_vector ) const;
+
+    //! Reinit all relevant ghosted vectors
+    void reinit_all_ghosted_vectors( MultiphysicsSystem & system );
 
   };
 

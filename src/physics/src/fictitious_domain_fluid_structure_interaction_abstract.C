@@ -33,6 +33,7 @@
 // libMesh
 #include "libmesh/fem_system.h"
 #include "libmesh/dof_map.h"
+#include "libmesh/unsteady_solver.h"
 
 namespace GRINS
 {
@@ -148,6 +149,42 @@ namespace GRINS
                          libMesh::GHOSTED);
 
     parallel_vector.localize( *ghosted_vector,dof_map.get_send_list());
+  }
+
+  void FictitiousDomainFluidStructureInteractionAbstract::reinit_all_ghosted_vectors( MultiphysicsSystem & system )
+  {
+
+    // Reinit current local solution, i.e. U_{n+1}
+    this->reinit_single_ghosted_vector(system,
+                                       (*system.solution),
+                                       system.current_local_solution);
+
+    // Also need to update unsteady system vectors
+    libMesh::TimeSolver & time_solver_raw = system.get_time_solver();
+    libMesh::UnsteadySolver * unsteady_solver = dynamic_cast<libMesh::UnsteadySolver *>(&time_solver_raw);
+    if( unsteady_solver)
+      {
+        // Old nonlinear solution, i.e. U_n
+        {
+          const libMesh::NumericVector<libMesh::Number> & old_nonlinear_soln =
+            system.get_vector("_old_nonlinear_solution");
+
+          this->reinit_single_ghosted_vector(system,
+                                             old_nonlinear_soln,
+                                             unsteady_solver->old_local_nonlinear_solution);
+        }
+
+        // prev_time_step nonlinear solution, i.e. U_{n-1}
+        {
+          const libMesh::NumericVector<libMesh::Number> & prev_time_step_nonlinear_soln =
+            system.get_vector("_prev_time_step_nonlinear_solution");
+
+          this->reinit_single_ghosted_vector(system,
+                                             prev_time_step_nonlinear_soln,
+                                             _prev_time_step_local_nonlinear_solution);
+        }
+
+      } // if(unsteady_solver)
   }
 
 } // end namespace GRINS
