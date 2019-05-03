@@ -69,10 +69,20 @@ namespace GRINS
     //! The subdomain ids for the fluid that are read from input
     std::set<libMesh::subdomain_id_type> _fluid_subdomain_ids;
 
+    //! Fluid density
+    libMesh::Real _rho_fluid;
+
+    //! Solid density
+    libMesh::Real _rho_solid;
+
     void parse_subdomain_ids( const PhysicsName & physics_name,
                               const GetPot & input,
                               const std::string & subsection,
                               std::set<libMesh::subdomain_id_type> & subdomain_ids );
+
+    libMesh::Real parse_density( const PhysicsName & physics_name,
+                                 const GetPot & input,
+                                 const std::string & subsection );
 
 
   };

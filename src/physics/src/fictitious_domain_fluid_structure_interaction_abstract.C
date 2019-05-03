@@ -27,6 +27,7 @@
 
 // GRINS
 #include "grins/variable_warehouse.h"
+#include "grins/materials_parsing.h"
 
 // libMesh
 #include "libmesh/fem_system.h"
@@ -50,12 +51,14 @@ namespace GRINS
     {
       std::string subsection("Fluid");
       this->parse_subdomain_ids(physics_name, input, subsection, _fluid_subdomain_ids );
+      _rho_fluid = this->parse_density(physics_name, input, subsection);
     }
 
     // Parse solid data
     {
       std::string subsection("Solid");
       this->parse_subdomain_ids(physics_name, input, subsection, _solid_subdomain_ids );
+      _rho_solid = this->parse_density(physics_name, input, subsection);
     }
   }
 
@@ -97,6 +100,22 @@ namespace GRINS
 
     for( unsigned int s = 0; s < n_subdomains; s++ )
       subdomain_ids.insert( input(var_string,std::numeric_limits<libMesh::subdomain_id_type>::max(), s) );
+  }
+
+  libMesh::Real FictitiousDomainFluidStructureInteractionAbstract::parse_density
+  ( const PhysicsName & physics_name,
+    const GetPot & input,
+    const std::string & subsection )
+  {
+    std::string mat_string("Physics/"+physics_name+"/"+subsection+"/material");
+    if( !input.have_variable(mat_string) )
+      libmesh_error_msg("ERROR: Could not find required input variable: "+mat_string+"!\n");
+
+    std::string material = input(mat_string,"DIE!");
+
+    std::string option("Materials/"+material+"/Density/value");
+    MaterialsParsing::check_for_input_option(input,option);
+    return input(option,0.0);
   }
 
 } // end namespace GRINS
