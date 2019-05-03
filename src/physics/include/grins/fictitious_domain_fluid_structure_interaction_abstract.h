@@ -217,6 +217,23 @@ namespace GRINS
                            libMesh::DenseSubMatrix<libMesh::Number> & Kwf_vlm,
                            libMesh::DenseSubMatrix<libMesh::Number> & Kwf_wlm) const;
 
+    //! Assemble local coupling terms into the global residual and Jacobian
+    /*!
+     *  Only handle the solid-fluid coupling terms. All the terms native/within
+     *  the solid context will still be handled by FEMSystem.
+     */
+    template<unsigned int Dim>
+    void assemble_coupled_terms( bool compute_jacobian,
+                                 MultiphysicsSystem & system,
+                                 const AssemblyContext & solid_context,
+                                 AssemblyContext & fluid_context,
+                                 unsigned int n_fluid_dofs,
+                                 unsigned int n_solid_dofs,
+                                 unsigned int n_lambda_dofs,
+                                 libMesh::DenseMatrix<libMesh::Number> & Kf_s,
+                                 libMesh::DenseMatrix<libMesh::Number> & Klm_f,
+                                 libMesh::DenseMatrix<libMesh::Number> & Kf_lm );
+
   };
 
 } // end namespace GRINS
