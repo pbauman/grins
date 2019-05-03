@@ -30,10 +30,12 @@
 #include "grins/materials_parsing.h"
 #include "grins/generic_ic_handler.h"
 
+
 // libMesh
 #include "libmesh/fem_system.h"
 #include "libmesh/dof_map.h"
 #include "libmesh/unsteady_solver.h"
+#include "libmesh/sparse_matrix.h"
 
 namespace GRINS
 {
@@ -185,6 +187,53 @@ namespace GRINS
         }
 
       } // if(unsteady_solver)
+  }
+
+  void FictitiousDomainFluidStructureInteractionAbstract::reinit_overlapping_data( MultiphysicsSystem & system,
+                                                                                   bool use_old_solution )
+  {
+    // We need to rebuild the overlap map each time because the position
+    // of the solid can change in between each Newton step.
+    _fluid_solid_overlap.reset( new OverlappingFluidSolidMap(system,
+                                                             (*_point_locator),
+                                                             _solid_subdomain_ids,
+                                                             _fluid_subdomain_ids,
+                                                             _disp_vars,
+                                                             use_old_solution) );
+
+    libMesh::DofMap & dof_map = system.get_dof_map();
+
+    if(!_coupling_functor)
+      {
+        _coupling_functor.reset( new OverlappingFluidSolidCouplingFunctor(system.get_mesh(),
+                                                                          *_coupling_matrix,
+                                                                          *_fluid_solid_overlap) );
+        dof_map.add_coupling_functor(*_coupling_functor);
+      }
+    else
+      {
+        dof_map.remove_coupling_functor(*_coupling_functor);
+        _coupling_functor.reset( new OverlappingFluidSolidCouplingFunctor(system.get_mesh(),
+                                                                          *_coupling_matrix,
+                                                                          *_fluid_solid_overlap) );
+        dof_map.add_coupling_functor(*_coupling_functor);
+      }
+
+    // Handle algebraic coupling
+    // We have to manually make these calls since we couldn't attach this
+    // functor before the mesh and dof_map was prepared.
+    dof_map.reinit_send_list(system.get_mesh());
+
+    this->reinit_all_ghosted_vectors( system );
+
+    // Handle full coupling (sparsity pattern)
+    dof_map.clear_sparsity();
+    dof_map.compute_sparsity(system.get_mesh());
+
+    // Now to reinit the matrix since we changed the sparsity pattern
+    libMesh::SparseMatrix<libMesh::Number> & matrix = system.get_matrix("System Matrix");
+    libmesh_assert(dof_map.is_attached(matrix));
+    matrix.init();
   }
 
 } // end namespace GRINS
