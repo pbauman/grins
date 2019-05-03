@@ -94,6 +94,9 @@ namespace GRINS
       _point_locator = system.get_mesh().sub_point_locator();
     }
 
+    //! We need a parallel vector to store the U_{n-1} time step.
+    void add_previous_time_step_parallel_vector_to_system( MultiphysicsSystem & system ) const;
+
   };
 
 } // end namespace GRINS
