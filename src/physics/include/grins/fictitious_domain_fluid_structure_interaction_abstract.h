@@ -151,6 +151,72 @@ namespace GRINS
     //! Build our local fluid context once and the reinit it when needed
     void build_fluid_context( MultiphysicsSystem & system );
 
+    //! Appropriately size, reposition coupled Jacobians for 2D case
+    /*!
+     *  Since the solid context wont have these Jacobians coupling fluid variables
+     *  with any of the solid variables, we need to manually manage them. Two D
+     *  version.
+     */
+    void prepare_jacobians(unsigned int n_fluid_dofs,
+                           unsigned int n_solid_dofs,
+                           unsigned int n_lambda_dofs,
+                           libMesh::DenseMatrix<libMesh::Number> & Kf_s,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kuf_us,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kuf_vs,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kvf_us,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vs,
+                           libMesh::DenseMatrix<libMesh::Number> & Klm_f,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kulm_uf,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kulm_vf,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_uf,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_vf,
+                           libMesh::DenseMatrix<libMesh::Number> & Kf_lm,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kuf_ulm,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kuf_vlm,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kvf_ulm,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vlm) const;
+
+    //! Appropriately size, reposition coupled Jacobians for 3D case
+    /*!
+     *  Since the solid context wont have these Jacobians coupling fluid variables
+     *  with any of the solid variables, we need to manually manage them. We reuse
+     *  the 2D function for the 2D terms and then just handle the remaining
+     *  3D terms.
+     */
+    void prepare_jacobians(unsigned int n_fluid_dofs,
+                           unsigned int n_solid_dofs,
+                           unsigned int n_lambda_dofs,
+                           libMesh::DenseMatrix<libMesh::Number> & Kf_s,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kuf_us,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kuf_vs,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kuf_ws,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kvf_us,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vs,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kvf_ws,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kwf_us,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kwf_vs,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kwf_ws,
+                           libMesh::DenseMatrix<libMesh::Number> & Klm_f,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kulm_uf,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kulm_vf,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kulm_wf,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_uf,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_vf,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_wf,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kwlm_uf,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kwlm_vf,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kwlm_wf,
+                           libMesh::DenseMatrix<libMesh::Number> & Kf_lm,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kuf_ulm,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kuf_vlm,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kuf_wlm,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kvf_ulm,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vlm,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kvf_wlm,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kwf_ulm,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kwf_vlm,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kwf_wlm) const;
+
   };
 
 } // end namespace GRINS
