@@ -30,6 +30,9 @@
 #include "grins/single_variable.h"
 #include "grins/multi_component_vector_variable.h"
 #include "grins/multiphysics_sys.h"
+#include "grins/overlapping_fluid_solid_map.h"
+#include "grins/overlapping_fluid_solid_coupling_functor.h"
+#include "libmesh/coupling_matrix.h"
 
 namespace GRINS
 {
@@ -79,6 +82,15 @@ namespace GRINS
     //! Point locator on mesh for determining overlap
     std::unique_ptr<libMesh::PointLocatorBase> _point_locator;
 
+    //! Data structure that holds current fluid/solid overlap
+    std::unique_ptr<OverlappingFluidSolidMap> _fluid_solid_overlap;
+
+    //! Coupling functor object that tells libMesh about additional coupling between fluid/solid
+    std::unique_ptr<OverlappingFluidSolidCouplingFunctor> _coupling_functor;
+
+    //! To contain the coupling between the variables
+    std::unique_ptr<libMesh::CouplingMatrix> _coupling_matrix;
+
     //! Ghosted vector to store the previous time step solution (U_{n-1})
     std::unique_ptr<libMesh::NumericVector<libMesh::Number>> _prev_time_step_local_nonlinear_solution;
 
@@ -108,6 +120,18 @@ namespace GRINS
 
     //! Reinit all relevant ghosted vectors
     void reinit_all_ghosted_vectors( MultiphysicsSystem & system );
+
+    //! Reinitializes all overlapping data structures and dependencies
+    /*!
+     * Rebuilds the OverlappingFluidSolidMap, OverlappingFluidSolidCouplingFunctor
+     * and then reinitializes the appropriates parts of the DofMap and System objects.
+     * If use_old_solution is true, this the OverlappingFluidSolidMap will use the solution
+     * at the current time step (U_n) instead of the "next" (the one currently being sovle for)
+     * time step (U_{n+1}). This will enable, essentially a semi-implicit method instead
+     * of fully implicit method.
+     */
+    void reinit_overlapping_data( MultiphysicsSystem & system,
+                                  bool use_old_solution );
 
   };
 
