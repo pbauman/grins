@@ -94,6 +94,7 @@ namespace GRINS
   {
     this->reinit_point_locator(system);
     this->add_previous_time_step_parallel_vector_to_system(system);
+    this->build_fluid_context(system);
   }
 
   void FictitiousDomainFluidStructureInteractionAbstract::preadvance_timestep( MultiphysicsSystem & system )
@@ -256,6 +257,13 @@ namespace GRINS
     libMesh::SparseMatrix<libMesh::Number> & matrix = system.get_matrix("System Matrix");
     libmesh_assert(dof_map.is_attached(matrix));
     matrix.init();
+  }
+
+  void FictitiousDomainFluidStructureInteractionAbstract::build_fluid_context( MultiphysicsSystem & system )
+  {
+    std::unique_ptr<libMesh::DiffContext> raw_context = system.build_context();
+    AssemblyContext * context = libMesh::cast_ptr<AssemblyContext*>(raw_context.release());
+    _fluid_context.reset(context);
   }
 
 } // end namespace GRINS
