@@ -97,6 +97,8 @@ namespace GRINS
     //! To contain the coupling between the variables
     std::unique_ptr<libMesh::CouplingMatrix> _coupling_matrix;
 
+    std::unique_ptr<AssemblyContext> _fluid_context;
+
     //! Ghosted vector to store the previous time step solution (U_{n-1})
     std::unique_ptr<libMesh::NumericVector<libMesh::Number>> _prev_time_step_local_nonlinear_solution;
 
@@ -144,6 +146,10 @@ namespace GRINS
      */
     void reinit_overlapping_data( MultiphysicsSystem & system,
                                   bool use_old_solution );
+
+
+    //! Build our local fluid context once and the reinit it when needed
+    void build_fluid_context( MultiphysicsSystem & system );
 
   };
 
