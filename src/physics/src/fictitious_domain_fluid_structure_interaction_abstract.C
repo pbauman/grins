@@ -45,6 +45,18 @@ namespace GRINS
   {
     _lambda_var.set_is_constraint_var(true);
     _solid_press_var.set_is_constraint_var(true);
+
+    // Parse fluid data
+    {
+      std::string subsection("Fluid");
+      this->parse_subdomain_ids(physics_name, input, subsection, _fluid_subdomain_ids );
+    }
+
+    // Parse solid data
+    {
+      std::string subsection("Solid");
+      this->parse_subdomain_ids(physics_name, input, subsection, _solid_subdomain_ids );
+    }
   }
 
   void FictitiousDomainFluidStructureInteractionAbstract::set_time_evolving_vars( libMesh::FEMSystem* system )
@@ -68,5 +80,23 @@ namespace GRINS
       system->time_evolving(_disp_vars.w(),1);
   }
 
+  void FictitiousDomainFluidStructureInteractionAbstract::parse_subdomain_ids
+  ( const PhysicsName & physics_name,
+    const GetPot & input,
+    const std::string & subsection,
+    std::set<libMesh::subdomain_id_type> & subdomain_ids)
+  {
+    std::string var_string = "Physics/"+physics_name+"/"+subsection+"/subdomains";
+
+    if( !input.have_variable(var_string) )
+      libmesh_error_msg("ERROR: Could not find required input variable: "+var_string+"!\n");
+
+    unsigned int n_subdomains = input.vector_variable_size(var_string);
+    if( n_subdomains == 0 )
+      libmesh_error_msg("Error: Must specify at least one enabled subdomain for "+var_string+"!\n");
+
+    for( unsigned int s = 0; s < n_subdomains; s++ )
+      subdomain_ids.insert( input(var_string,std::numeric_limits<libMesh::subdomain_id_type>::max(), s) );
+  }
 
 } // end namespace GRINS
