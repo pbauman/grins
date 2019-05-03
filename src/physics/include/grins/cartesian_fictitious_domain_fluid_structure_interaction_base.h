@@ -46,6 +46,8 @@ namespace GRINS
     //! Context initialization
     virtual void init_context( AssemblyContext & context ) override;
 
+    virtual void element_time_derivative( bool compute_jacobian, AssemblyContext& context ) override;
+
   protected:
 
     void check_variable_dim_consistency() const;
