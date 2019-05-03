@@ -105,6 +105,12 @@ namespace GRINS
                               const std::string & subsection,
                               std::set<libMesh::subdomain_id_type> & subdomain_ids );
 
+    bool is_solid_elem( libMesh::subdomain_id_type elem_id ) const
+    { return _solid_subdomain_ids.find(elem_id) != _solid_subdomain_ids.end(); }
+
+    bool is_fluid_elem( libMesh::subdomain_id_type elem_id ) const
+    { return _fluid_subdomain_ids.find(elem_id) != _fluid_subdomain_ids.end(); }
+
     libMesh::Real parse_density( const PhysicsName & physics_name,
                                  const GetPot & input,
                                  const std::string & subsection );
