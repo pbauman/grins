@@ -121,4 +121,17 @@ namespace GRINS
     return input(option,0.0);
   }
 
+  void FictitiousDomainFluidStructureInteractionAbstract::add_previous_time_step_parallel_vector_to_system
+  ( MultiphysicsSystem & system ) const
+  {
+    libMesh::NumericVector<libMesh::Number> & prev_time_step_nonlinear_soln =
+      system.add_vector("_prev_time_step_nonlinear_solution");
+
+    // This should be a parallel vector. The ghosted version we will store locally in this class.
+    // We don't deal with localizing the ghosted version now because that will be taken care of
+    // with all other ghosted vectors.
+    if(!prev_time_step_nonlinear_soln.initialized())
+      prev_time_step_nonlinear_soln.init(system.n_dofs(), system.n_local_dofs(), false, libMesh::PARALLEL);
+  }
+
 } // end namespace GRINS
