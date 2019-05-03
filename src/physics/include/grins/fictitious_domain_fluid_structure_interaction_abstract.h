@@ -97,6 +97,12 @@ namespace GRINS
     //! We need a parallel vector to store the U_{n-1} time step.
     void add_previous_time_step_parallel_vector_to_system( MultiphysicsSystem & system ) const;
 
+    //! Rebuild and localize the ghosted vector from the parallel vector
+    void reinit_single_ghosted_vector
+    ( MultiphysicsSystem & system,
+      const libMesh::NumericVector<libMesh::Number> & parallel_vector,
+      std::unique_ptr<libMesh::NumericVector<libMesh::Number>> & ghosted_vector ) const;
+
   };
 
 } // end namespace GRINS
