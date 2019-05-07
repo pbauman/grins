@@ -240,6 +240,10 @@ namespace GRINS
                                  libMesh::DenseMatrix<libMesh::Number> & Klm_f,
                                  libMesh::DenseMatrix<libMesh::Number> & Kf_lm );
 
+    void get_prev_time_elem_solution( AssemblyContext & solid_context,
+                                      libMesh::DenseVector<libMesh::Number> & prev_time_solution ) const;
+
+
     template<unsigned int Dim, bool UseOldDisplacement>
     void compute_displaced_point( const MultiphysicsSystem & system,
                                   AssemblyContext & solid_context,
