@@ -79,6 +79,24 @@ namespace GRINS
     return std::string("ERROR: Expected variable to have dimension "+ds.str()+"\n, but found "+vs.str()+"!\n");
   }
 
+  template<unsigned int Dim, bool UseOldDisplacement>
+  libMesh::Tensor CartesianFictitiousDomainFluidStructureInteractionBase<Dim,UseOldDisplacement>::form_def_gradient
+  ( const libMesh::Gradient & grad_u, const libMesh::Gradient & grad_v ) const
+  {
+    return libMesh::Tensor( 1.0+grad_u(0), grad_u(1), 0.0,
+                            grad_v(0), 1.0+grad_v(1), 0.0,
+                            0.0,           0.0,       1.0 );
+  }
+
+  template<unsigned int Dim, bool UseOldDisplacement>
+  libMesh::Tensor CartesianFictitiousDomainFluidStructureInteractionBase<Dim,UseOldDisplacement>::form_def_gradient
+  ( const libMesh::Gradient & grad_u, const libMesh::Gradient & grad_v, const libMesh::Gradient & grad_w ) const
+  {
+    return libMesh::Tensor( 1.0+grad_u(0), grad_u(1), grad_u(2),
+                            grad_v(0), 1.0+grad_v(1), grad_v(2),
+                            grad_w(0), grad_w(1), 1.0+grad_w(2) );
+  }
+
   // Instantiate
   template class CartesianFictitiousDomainFluidStructureInteractionBase<2,false>;
   template class CartesianFictitiousDomainFluidStructureInteractionBase<3,false>;
