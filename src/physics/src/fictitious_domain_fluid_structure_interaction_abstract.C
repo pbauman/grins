@@ -592,6 +592,64 @@ namespace GRINS
       solid_context.get_elem_solution() = elem_solution_copy;
   }
 
+  template<unsigned int Dim>
+  void FictitiousDomainFluidStructureInteractionAbstract::compute_displacement_accel
+  ( AssemblyContext & solid_context,
+    const unsigned int qp,
+    libMesh::Gradient & Uddot /*\ddot{U}*/ )
+  {
+    MultiphysicsSystem & system = solid_context.get_multiphysics_system();
+
+    // Compute U_{n+1}
+    libMesh::Gradient Unp1;
+    solid_context.interior_value(this->_disp_vars.u(), qp, Unp1(0));
+    solid_context.interior_value(this->_disp_vars.v(), qp, Unp1(1));
+    if(Dim==3)
+      solid_context.interior_value(this->_disp_vars.w(), qp, Unp1(2));
+
+
+    libMesh::DenseVector<libMesh::Number> old_elem_solution(solid_context.get_elem_solution().size());
+    libMesh::DenseVector<libMesh::Number> elem_solution_copy(solid_context.get_elem_solution().size());
+    elem_solution_copy = solid_context.get_elem_solution();
+
+    // Compute U_{n}
+    libMesh::Gradient Un;
+    {
+      // This populates the old_elem_solution vector for the solid element
+      // using the solution values from the prevous timestep
+      solid_context.get_old_elem_solution(system,old_elem_solution);
+
+      // Put in the old_elem_solution so we use the previous timestep values
+      solid_context.get_elem_solution() = old_elem_solution;
+
+      solid_context.interior_value(this->_disp_vars.u(), qp, Un(0));
+      solid_context.interior_value(this->_disp_vars.v(), qp, Un(1));
+      if(Dim==3)
+        solid_context.interior_value(this->_disp_vars.w(), qp, Un(2));
+    }
+
+    // Compute U_{n-1}
+    libMesh::Gradient Unm1;
+    {
+      this->get_prev_time_elem_solution(solid_context,old_elem_solution);
+
+      // Put in the old_old_elem_solution so we use the previous timestep values
+      solid_context.get_elem_solution() = old_elem_solution;
+
+      solid_context.interior_value(this->_disp_vars.u(), qp, Unm1(0));
+      solid_context.interior_value(this->_disp_vars.v(), qp, Unm1(1));
+      if(Dim==3)
+        solid_context.interior_value(this->_disp_vars.v(), qp, Unm1(2));
+    }
+
+    // Copy back
+    solid_context.get_elem_solution() = elem_solution_copy;
+
+    libMesh::Real dt = solid_context.get_deltat_value();
+
+    Uddot = (Unp1 -2*Un + Unm1)/(dt*dt);
+  }
+
   // Instantiate
   template void FictitiousDomainFluidStructureInteractionAbstract::assemble_coupled_terms<2>
   ( bool, MultiphysicsSystem &, const AssemblyContext &, AssemblyContext &,
@@ -626,5 +684,11 @@ namespace GRINS
   template void FictitiousDomainFluidStructureInteractionAbstract::reinit_fluid_context<3>
   ( const libMesh::Point &, const libMesh::Gradient &, const libMesh::Elem *, AssemblyContext & );
 
+
+  template void FictitiousDomainFluidStructureInteractionAbstract::compute_displacement_accel<2>
+  ( AssemblyContext &, const unsigned int, libMesh::Gradient & );
+
+  template void FictitiousDomainFluidStructureInteractionAbstract::compute_displacement_accel<3>
+  ( AssemblyContext &, const unsigned int, libMesh::Gradient & );
 
 } // end namespace GRINS
