@@ -547,6 +547,18 @@ namespace GRINS
       } // compute_jacobian
   }
 
+  void FictitiousDomainFluidStructureInteractionAbstract::get_prev_time_elem_solution
+  ( AssemblyContext & solid_context,
+    libMesh::DenseVector<libMesh::Number> & prev_time_solution ) const
+  {
+    unsigned int n_dofs = solid_context.get_elem_solution().size();
+    libmesh_assert_equal_to( prev_time_solution.size(), n_dofs);
+
+    for (unsigned int i=0; i != n_dofs; ++i)
+      prev_time_solution(i) =
+        (*(this->_prev_time_step_local_nonlinear_solution))(solid_context.get_dof_indices()[i]);
+  }
+
   template<unsigned int Dim, bool UseOldDisplacement>
   void FictitiousDomainFluidStructureInteractionAbstract::compute_displaced_point
   ( const MultiphysicsSystem & system,
