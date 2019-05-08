@@ -234,6 +234,12 @@ namespace GRINS
                                  libMesh::DenseMatrix<libMesh::Number> & Klm_f,
                                  libMesh::DenseMatrix<libMesh::Number> & Kf_lm );
 
+    template<unsigned int Dim, bool UseOldDisplacement>
+    void compute_displaced_point( const MultiphysicsSystem & system,
+                                  AssemblyContext & solid_context,
+                                  const unsigned int qp,
+                                  libMesh::Gradient & U) const;
+
   };
 
 } // end namespace GRINS
