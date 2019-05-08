@@ -41,6 +41,9 @@ namespace GRINS
     static VariableFactoryBasic<SingleVariable>
       grins_factory_single_var(VariablesParsing::single_var_section());
 
+    static VariableFactoryBasic<MultcomponentVectorVariable>
+      grins_factory_vector_var(VariablesParsing::vector_var_section());
+
     static VariableFactoryBasic<PressureFEVariable>
       grins_factory_press_fe_var(VariablesParsing::pressure_section());
 
