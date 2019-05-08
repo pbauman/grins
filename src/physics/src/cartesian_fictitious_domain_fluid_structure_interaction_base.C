@@ -481,7 +481,7 @@ namespace GRINS
                         for( int j = 0; j < n_lambda_dofs; j++ )
                           {
                             const libMesh::Real l2_value =
-                              lambda_phi[j][qp]*fluid_phi[i][0]*jac*solid_context.get_elem_solution_derivative();
+                              lambda_phi[j][qp]*phiJ*solid_context.get_elem_solution_derivative();
 
                             if(Dim==2)
                               {
@@ -498,9 +498,12 @@ namespace GRINS
                       } // compute jacobian
                   }
 
-                // Solid residual
+                //============================================
+                // Solid residual terms
+                //============================================
                 for (int i=0; i != n_solid_dofs; i++)
                   {
+                    libMesh::Real phiJ = solid_phi[i][qp]*jac;
                     libMesh::RealGradient dphiJ(solid_dphi[i][qp]*solid_JxW[qp]);
 
                     if(Dim==2)
@@ -508,20 +511,57 @@ namespace GRINS
                         weak_form.evaluate_internal_stress_residual
                           (P,dphiJ,Fus(i),Fvs(i));
                         weak_form.evaluate_pressure_stress_residual
-                          (J,ps,FCinv,dphiJ,Fus(i),Fvs(i));
+                          (J,solid_press,FCinv,dphiJ,Fus(i),Fvs(i));
+
+                        // Acceleration term
+                        Fus(i) += delta_rho*Uddot(0)*phiJ;
+                        Fvs(i) += delta_rho*Uddot(1)*phiJ;
+
+                        //L2 Norm
+                        Fus(i) -= lambda_x*phiJ;
+                        Fvs(i) -= lambda_y*phiJ;
+
+                        //H1 Norm
+                        for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
+                          {
+                            Fus(i) -= grad_lambda_x(alpha)*dphiJ(alpha);
+                            Fvs(i) -= grad_lambda_y(alpha)*dphiJ(alpha);
+                          }
+
                       }
                     else if(Dim==3)
                       {
                         weak_form.evaluate_internal_stress_residual
                           (P,dphiJ,Fus(i),Fvs(i),(*Fws)(i));
                         weak_form.evaluate_pressure_stress_residual
-                          (J,ps,FCinv,dphiJ,Fus(i),Fvs(i),(*Fws)(i));
+                          (J,solid_press,FCinv,dphiJ,Fus(i),Fvs(i),(*Fws)(i));
+
+                        // Acceleration term
+                        Fus(i) += delta_rho*Uddot(0)*phiJ;
+                        Fvs(i) += delta_rho*Uddot(1)*phiJ;
+                        (*Fws)(i) += delta_rho*Uddot(2)*phiJ;
+
+                        //L2 Norm
+                        Fus(i) -= lambda_x*phiJ;
+                        Fvs(i) -= lambda_y*phiJ;
+                        (*Fws)(i) -= lambda_z*phiJ;
+
+                        //H1 Norm
+                        for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
+                          {
+                            Fus(i) -= grad_lambda_x(alpha)*dphiJ(alpha);
+                            Fvs(i) -= grad_lambda_y(alpha)*dphiJ(alpha);
+                            (*Fws)(i) -= grad_lambda_z(alpha)*dphiJ(alpha);
+                          }
                       }
 
                     if( compute_jacobian )
                       {
+                        // Solid derivatives
                         for( int j = 0; j != n_solid_dofs; j++ )
                           {
+                            libMesh::Real accel_value = delta_rho*phiJ*solid_phi[j][qp]/dt2;
+
                             if(Dim==2)
                               {
                                 weak_form.evaluate_internal_stress_jacobian
@@ -530,8 +570,12 @@ namespace GRINS
                                    Kvs_us(i,j),Kvs_vs(i,j));
 
                                 weak_form.evaluate_pressure_stress_displacement_jacobian
-                                  (J,ps,F,Cinv,FCinv,dphiJ,solid_dphi[j][qp],
+                                  (J,solid_press,F,Cinv,FCinv,dphiJ,solid_dphi[j][qp],
                                    Kus_us(i,j),Kus_vs(i,j),Kvs_us(i,j),Kvs_vs(i,j) );
+
+                                // Acceleration term
+                                Kus_us(i,j) += accel_value;
+                                Kvs_vs(i,j) += accel_value;
                               }
                             else if(Dim==3)
                               {
@@ -542,13 +586,19 @@ namespace GRINS
                                    (*Kws_us)(i,j), (*Kws_vs)(i,j), (*Kws_ws)(i,j));
 
                                 weak_form.evaluate_pressure_stress_displacement_jacobian
-                                  (J,ps,F,Cinv,FCinv,dphiJ,solid_dphi[j][qp],
+                                  (J,solid_press,F,Cinv,FCinv,dphiJ,solid_dphi[j][qp],
                                    Kus_us(i,j), Kus_vs(i,j), (*Kus_ws)(i,j),
                                    Kvs_us(i,j), Kvs_vs(i,j), (*Kvs_ws)(i,j),
                                    (*Kws_us)(i,j), (*Kws_vs)(i,j), (*Kws_ws)(i,j) );
+
+                                // Acceleration term
+                                Kus_us(i,j) += accel_value;
+                                Kvs_vs(i,j) += accel_value;
+                                (*Kws_ws)(i,j) += accel_value;
                               }
                           } // end displacement dof loop
 
+                        // Solid pressure derivatives
                         for( int j = 0; j != n_solid_press_dofs; j++ )
                           {
                             if(Dim==2)
@@ -562,6 +612,25 @@ namespace GRINS
                                   Kus_ps(i,j),Kvs_ps(i,j),(*Kws_ps)(i,j) );
 
                           } // end pressure dof loop
+
+                        // lambda derivatives
+                        for( int j = 0; j < n_lambda_dofs; j++ )
+                          {
+                            const libMesh::Real l2_value =
+                              lambda_phi[j][qp]*phiJ*solid_context.get_elem_solution_derivative();
+
+                            if(Dim==2)
+                              {
+                                Kus_ulm(i,j) -= l2_value;
+                                Kvs_vlm(i,j) -= l2_value;
+                              }
+                            if(Dim==3)
+                              {
+                                Kus_ulm(i,j) -= l2_value;
+                                Kvs_vlm(i,j) -= l2_value;
+                                (*Kws_wlm)(i,j) -= l2_value;
+                              }
+                          }
 
                       } // compute jacobian
 
