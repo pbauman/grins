@@ -526,6 +526,39 @@ namespace GRINS
       } // compute_jacobian
   }
 
+  template<unsigned int Dim, bool UseOldDisplacement>
+  void FictitiousDomainFluidStructureInteractionAbstract::compute_displaced_point
+  ( const MultiphysicsSystem & system,
+    AssemblyContext & solid_context,
+    const unsigned int qp,
+    libMesh::Gradient & U) const
+  {
+    libMesh::DenseVector<libMesh::Number> elem_solution_copy(solid_context.get_elem_solution().size());
+
+    if(UseOldDisplacement)
+      {
+        // Compute position of displaced quadrature point at the previous time step
+        libMesh::DenseVector<libMesh::Number> old_elem_solution(solid_context.get_elem_solution().size());
+
+        // This populates the old_elem_solution vector for the solid element
+        // using the solution values from the prevous timestep
+        solid_context.get_old_elem_solution(system,old_elem_solution);
+
+        // Put in the old_elem_solution so we use the previous timestep values
+        elem_solution_copy = solid_context.get_elem_solution();
+        solid_context.get_elem_solution() = old_elem_solution;
+      }
+
+    solid_context.interior_value(this->_disp_vars.u(), qp, U(0) );
+    solid_context.interior_value(this->_disp_vars.v(), qp, U(1) );
+    if(Dim==3)
+      solid_context.interior_value(this->_disp_vars.w(), qp, U(2) );
+
+    // Copy back
+    if(UseOldDisplacement)
+      solid_context.get_elem_solution() = elem_solution_copy;
+  }
+
   // Instantiate
   template void FictitiousDomainFluidStructureInteractionAbstract::assemble_coupled_terms<2>
   ( bool, MultiphysicsSystem &, const AssemblyContext &, AssemblyContext &,
@@ -540,5 +573,18 @@ namespace GRINS
     libMesh::DenseMatrix<libMesh::Number> &,
     libMesh::DenseMatrix<libMesh::Number> &,
     libMesh::DenseMatrix<libMesh::Number> &);
+
+  template void FictitiousDomainFluidStructureInteractionAbstract::compute_displaced_point<2,false>
+  ( const MultiphysicsSystem &, AssemblyContext &, const unsigned int, libMesh::Gradient &) const;
+
+  template void FictitiousDomainFluidStructureInteractionAbstract::compute_displaced_point<3,false>
+  ( const MultiphysicsSystem &, AssemblyContext &, const unsigned int, libMesh::Gradient &) const;
+
+  template void FictitiousDomainFluidStructureInteractionAbstract::compute_displaced_point<2,true>
+  ( const MultiphysicsSystem &, AssemblyContext &, const unsigned int, libMesh::Gradient &) const;
+
+  template void FictitiousDomainFluidStructureInteractionAbstract::compute_displaced_point<3,true>
+  ( const MultiphysicsSystem &, AssemblyContext &, const unsigned int, libMesh::Gradient &) const;
+
 
 } // end namespace GRINS
