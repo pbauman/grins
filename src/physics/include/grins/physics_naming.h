@@ -197,6 +197,12 @@ namespace GRINS
     static PhysicsName elastic_cable_constant_gravity()
     { return "ElasticCableConstantGravity"+suffix(); }
 
+    static PhysicsName semi_implicit_cartesian_fictitious_domain_fluid_structure_interaction()
+    { return "SemiImplicitCartesianFictitiousDomainFluidStructureInteraction"+suffix(); }
+
+    static PhysicsName fully_implicit_cartesian_fictitious_domain_fluid_structure_interaction()
+    { return "FullyImplicitCartesianFictitiousDomainFluidStructureInteraction"+suffix(); }
+
     static PhysicsName constant_source_term()
     { return "ConstantSourceTerm"+suffix(); }
 
