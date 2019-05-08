@@ -151,6 +151,12 @@ namespace GRINS
     //! Build our local fluid context once and the reinit it when needed
     void build_fluid_context( MultiphysicsSystem & system );
 
+    template<unsigned int Dim>
+    void reinit_fluid_context( const libMesh::Point & x_qp,
+                               const libMesh::Gradient & U,
+                               const libMesh::Elem * fluid_elem,
+                               AssemblyContext & fluid_context );
+
     //! Appropriately size, reposition coupled Jacobians for 2D case
     /*!
      *  Since the solid context wont have these Jacobians coupling fluid variables
