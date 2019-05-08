@@ -36,6 +36,7 @@
 #include "libmesh/dof_map.h"
 #include "libmesh/unsteady_solver.h"
 #include "libmesh/sparse_matrix.h"
+#include "libmesh/fe_interface.h"
 
 namespace GRINS
 {
@@ -95,6 +96,26 @@ namespace GRINS
     this->reinit_point_locator(system);
     this->add_previous_time_step_parallel_vector_to_system(system);
     this->build_fluid_context(system);
+  }
+
+  template<unsigned int Dim>
+  void FictitiousDomainFluidStructureInteractionAbstract::reinit_fluid_context
+  ( const libMesh::Point & x_qp,
+    const libMesh::Gradient & U,
+    const libMesh::Elem * fluid_elem,
+    AssemblyContext & fluid_context )
+  {
+    libMesh::Point X(x_qp+U);
+
+    libMesh::FEBase * fe = fluid_context.get_element_fe(this->_flow_vars.u());
+    libMesh::FEType fetype = fe->get_fe_type();
+
+    //We need to hand *reference* element points to the FEMContext to reinit
+    libMesh::Point x_ref = libMesh::FEInterface::inverse_map(Dim,fetype,fluid_elem,X);
+
+    std::vector<libMesh::Point> x_ref_vec(1,x_ref);
+
+    fluid_context.elem_fe_reinit(&x_ref_vec);
   }
 
   void FictitiousDomainFluidStructureInteractionAbstract::preadvance_timestep( MultiphysicsSystem & system )
@@ -585,6 +606,13 @@ namespace GRINS
 
   template void FictitiousDomainFluidStructureInteractionAbstract::compute_displaced_point<3,true>
   ( const MultiphysicsSystem &, AssemblyContext &, const unsigned int, libMesh::Gradient &) const;
+
+
+  template void FictitiousDomainFluidStructureInteractionAbstract::reinit_fluid_context<2>
+  ( const libMesh::Point &, const libMesh::Gradient &, const libMesh::Elem *, AssemblyContext & );
+
+  template void FictitiousDomainFluidStructureInteractionAbstract::reinit_fluid_context<3>
+  ( const libMesh::Point &, const libMesh::Gradient &, const libMesh::Elem *, AssemblyContext & );
 
 
 } // end namespace GRINS
