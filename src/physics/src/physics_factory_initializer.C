@@ -34,6 +34,7 @@
 #include "grins/physics_factory_plane_stress_solids.h"
 #include "grins/physics_factory_compressible_hyperelasticity.h"
 #include "grins/physics_factory_incompressible_hyperelasticity.h"
+#include "grins/physics_factory_cartesian_fictitious_domain_fluid_structure_interaction.h"
 #include "grins/physics_factory_variable_density_flow.h"
 #include "grins/physics_factory_reacting_flows.h"
 
@@ -82,6 +83,9 @@
 
 #include "grins/compressible_hyperelasticity.h"
 #include "grins/incompressible_hyperelasticity.h"
+
+#include "grins/semi_implicit_cartesian_fictitious_domain_fluid_structure_interaction.h"
+#include "grins/fully_implicit_cartesian_fictitious_domain_fluid_structure_interaction.h"
 
 #include "grins/low_mach_navier_stokes.h"
 #include "grins/low_mach_navier_stokes_braack_stab.h"
@@ -245,6 +249,19 @@ namespace GRINS
       grins_factory_plane_strain_incompressible_hyperelasticity
       (PhysicsNaming::plane_strain_incompressible_hyperelasticity(),
        PhysicsNaming::plane_strain_incompressible_hyperelasticity());
+
+
+    static PhysicsFactoryCartesianFictitiousDomainFluidStructureInteraction<SemiImplicitCartesianFictitiousDomainFluidStructureInteraction>
+      grins_factory_semi_implicit_cartesian_fictitious_domain_fluid_structure_interaction
+      (PhysicsNaming::semi_implicit_cartesian_fictitious_domain_fluid_structure_interaction(),
+       PhysicsNaming::semi_implicit_cartesian_fictitious_domain_fluid_structure_interaction());
+
+    static PhysicsFactoryCartesianFictitiousDomainFluidStructureInteraction<FullyImplicitCartesianFictitiousDomainFluidStructureInteraction>
+      grins_factory_fully_implicit_cartesian_fictitious_domain_fluid_structure_interaction
+      (PhysicsNaming::fully_implicit_cartesian_fictitious_domain_fluid_structure_interaction(),
+       PhysicsNaming::fully_implicit_cartesian_fictitious_domain_fluid_structure_interaction());
+
+
 
     static PhysicsFactoryVariableDensityFlow<LowMachNavierStokes> grins_factory_low_mach_navier_stokes
       (PhysicsNaming::low_mach_navier_stokes(),PhysicsNaming::low_mach_navier_stokes());
