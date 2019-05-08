@@ -62,6 +62,10 @@ namespace GRINS
                                        const libMesh::Gradient & grad_v,
                                        const libMesh::Gradient & grad_w ) const;
 
+    libMesh::Tensor form_fluid_def_gradient(AssemblyContext & solid_context,
+                                            const libMesh::Tensor & F,
+                                            const unsigned int qp) const;
+
   };
 
 } // end namespace GRINS

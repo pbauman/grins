@@ -97,6 +97,47 @@ namespace GRINS
                             grad_w(0), grad_w(1), 1.0+grad_w(2) );
   }
 
+  template<unsigned int Dim, bool UseOldDisplacement>
+  libMesh::Tensor
+  CartesianFictitiousDomainFluidStructureInteractionBase<Dim,UseOldDisplacement>::form_fluid_def_gradient
+  (AssemblyContext & solid_context, const libMesh::Tensor & F, const unsigned int qp) const
+  {
+    if(UseOldDisplacement)
+      {
+        const MultiphysicsSystem & system = solid_context.get_multiphysics_system();
+
+        libMesh::DenseVector<libMesh::Number> old_elem_solution(solid_context.get_elem_solution().size());
+        libMesh::DenseVector<libMesh::Number> elem_solution_copy(solid_context.get_elem_solution().size());
+
+        // This populates the old_elem_solution vector for the solid element
+        // using the solution values from the prevous timestep
+        solid_context.get_old_elem_solution(system,old_elem_solution);
+
+        // Put in the old_elem_solution so we use the previous timestep values
+        elem_solution_copy = solid_context.get_elem_solution();
+        solid_context.get_elem_solution() = old_elem_solution;
+
+        libMesh::Gradient grad_u, grad_v, grad_w;
+        solid_context.interior_gradient(this->_disp_vars.u(), qp, grad_u);
+        solid_context.interior_gradient(this->_disp_vars.v(), qp, grad_v);
+        if(Dim==3)
+          solid_context.interior_gradient(this->_disp_vars.v(), qp, grad_w);
+
+        // Copy back
+        solid_context.get_elem_solution() = elem_solution_copy;
+
+        libMesh::Tensor Fold;
+        if(Dim==2)
+          Fold = this->form_def_gradient(grad_u,grad_v);
+        else if(Dim==3)
+          Fold = this->form_def_gradient(grad_u,grad_v,grad_w);
+
+        return Fold;
+      }
+    else
+      return F;
+  }
+
   // Instantiate
   template class CartesianFictitiousDomainFluidStructureInteractionBase<2,false>;
   template class CartesianFictitiousDomainFluidStructureInteractionBase<3,false>;
