@@ -441,10 +441,61 @@ namespace GRINS
 
                 libMesh::Real jac = solid_JxW[qp];
 
+                //============================================
+                // Fluid residual terms
+                //============================================
                 for (int i=0; i != n_fluid_dofs; i++)
                   {
                     libmesh_assert_equal_to( fluid_phi[i].size(), 1 );
 
+                    libMesh::Real phiJ = fluid_phi[i][0]*jac;
+
+                    if(Dim==2)
+                      {
+                        // L2 Norm
+                        Fuf(i) -= lambda_x*phiJ;
+                        Fvf(i) -= lambda_y*phiJ;
+
+                        // H1 Term
+                        libMesh::Gradient fluid_term = grad_lam_timesFT*fluid_dphi[i][0];
+                        Fuf(i) -= fluid_term(0)*jac;
+                        Fvf(i) -= fluid_term(1)*jac;
+                      }
+                    if(Dim==3)
+                      {
+                        // L2 Norm
+                        Fuf(i) -= lambda_x*phiJ;
+                        Fvf(i) -= lambda_y*phiJ;
+                        (*Fwf)(i) -= lambda_z*phiJ;
+
+                        // H1 Term
+                        libMesh::Gradient fluid_term = grad_lam_timesFT*fluid_dphi[i][0];
+                        Fuf(i) -= fluid_term(0)*jac;
+                        Fvf(i) -= fluid_term(1)*jac;
+                        (*Fwf)(i) -= fluid_term(2)*jac;
+                      }
+
+                    if( compute_jacobian )
+                      {
+                        // Lambda deriviatives
+                        for( int j = 0; j < n_lambda_dofs; j++ )
+                          {
+                            const libMesh::Real l2_value =
+                              lambda_phi[j][qp]*fluid_phi[i][0]*jac*solid_context.get_elem_solution_derivative();
+
+                            if(Dim==2)
+                              {
+                                Kuf_ulm(i,j) -= l2_value;
+                                Kvf_vlm(i,j) -= l2_value;
+                              }
+                            if(Dim==3)
+                              {
+                                Kuf_ulm(i,j) -= l2_value;
+                                Kvf_vlm(i,j) -= l2_value;
+                                (*Kwf_wlm)(i,j) -= l2_value;
+                              }
+                          } // lambda dof loop
+                      } // compute jacobian
                   }
 
                 // Solid residual
