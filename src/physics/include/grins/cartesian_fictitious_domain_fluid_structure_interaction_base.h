@@ -27,6 +27,8 @@
 
 // GRINS
 #include "grins/fictitious_domain_fluid_structure_interaction_abstract.h"
+#include "grins/hyperelastic_strain_energy.h"
+#include "grins/mooney_rivlin.h"
 
 namespace GRINS
 {
@@ -49,6 +51,8 @@ namespace GRINS
     virtual void element_time_derivative( bool compute_jacobian, AssemblyContext& context ) override;
 
   protected:
+
+    std::unique_ptr<HyperelasticStrainEnergy<MooneyRivlin>> _strain_energy;
 
     void check_variable_dim_consistency() const;
 
