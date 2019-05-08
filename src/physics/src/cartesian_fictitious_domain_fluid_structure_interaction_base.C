@@ -27,6 +27,8 @@
 
 // GRINS
 #include "grins/cartesian_hyperelasticity.h"
+#include "grins/mooney_rivlin.h"
+#include "grins/incompressible_hyperelasticity_weak_form.h"
 
 // libMesh
 #include "libmesh/elem.h"
@@ -37,8 +39,14 @@ namespace GRINS
   CartesianFictitiousDomainFluidStructureInteractionBase<Dim,UseOldDisplacement>::
   CartesianFictitiousDomainFluidStructureInteractionBase( const PhysicsName & physics_name,
                                                           const GetPot & input )
-    : FictitiousDomainFluidStructureInteractionAbstract(physics_name,input)
+    : FictitiousDomainFluidStructureInteractionAbstract(physics_name,input),
+      _strain_energy(nullptr)
   {
+    std::string mat_string("Physics/"+physics_name+"/Solid/material");
+    const std::string material = input(mat_string,"DIE!");
+
+    _strain_energy.reset(new MooneyRivlin(input,material));
+
     this->check_variable_dim_consistency();
   }
 
@@ -229,6 +237,13 @@ namespace GRINS
         int n_lambda_dofs = solid_context.get_dof_indices(this->_lambda_var.u()).size();
         int n_solid_press_dofs = solid_context.get_dof_indices(this->_solid_press_var.p()).size();
 
+        libMesh::Real delta_rho = this->_rho_solid - this->_rho_fluid;
+
+        libMesh::Real dt = solid_context.get_deltat_value();
+        libMesh::Real dt2 = dt*dt;
+
+        IncompressibleHyperelasticityWeakForm<MooneyRivlin> weak_form;
+
         // Loop over those fluid elements
         for( const auto & fluid_id : fluid_elem_ids )
           {
@@ -384,7 +399,8 @@ namespace GRINS
                 F_fluid = this->form_fluid_def_gradient(solid_context,F,qp);
 
                 // Builds all our hyperelastic quantities
-                CartesianHyperlasticity<StrainEnergy> stress_law(F, (*(this->_strain_energy)));
+                CartesianHyperlasticity<MooneyRivlin>
+                  stress_law(F, (*(this->_strain_energy)));
 
                 libMesh::Tensor P(stress_law.pk1_stress());
                 const libMesh::Tensor & S = stress_law.get_pk2_stress();
@@ -395,7 +411,36 @@ namespace GRINS
 
                 libMesh::Tensor FCinv(F*Cinv);
 
-                // Fluid residual
+                libMesh::Tensor grad_lam( grad_lambda_x(0), grad_lambda_x(1), 0,
+                                          grad_lambda_y(0), grad_lambda_y(1), 0,
+                                          0, 0, 0);
+                if(Dim==3)
+                  {
+                    grad_lam(0,2) = grad_lambda_x(2);
+                    grad_lam(1,2) = grad_lambda_y(2);
+                    grad_lam(2,0) = grad_lambda_z(0);
+                    grad_lam(2,1) = grad_lambda_z(1);
+                    grad_lam(2,2) = grad_lambda_z(2);
+                  }
+
+                libMesh::Tensor grad_lam_timesFT( grad_lam*(F_fluid.transpose()) );
+
+                libMesh::Tensor gradV( grad_Vx(0),  grad_Vx(1), 0,
+                                       grad_Vy(0), grad_Vy(1), 0,
+                                       0, 0, 0);
+                if(Dim==3)
+                  {
+                    gradV(0,2) = grad_Vx(2);
+                    gradV(1,2) = grad_Vy(2);
+                    gradV(0,2) = grad_Vz(0);
+                    gradV(1,2) = grad_Vz(1);
+                    gradV(2,2) = grad_Vz(2);
+                  }
+
+                libMesh::TensorValue<libMesh::Real> gradV_times_F( gradV*F_fluid );
+
+                libMesh::Real jac = solid_JxW[qp];
+
                 for (int i=0; i != n_fluid_dofs; i++)
                   {
                     libmesh_assert_equal_to( fluid_phi[i].size(), 1 );
@@ -405,8 +450,71 @@ namespace GRINS
                 // Solid residual
                 for (int i=0; i != n_solid_dofs; i++)
                   {
+                    libMesh::RealGradient dphiJ(solid_dphi[i][qp]*solid_JxW[qp]);
 
-                  }
+                    if(Dim==2)
+                      {
+                        weak_form.evaluate_internal_stress_residual
+                          (P,dphiJ,Fus(i),Fvs(i));
+                        weak_form.evaluate_pressure_stress_residual
+                          (J,ps,FCinv,dphiJ,Fus(i),Fvs(i));
+                      }
+                    else if(Dim==3)
+                      {
+                        weak_form.evaluate_internal_stress_residual
+                          (P,dphiJ,Fus(i),Fvs(i),(*Fws)(i));
+                        weak_form.evaluate_pressure_stress_residual
+                          (J,ps,FCinv,dphiJ,Fus(i),Fvs(i),(*Fws)(i));
+                      }
+
+                    if( compute_jacobian )
+                      {
+                        for( int j = 0; j != n_solid_dofs; j++ )
+                          {
+                            if(Dim==2)
+                              {
+                                weak_form.evaluate_internal_stress_jacobian
+                                  (S,F,dphiJ,solid_dphi[j][qp],stress_law,
+                                   Kus_us(i,j),Kus_vs(i,j),
+                                   Kvs_us(i,j),Kvs_vs(i,j));
+
+                                weak_form.evaluate_pressure_stress_displacement_jacobian
+                                  (J,ps,F,Cinv,FCinv,dphiJ,solid_dphi[j][qp],
+                                   Kus_us(i,j),Kus_vs(i,j),Kvs_us(i,j),Kvs_vs(i,j) );
+                              }
+                            else if(Dim==3)
+                              {
+                                weak_form.evaluate_internal_stress_jacobian
+                                  (S,F,dphiJ,solid_dphi[j][qp],stress_law,
+                                   Kus_us(i,j), Kus_vs(i,j), (*Kus_ws)(i,j),
+                                   Kvs_us(i,j), Kvs_vs(i,j), (*Kvs_ws)(i,j),
+                                   (*Kws_us)(i,j), (*Kws_vs)(i,j), (*Kws_ws)(i,j));
+
+                                weak_form.evaluate_pressure_stress_displacement_jacobian
+                                  (J,ps,F,Cinv,FCinv,dphiJ,solid_dphi[j][qp],
+                                   Kus_us(i,j), Kus_vs(i,j), (*Kus_ws)(i,j),
+                                   Kvs_us(i,j), Kvs_vs(i,j), (*Kvs_ws)(i,j),
+                                   (*Kws_us)(i,j), (*Kws_vs)(i,j), (*Kws_ws)(i,j) );
+                              }
+                          } // end displacement dof loop
+
+                        for( int j = 0; j != n_solid_press_dofs; j++ )
+                          {
+                            if(Dim==2)
+                              weak_form.evaluate_pressure_stress_pressure_jacobian
+                                ( J,FCinv,solid_press_phi[j][qp],dphiJ,
+                                  Kus_ps(i,j),Kvs_ps(i,j) );
+
+                            else if(Dim==3)
+                              weak_form.evaluate_pressure_stress_pressure_jacobian
+                                ( J,FCinv,solid_press_phi[j][qp],dphiJ,
+                                  Kus_ps(i,j),Kvs_ps(i,j),(*Kws_ps)(i,j) );
+
+                          } // end pressure dof loop
+
+                      } // compute jacobian
+
+                  } // end displacement dof loop
 
                 // Lambda residual
                 for( int i = 0; i < n_lambda_dofs; i++ )
@@ -419,8 +527,26 @@ namespace GRINS
                 //============================================
                 for( int i = 0; i < n_solid_press_dofs; i++ )
                   {
+                    libMesh::Real phiJ = solid_press_phi[i][qp]*jac;
+                    weak_form.evaluate_pressure_constraint_residual(J,phiJ,Fps(i));
 
-                  }
+                    if( compute_jacobian )
+                      {
+                        for( int j = 0; j != n_solid_dofs; j++ )
+                          {
+                            if(Dim==2)
+                              weak_form.evaluate_pressure_constraint_jacobian
+                                ( J, FCinv, solid_dphi[j][qp], phiJ,
+                                  Kps_us(i,j), Kps_vs(i,j) );
+
+                            else if(Dim==3)
+                              weak_form.evaluate_pressure_constraint_jacobian
+                                ( J, FCinv, solid_dphi[j][qp], phiJ,
+                                  Kps_us(i,j), Kps_vs(i,j), (*Kps_ws)(i,j) );
+                          }
+                      } // compute Jacobian
+
+                  } // end solid pressure dof loop
 
               } // end qp loop
 
