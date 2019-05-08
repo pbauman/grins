@@ -636,11 +636,79 @@ namespace GRINS
 
                   } // end displacement dof loop
 
-                // Lambda residual
+                //============================================
+                // Lambda residual terms
+                //============================================
                 for( int i = 0; i < n_lambda_dofs; i++ )
                   {
+                    libMesh::Real phiJ = lambda_phi[i][qp]*jac;
+                    if(Dim==2)
+                      {
+                        //L2 Norm
+                        Fulm(i) += (Vx - udot)*phiJ;
+                        Fvlm(i) += (Vy - vdot)*phiJ;
 
-                  }
+                        // H1 term
+                        libMesh::Gradient fluid_term = (gradV_times_F-Fdot)*lambda_dphi[i][qp];
+                        Fulm(i) += fluid_term(0)*jac;
+                        Fvlm(i) += fluid_term(1)*jac;
+                      }
+                    if(Dim==3)
+                      {
+                        //L2 Norm
+                        Fulm(i) += (Vx - udot)*phiJ;
+                        Fvlm(i) += (Vy - vdot)*phiJ;
+                        (*Fwlm)(i) += (Vz - wdot)*phiJ;
+
+                        // H1 term
+                        libMesh::Gradient fluid_term = (gradV_times_F-Fdot)*lambda_dphi[i][qp];
+                        Fulm(i) += fluid_term(0)*jac;
+                        Fvlm(i) += fluid_term(1)*jac;
+                        (*Fwlm)(i) += fluid_term(2)*jac;
+                      }
+
+                    if(compute_jacobian)
+                      {
+                        // Solid derivatives
+                        for( int j = 0; j != n_solid_dofs; j++ )
+                          {
+                            const libMesh::Real l2_value =
+                              solid_phi[j][qp]*phiJ*solid_context.get_elem_solution_rate_derivative();
+
+                            if(Dim==2)
+                              {
+                                Kulm_us(i,j) -= l2_value;
+                                Kvlm_vs(i,j) -= l2_value;
+                              }
+                            if(Dim==3)
+                              {
+                                Kulm_us(i,j) -= l2_value;
+                                Kvlm_vs(i,j) -= l2_value;
+                                (*Kwlm_ws)(i,j) -= l2_value;
+                              }
+                          } // end solid dof loop
+
+                        // Fluid derivatives
+                        for (int j=0; j != n_fluid_dofs; j++)
+                          {
+                            libMesh::Real l2_value =
+                              fluid_phi[j][0]*phiJ*solid_context.get_elem_solution_derivative();
+
+                            if(Dim==2)
+                              {
+                                Kulm_uf(i,j) += l2_value;
+                                Kvlm_vf(i,j) += l2_value;
+                              }
+                            if(Dim==3)
+                              {
+                                Kulm_uf(i,j) += l2_value;
+                                Kvlm_vf(i,j) += l2_value;
+                                (*Kwlm_wf)(i,j) += l2_value;
+                              }
+                          } // end fluid dof loop
+
+                      } // compute jacobian
+                  } // End lambda dof loop
 
                 //============================================
                 // Solid pressure residual terms
