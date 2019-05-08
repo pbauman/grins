@@ -480,6 +480,8 @@ include_HEADERS += physics/include/grins/overlapping_fluid_solid_map.h
 include_HEADERS += physics/include/grins/overlapping_fluid_solid_coupling_functor.h
 include_HEADERS += physics/include/grins/fictitious_domain_fluid_structure_interaction_abstract.h
 include_HEADERS += physics/include/grins/cartesian_fictitious_domain_fluid_structure_interaction_base.h
+include_HEADERS += physics/include/grins/semi_implicit_cartesian_fictitious_domain_fluid_structure_interaction.h
+include_HEADERS += physics/include/grins/fully_implicit_cartesian_fictitious_domain_fluid_structure_interaction.h
 
 # src/properties headers
 include_HEADERS += properties/include/grins/property_types.h
