@@ -206,19 +206,19 @@ namespace GRINS
           }
 
         // Extract solid context shape functions
-        const std::vector<std::vector<libMesh::Real> > solid_phi =
+        const std::vector<std::vector<libMesh::Real> > & solid_phi =
           solid_context.get_element_fe(us_var,Dim)->get_phi();
 
-        const std::vector<std::vector<libMesh::RealGradient> > solid_dphi =
+        const std::vector<std::vector<libMesh::RealGradient> > & solid_dphi =
           solid_context.get_element_fe(us_var,Dim)->get_dphi();
 
-        const std::vector<std::vector<libMesh::Real> > lambda_phi =
+        const std::vector<std::vector<libMesh::Real> > & lambda_phi =
           solid_context.get_element_fe(lx_var,Dim)->get_phi();
 
         const std::vector<std::vector<libMesh::RealGradient> > & lambda_dphi =
           solid_context.get_element_fe(lx_var,Dim)->get_dphi();
 
-        const std::vector<std::vector<libMesh::Real> > solid_press_phi =
+        const std::vector<std::vector<libMesh::Real> > & solid_press_phi =
           solid_context.get_element_fe(ps_var,Dim)->get_phi();
 
         const std::vector<libMesh::Real> & solid_JxW =
