@@ -398,6 +398,9 @@ namespace GRINS
 
                 F_fluid = this->form_fluid_def_gradient(solid_context,F,qp);
 
+                // Let's cache this since we will use it repeatedly
+                libMesh::Tensor FfluidT(F_fluid.transpose());
+
                 // Builds all our hyperelastic quantities
                 CartesianHyperlasticity<MooneyRivlin>
                   stress_law(F, (*(this->_strain_energy)));
@@ -422,8 +425,6 @@ namespace GRINS
                     grad_lam(2,1) = grad_lambda_z(1);
                     grad_lam(2,2) = grad_lambda_z(2);
                   }
-
-                libMesh::Tensor grad_lam_timesFT( grad_lam*(F_fluid.transpose()) );
 
                 libMesh::Tensor gradV( grad_Vx(0),  grad_Vx(1), 0,
                                        grad_Vy(0), grad_Vy(1), 0,
@@ -450,6 +451,8 @@ namespace GRINS
 
                     libMesh::Real phiJ = fluid_phi[i][0]*jac;
 
+                    libMesh::Gradient FT_times_dphiJ ( FfluidT*fluid_dphi[i][0]*jac );
+
                     if(Dim==2)
                       {
                         // L2 Norm
@@ -457,11 +460,10 @@ namespace GRINS
                         Fvf(i) -= lambda_y*phiJ;
 
                         // H1 Term
-                        /*
-                        libMesh::Gradient fluid_term = grad_lam_timesFT*fluid_dphi[i][0];
-                        Fuf(i) -= fluid_term(0)*jac;
-                        Fvf(i) -= fluid_term(1)*jac;
-                        */
+                        libMesh::Gradient fluid_term = grad_lam*FT_times_dphiJ;
+
+                        Fuf(i) -= fluid_term(0);
+                        Fvf(i) -= fluid_term(1);
                       }
                     if(Dim==3)
                       {
@@ -471,12 +473,10 @@ namespace GRINS
                         (*Fwf)(i) -= lambda_z*phiJ;
 
                         // H1 Term
-                        /*
-                        libMesh::Gradient fluid_term = grad_lam_timesFT*fluid_dphi[i][0];
+                        libMesh::Gradient fluid_term = grad_lam*FT_times_dphiJ;
                         Fuf(i) -= fluid_term(0)*jac;
                         Fvf(i) -= fluid_term(1)*jac;
                         (*Fwf)(i) -= fluid_term(2)*jac;
-                        */
                       }
 
                     if( compute_jacobian )
@@ -487,16 +487,20 @@ namespace GRINS
                             const libMesh::Real l2_value =
                               lambda_phi[j][qp]*phiJ*solid_context.get_elem_solution_derivative();
 
+
+                            const libMesh::Real h1_value =
+                              lambda_dphi[j][qp]*FT_times_dphiJ*solid_context.get_elem_solution_derivative();
+
                             if(Dim==2)
                               {
-                                Kuf_ulm(i,j) -= l2_value;
-                                Kvf_vlm(i,j) -= l2_value;
+                                Kuf_ulm(i,j) -= (l2_value+h1_value);
+                                Kvf_vlm(i,j) -= (l2_value+h1_value);
                               }
                             if(Dim==3)
                               {
-                                Kuf_ulm(i,j) -= l2_value;
-                                Kvf_vlm(i,j) -= l2_value;
-                                (*Kwf_wlm)(i,j) -= l2_value;
+                                Kuf_ulm(i,j) -= (l2_value+h1_value);
+                                Kvf_vlm(i,j) -= (l2_value+h1_value);
+                                (*Kwf_wlm)(i,j) -= (l2_value+h1_value);
                               }
                           } // lambda dof loop
                       } // compute jacobian
@@ -526,14 +530,11 @@ namespace GRINS
                         Fvs(i) -= lambda_y*phiJ;
 
                         //H1 Norm
-                        /*
                         for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
                           {
                             Fus(i) -= grad_lambda_x(alpha)*dphiJ(alpha);
                             Fvs(i) -= grad_lambda_y(alpha)*dphiJ(alpha);
                           }
-                        */
-
                       }
                     else if(Dim==3)
                       {
@@ -553,14 +554,12 @@ namespace GRINS
                         (*Fws)(i) -= lambda_z*phiJ;
 
                         //H1 Norm
-                        /*
                         for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
                           {
                             Fus(i) -= grad_lambda_x(alpha)*dphiJ(alpha);
                             Fvs(i) -= grad_lambda_y(alpha)*dphiJ(alpha);
                             (*Fws)(i) -= grad_lambda_z(alpha)*dphiJ(alpha);
                           }
-                        */
                       }
 
                     if( compute_jacobian )
@@ -627,16 +626,19 @@ namespace GRINS
                             const libMesh::Real l2_value =
                               lambda_phi[j][qp]*phiJ*solid_context.get_elem_solution_derivative();
 
+                            const libMesh::Real h1_value =
+                              (lambda_dphi[j][qp]*dphiJ)*solid_context.get_elem_solution_derivative();
+
                             if(Dim==2)
                               {
-                                Kus_ulm(i,j) -= l2_value;
-                                Kvs_vlm(i,j) -= l2_value;
+                                Kus_ulm(i,j) -= (l2_value+h1_value);
+                                Kvs_vlm(i,j) -= (l2_value+h1_value);
                               }
                             if(Dim==3)
                               {
-                                Kus_ulm(i,j) -= l2_value;
-                                Kvs_vlm(i,j) -= l2_value;
-                                (*Kws_wlm)(i,j) -= l2_value;
+                                Kus_ulm(i,j) -= (l2_value+h1_value);
+                                Kvs_vlm(i,j) -= (l2_value+h1_value);
+                                (*Kws_wlm)(i,j) -= (l2_value+h1_value);
                               }
                           }
 
@@ -657,11 +659,9 @@ namespace GRINS
                         Fvlm(i) += (Vy - vdot)*phiJ;
 
                         // H1 term
-                        /*
                         libMesh::Gradient fluid_term = (gradV_times_F-Fdot)*lambda_dphi[i][qp];
                         Fulm(i) += fluid_term(0)*jac;
                         Fvlm(i) += fluid_term(1)*jac;
-                        */
                       }
                     if(Dim==3)
                       {
@@ -671,12 +671,10 @@ namespace GRINS
                         (*Fwlm)(i) += (Vz - wdot)*phiJ;
 
                         // H1 term
-                        /*
                         libMesh::Gradient fluid_term = (gradV_times_F-Fdot)*lambda_dphi[i][qp];
                         Fulm(i) += fluid_term(0)*jac;
                         Fvlm(i) += fluid_term(1)*jac;
                         (*Fwlm)(i) += fluid_term(2)*jac;
-                        */
                       }
 
                     if(compute_jacobian)
@@ -687,18 +685,23 @@ namespace GRINS
                             const libMesh::Real l2_value =
                               solid_phi[j][qp]*phiJ*solid_context.get_elem_solution_rate_derivative();
 
+                            const libMesh::Real h1_value =
+                              (solid_dphi[j][qp]*lambda_dphi[i][qp])*jac*solid_context.get_elem_solution_rate_derivative();
+
                             if(Dim==2)
                               {
-                                Kulm_us(i,j) -= l2_value;
-                                Kvlm_vs(i,j) -= l2_value;
+                                Kulm_us(i,j) -= (l2_value+h1_value);
+                                Kvlm_vs(i,j) -= (l2_value+h1_value);
                               }
                             if(Dim==3)
                               {
-                                Kulm_us(i,j) -= l2_value;
-                                Kvlm_vs(i,j) -= l2_value;
-                                (*Kwlm_ws)(i,j) -= l2_value;
+                                Kulm_us(i,j) -= (l2_value+h1_value);
+                                Kvlm_vs(i,j) -= (l2_value+h1_value);
+                                (*Kwlm_ws)(i,j) -= (l2_value+h1_value);
                               }
                           } // end solid dof loop
+
+                        libMesh::Gradient FFluid_times_dphiJ( (F_fluid*lambda_dphi[i][qp])*jac );
 
                         // Fluid derivatives
                         for (int j=0; j != n_fluid_dofs; j++)
@@ -706,16 +709,19 @@ namespace GRINS
                             libMesh::Real l2_value =
                               fluid_phi[j][0]*phiJ*solid_context.get_elem_solution_derivative();
 
+                            const libMesh::Real h1_value =
+                              (fluid_dphi[j][0]*FFluid_times_dphiJ)*solid_context.get_elem_solution_derivative();
+
                             if(Dim==2)
                               {
-                                Kulm_uf(i,j) += l2_value;
-                                Kvlm_vf(i,j) += l2_value;
+                                Kulm_uf(i,j) += l2_value+h1_value;
+                                Kvlm_vf(i,j) += l2_value+h1_value;
                               }
                             if(Dim==3)
                               {
-                                Kulm_uf(i,j) += l2_value;
-                                Kvlm_vf(i,j) += l2_value;
-                                (*Kwlm_wf)(i,j) += l2_value;
+                                Kulm_uf(i,j) += l2_value+h1_value;
+                                Kvlm_vf(i,j) += l2_value+h1_value;
+                                (*Kwlm_wf)(i,j) += l2_value+h1_value;
                               }
                           } // end fluid dof loop
 
