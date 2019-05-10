@@ -67,9 +67,6 @@ namespace GRINS
     //! FE variables for the lagrange multiplier
     MultcomponentVectorVariable & _lambda_var;
 
-    //! FE variable for the fluid pressure
-    PressureFEVariable & _fluid_press_var;
-
     //! FE variable for the solid pressure
     PressureFEVariable & _solid_press_var;
 
