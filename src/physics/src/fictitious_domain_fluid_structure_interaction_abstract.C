@@ -639,7 +639,7 @@ namespace GRINS
       solid_context.interior_value(this->_disp_vars.u(), qp, Unm1(0));
       solid_context.interior_value(this->_disp_vars.v(), qp, Unm1(1));
       if(Dim==3)
-        solid_context.interior_value(this->_disp_vars.v(), qp, Unm1(2));
+        solid_context.interior_value(this->_disp_vars.w(), qp, Unm1(2));
     }
 
     // Copy back
