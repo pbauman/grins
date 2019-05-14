@@ -53,6 +53,9 @@ namespace GRINS
     //! Init point locator, U_{n-1}
     virtual void auxiliary_init( MultiphysicsSystem & system ) override;
 
+    virtual void reinit( MultiphysicsSystem & system ) override
+    { this->reinit_point_locator(system); }
+
     //! Need to advance U_{n-1} before the other NumericVectors are updated
     virtual void preadvance_timestep( MultiphysicsSystem & system ) override;
 
