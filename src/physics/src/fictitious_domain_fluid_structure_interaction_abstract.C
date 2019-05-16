@@ -437,9 +437,11 @@ namespace GRINS
     unsigned int n_fluid_dofs,
     unsigned int n_solid_dofs,
     unsigned int n_lambda_dofs,
+    unsigned int n_fluid_press_dofs,
     libMesh::DenseMatrix<libMesh::Number> & Kf_s,
     libMesh::DenseMatrix<libMesh::Number> & Klm_f,
-    libMesh::DenseMatrix<libMesh::Number> & Kf_lm )
+    libMesh::DenseMatrix<libMesh::Number> & Kf_lm,
+    libMesh::DenseMatrix<libMesh::Number> & Ks_pf )
   {
     std::vector<libMesh::dof_id_type> velocity_dof_indices;
 
@@ -565,6 +567,15 @@ namespace GRINS
     system.matrix->add_matrix( Kf_lm,
                                velocity_dof_indices,
                                lambda_dof_indices );
+
+    system.get_dof_map().constrain_element_matrix
+      ( Ks_pf,
+        solid_dof_indices,
+        fluid_context.get_dof_indices(this->_fluid_press_var.p()), false );
+
+    system.matrix->add_matrix( Ks_pf,
+                               solid_dof_indices,
+                               fluid_context.get_dof_indices(this->_fluid_press_var.p()) );
   }
 
   void FictitiousDomainFluidStructureInteractionAbstract::get_prev_time_elem_solution
@@ -673,14 +684,16 @@ namespace GRINS
   // Instantiate
   template void FictitiousDomainFluidStructureInteractionAbstract::assemble_coupled_jacobians<2>
   ( MultiphysicsSystem &, const AssemblyContext &, AssemblyContext &,
-    unsigned int, unsigned int, unsigned int,
+    unsigned int, unsigned int, unsigned int, unsigned int,
+    libMesh::DenseMatrix<libMesh::Number> &,
     libMesh::DenseMatrix<libMesh::Number> &,
     libMesh::DenseMatrix<libMesh::Number> &,
     libMesh::DenseMatrix<libMesh::Number> &);
 
   template void FictitiousDomainFluidStructureInteractionAbstract::assemble_coupled_jacobians<3>
   ( MultiphysicsSystem &, const AssemblyContext &, AssemblyContext &,
-    unsigned int, unsigned int, unsigned int,
+    unsigned int, unsigned int, unsigned int, unsigned int,
+    libMesh::DenseMatrix<libMesh::Number> &,
     libMesh::DenseMatrix<libMesh::Number> &,
     libMesh::DenseMatrix<libMesh::Number> &,
     libMesh::DenseMatrix<libMesh::Number> &);
