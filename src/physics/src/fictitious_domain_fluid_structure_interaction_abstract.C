@@ -289,7 +289,8 @@ namespace GRINS
   }
 
   void FictitiousDomainFluidStructureInteractionAbstract::prepare_jacobians
-  (unsigned int n_fluid_dofs, unsigned int n_solid_dofs, unsigned int n_lambda_dofs,
+  (unsigned int n_fluid_dofs, unsigned int n_solid_dofs,
+   unsigned int n_lambda_dofs, unsigned int n_fluid_press_dofs,
    libMesh::DenseMatrix<libMesh::Number> & Kf_s,
    libMesh::DenseSubMatrix<libMesh::Number> & Kuf_us,
    libMesh::DenseSubMatrix<libMesh::Number> & Kuf_vs,
@@ -304,7 +305,10 @@ namespace GRINS
    libMesh::DenseSubMatrix<libMesh::Number> & Kuf_ulm,
    libMesh::DenseSubMatrix<libMesh::Number> & Kuf_vlm,
    libMesh::DenseSubMatrix<libMesh::Number> & Kvf_ulm,
-   libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vlm) const
+   libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vlm,
+   libMesh::DenseMatrix<libMesh::Number> & Ks_pf,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kus_pf,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kvs_pf) const
   {
     libmesh_assert_equal_to( this->_flow_vars.dim(),this->_disp_vars.dim() );
     libmesh_assert_equal_to( this->_lambda_var.dim(),this->_flow_vars.dim() );
@@ -330,10 +334,16 @@ namespace GRINS
     Kuf_vlm.reposition( 0, n_lambda_dofs, n_fluid_dofs, n_lambda_dofs );
     Kvf_ulm.reposition( n_fluid_dofs, 0, n_fluid_dofs, n_lambda_dofs );
     Kvf_vlm.reposition( n_fluid_dofs, n_lambda_dofs, n_fluid_dofs, n_lambda_dofs );
+
+    Ks_pf.resize( this->_disp_vars.dim()*n_solid_dofs, n_fluid_press_dofs );
+
+    Kus_pf.reposition( 0,            0, n_solid_dofs, n_fluid_press_dofs );
+    Kvs_pf.reposition( n_solid_dofs, 0, n_solid_dofs, n_fluid_press_dofs );
   }
 
   void FictitiousDomainFluidStructureInteractionAbstract::prepare_jacobians
-  (unsigned int n_fluid_dofs, unsigned int n_solid_dofs, unsigned int n_lambda_dofs,
+  (unsigned int n_fluid_dofs, unsigned int n_solid_dofs,
+   unsigned int n_lambda_dofs, unsigned int n_fluid_press_dofs,
    libMesh::DenseMatrix<libMesh::Number> & Kf_s,
    libMesh::DenseSubMatrix<libMesh::Number> & Kuf_us,
    libMesh::DenseSubMatrix<libMesh::Number> & Kuf_vs,
@@ -363,16 +373,22 @@ namespace GRINS
    libMesh::DenseSubMatrix<libMesh::Number> & Kvf_wlm,
    libMesh::DenseSubMatrix<libMesh::Number> & Kwf_ulm,
    libMesh::DenseSubMatrix<libMesh::Number> & Kwf_vlm,
-   libMesh::DenseSubMatrix<libMesh::Number> & Kwf_wlm) const
+   libMesh::DenseSubMatrix<libMesh::Number> & Kwf_wlm,
+   libMesh::DenseMatrix<libMesh::Number> & Ks_pf,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kus_pf,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kvs_pf,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kws_pf) const
   {
     // We can reuse all the 2-D bits and just handle the 3-D terms
-    this->prepare_jacobians(n_fluid_dofs, n_solid_dofs, n_lambda_dofs,
+    this->prepare_jacobians(n_fluid_dofs, n_solid_dofs, n_lambda_dofs, n_fluid_press_dofs,
                             Kf_s,
                             Kuf_us,Kuf_vs,Kvf_us,Kvf_vs,
                             Klm_f,
                             Kulm_uf,Kulm_vf, Kvlm_uf,Kvlm_vf,
                             Kf_lm,
-                            Kuf_ulm,Kuf_vlm,Kvf_ulm,Kvf_vlm);
+                            Kuf_ulm,Kuf_vlm,Kvf_ulm,Kvf_vlm,
+                            Ks_pf,
+                            Kus_pf, Kvs_pf);
 
     // Fluid-Solid
     Kuf_ws.reposition( 0,              2*n_solid_dofs, n_fluid_dofs, n_solid_dofs );
@@ -394,6 +410,9 @@ namespace GRINS
     Kwf_ulm.reposition( 2*n_fluid_dofs, 0,               n_fluid_dofs, n_lambda_dofs );
     Kwf_vlm.reposition( 2*n_fluid_dofs, n_lambda_dofs,   n_fluid_dofs, n_lambda_dofs );
     Kwf_wlm.reposition( 2*n_fluid_dofs, 2*n_lambda_dofs, n_fluid_dofs, n_lambda_dofs );
+
+    // Solid-fluid pressure
+    Kws_pf.reposition( 2*n_solid_dofs, 0, n_solid_dofs, n_fluid_press_dofs );
   }
 
   void FictitiousDomainFluidStructureInteractionAbstract::assemble_coupled_residuals
