@@ -126,7 +126,12 @@ namespace GRINS
           }
 
 
+        libMesh::DenseMatrix<libMesh::Number> Ks_pf;
+        libMesh::DenseSubMatrix<libMesh::Number> Kus_pf(Ks_pf), Kvs_pf(Ks_pf);
 
+        std::unique_ptr<libMesh::DenseSubMatrix<libMesh::Number>> Kws_pf;
+        if(Dim==3)
+          Kws_pf.reset( new libMesh::DenseSubMatrix<libMesh::Number>(Ks_pf) );
 
         // We need to grab the fluid elements that are overlapping with this solid elem.
         // Then, for that fluid element, extract the indices of the *solid* quadrature points
@@ -151,12 +156,13 @@ namespace GRINS
             fluid_context.pre_fe_reinit(system,fluid_elem);
 
             int n_fluid_dofs = fluid_context.get_dof_indices(this->_flow_vars.u()).size();
+            int n_fluid_press_dofs = fluid_context.get_dof_indices(this->_fluid_press_var.p()).size();
 
             // Prepare the space for Jacobians first if we're computing it
             if ( compute_jacobian )
               {
                 if(Dim==2)
-                  this->prepare_jacobians(n_fluid_dofs, n_solid_dofs, n_lambda_dofs,
+                  this->prepare_jacobians(n_fluid_dofs, n_solid_dofs, n_lambda_dofs, n_fluid_press_dofs,
                                           Kf_s,
                                           Kuf_us,Kuf_vs,
                                           Kvf_us,Kvf_vs,
@@ -165,9 +171,11 @@ namespace GRINS
                                           Kvlm_uf,Kvlm_vf,
                                           Kf_lm,
                                           Kuf_ulm,Kuf_vlm,
-                                          Kvf_ulm,Kvf_vlm);
+                                          Kvf_ulm,Kvf_vlm,
+                                          Ks_pf,
+                                          Kus_pf,Kvs_pf);
                 else if(Dim==3)
-                  this->prepare_jacobians(n_fluid_dofs, n_solid_dofs, n_lambda_dofs,
+                  this->prepare_jacobians(n_fluid_dofs, n_solid_dofs, n_lambda_dofs, n_fluid_press_dofs,
                                           Kf_s,
                                           Kuf_us,Kuf_vs,(*Kuf_ws),
                                           Kvf_us,Kvf_vs,(*Kvf_ws),
@@ -179,7 +187,9 @@ namespace GRINS
                                           Kf_lm,
                                           Kuf_ulm,Kuf_vlm,(*Kuf_wlm),
                                           Kvf_ulm,Kvf_vlm,(*Kvf_wlm),
-                                          (*Kwf_ulm),(*Kwf_vlm),(*Kwf_wlm) );
+                                          (*Kwf_ulm),(*Kwf_vlm),(*Kwf_wlm),
+                                          Ks_pf,
+                                          Kus_pf,Kvs_pf,(*Kws_pf) );
               }
 
 
@@ -199,8 +209,9 @@ namespace GRINS
                  // in the fluid context and the coupled Jacobians into the global data system
                  // residual and Jacobian
                  this->assemble_coupled_jacobians<Dim>( system, solid_context, fluid_context,
-                                                        n_fluid_dofs, n_solid_dofs, n_lambda_dofs,
-                                                        Kf_s, Klm_f, Kf_lm );
+                                                        n_fluid_dofs, n_solid_dofs,
+                                                        n_lambda_dofs, n_fluid_press_dofs,
+                                                        Kf_s, Klm_f, Kf_lm, Ks_pf );
               }
 
           } // loop over fluid elems
@@ -854,6 +865,8 @@ namespace GRINS
     if(Dim==3)
       wf_var = this->_flow_vars.w();
 
+    unsigned int pf_var = this->_fluid_press_var.p();
+
     unsigned int lx_var = this->_lambda_var.u();
     unsigned int ly_var = this->_lambda_var.v();
     unsigned int lz_var = libMesh::invalid_uint;
@@ -888,6 +901,8 @@ namespace GRINS
     // Extract fluid shape functions
     fluid_context.get_element_fe(uf_var,Dim)->get_phi();
     fluid_context.get_element_fe(uf_var,Dim)->get_dphi();
+    fluid_context.get_element_fe(pf_var,Dim)->get_phi();
+    fluid_context.get_element_fe(pf_var,Dim)->get_dphi();
 
     const libMesh::Elem & fluid_elem = fluid_context.get_elem();
 
