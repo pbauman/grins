@@ -249,9 +249,11 @@ namespace GRINS
                                      unsigned int n_fluid_dofs,
                                      unsigned int n_solid_dofs,
                                      unsigned int n_lambda_dofs,
+                                     unsigned int n_fluid_press_dofs,
                                      libMesh::DenseMatrix<libMesh::Number> & Kf_s,
                                      libMesh::DenseMatrix<libMesh::Number> & Klm_f,
-                                     libMesh::DenseMatrix<libMesh::Number> & Kf_lm );
+                                     libMesh::DenseMatrix<libMesh::Number> & Kf_lm,
+                                     libMesh::DenseMatrix<libMesh::Number> & Ks_pf );
 
     void get_prev_time_elem_solution( AssemblyContext & solid_context,
                                       libMesh::DenseVector<libMesh::Number> & prev_time_solution ) const;
