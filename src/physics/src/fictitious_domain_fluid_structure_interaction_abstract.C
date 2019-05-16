@@ -47,10 +47,12 @@ namespace GRINS
      _flow_vars(GRINSPrivate::VariableWarehouse::get_variable_subclass<VelocityVariable>(VariablesParsing::velocity_variable_name(input,physics_name,VariablesParsing::PHYSICS))),
      _disp_vars(GRINSPrivate::VariableWarehouse::get_variable_subclass<DisplacementVariable>(VariablesParsing::disp_variable_name(input,physics_name,VariablesParsing::PHYSICS))),
      _lambda_var(GRINSPrivate::VariableWarehouse::get_variable_subclass<MultcomponentVectorVariable>(VariablesParsing::vector_variable_name(input,physics_name,VariablesParsing::PHYSICS))),
-     _solid_press_var(GRINSPrivate::VariableWarehouse::get_variable_subclass<PressureFEVariable>(VariablesParsing::press_variable_name(input,physics_name,VariablesParsing::PHYSICS)))
+     _solid_press_var(GRINSPrivate::VariableWarehouse::get_variable_subclass<PressureFEVariable>(VariablesParsing::press_variable_name(input,physics_name,VariablesParsing::PHYSICS))),
+     _fluid_press_var(GRINSPrivate::VariableWarehouse::get_variable_subclass<PressureFEVariable>("Pressure"))
   {
     _lambda_var.set_is_constraint_var(true);
     _solid_press_var.set_is_constraint_var(true);
+    _fluid_press_var.set_is_constraint_var(true);
 
     // Parse fluid data
     {
