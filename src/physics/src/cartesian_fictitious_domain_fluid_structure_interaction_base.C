@@ -76,79 +76,11 @@ namespace GRINS
     if( this->is_solid_elem( current_elem.subdomain_id() ) &&
         this->_fluid_solid_overlap->has_overlapping_fluid_elem(current_elem.id()) )
       {
-        // Variable indices
-        unsigned int us_var = this->_disp_vars.u();
-        unsigned int vs_var = this->_disp_vars.v();
-        unsigned int ws_var = libMesh::invalid_uint;
-        if(Dim==3)
-          ws_var = this->_disp_vars.w();
-
-        unsigned int ps_var = this->_solid_press_var.p();
-
-        unsigned int uf_var = this->_flow_vars.u();
-        unsigned int vf_var = this->_flow_vars.v();
-        unsigned int wf_var = libMesh::invalid_uint;
-        if(Dim==3)
-          wf_var = this->_flow_vars.w();
-
-        unsigned int lx_var = this->_lambda_var.u();
-        unsigned int ly_var = this->_lambda_var.v();
-        unsigned int lz_var = libMesh::invalid_uint;
-        if(Dim==3)
-          lz_var = this->_lambda_var.w();
-
-
         // For clarity
         AssemblyContext & solid_context = context;
         AssemblyContext & fluid_context = *(this->_fluid_context);
 
         MultiphysicsSystem & system = solid_context.get_multiphysics_system();
-
-        // Solid residual and Jacobian data structures
-
-
-        libMesh::DenseSubMatrix<libMesh::Number> & Kus_us = solid_context.get_elem_jacobian(us_var,us_var);
-        libMesh::DenseSubMatrix<libMesh::Number> & Kus_vs = solid_context.get_elem_jacobian(us_var,vs_var);
-        libMesh::DenseSubMatrix<libMesh::Number> & Kvs_us = solid_context.get_elem_jacobian(vs_var,us_var);
-        libMesh::DenseSubMatrix<libMesh::Number> & Kvs_vs = solid_context.get_elem_jacobian(vs_var,vs_var);
-
-        libMesh::DenseSubMatrix<libMesh::Number> * Kus_ws = nullptr;
-        libMesh::DenseSubMatrix<libMesh::Number> * Kvs_ws = nullptr;
-        libMesh::DenseSubMatrix<libMesh::Number> * Kws_us = nullptr;
-        libMesh::DenseSubMatrix<libMesh::Number> * Kws_vs = nullptr;
-        libMesh::DenseSubMatrix<libMesh::Number> * Kws_ws = nullptr;
-
-        libMesh::DenseSubMatrix<libMesh::Number> & Kus_ps = solid_context.get_elem_jacobian(us_var,ps_var);
-        libMesh::DenseSubMatrix<libMesh::Number> & Kvs_ps = solid_context.get_elem_jacobian(vs_var,ps_var);
-        libMesh::DenseSubMatrix<libMesh::Number> * Kws_ps = nullptr;
-        if(Dim==3)
-          Kws_ps = &solid_context.get_elem_jacobian(ws_var,ps_var);
-
-        libMesh::DenseSubMatrix<libMesh::Number> & Kps_us = solid_context.get_elem_jacobian(ps_var,us_var);
-        libMesh::DenseSubMatrix<libMesh::Number> & Kps_vs = solid_context.get_elem_jacobian(ps_var,vs_var);
-        libMesh::DenseSubMatrix<libMesh::Number> * Kps_ws = nullptr;
-        if(Dim==3)
-          Kps_ws = &solid_context.get_elem_jacobian(ps_var,ws_var);
-
-
-        libMesh::DenseSubMatrix<libMesh::Number> & Kus_ulm = solid_context.get_elem_jacobian(us_var,lx_var);
-        libMesh::DenseSubMatrix<libMesh::Number> & Kvs_vlm = solid_context.get_elem_jacobian(vs_var,ly_var);
-        libMesh::DenseSubMatrix<libMesh::Number> * Kws_wlm = nullptr;
-
-        libMesh::DenseSubMatrix<libMesh::Number> & Kulm_us = solid_context.get_elem_jacobian(lx_var,us_var);
-        libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_vs = solid_context.get_elem_jacobian(ly_var,vs_var);
-        libMesh::DenseSubMatrix<libMesh::Number> * Kwlm_ws = nullptr;
-
-        if(Dim==3)
-          {
-            Kus_ws = &solid_context.get_elem_jacobian(us_var,ws_var);
-            Kvs_ws = &solid_context.get_elem_jacobian(vs_var,ws_var);
-            Kws_us = &solid_context.get_elem_jacobian(ws_var,us_var);
-            Kws_vs = &solid_context.get_elem_jacobian(ws_var,vs_var);
-            Kws_ws = &solid_context.get_elem_jacobian(ws_var,ws_var);
-            Kws_wlm = &solid_context.get_elem_jacobian(ws_var,lz_var);
-            Kwlm_ws = &solid_context.get_elem_jacobian(lz_var,ws_var);
-          }
 
         // Matrix for coupled Jacobian terms that are not available in the solid_context
         libMesh::DenseMatrix<libMesh::Number> Kf_s;
@@ -193,27 +125,8 @@ namespace GRINS
             Kwf_wlm.reset( new libMesh::DenseSubMatrix<libMesh::Number>(Kf_lm) );
           }
 
-        // Extract solid context shape functions
-        const std::vector<std::vector<libMesh::Real> > & solid_phi =
-          solid_context.get_element_fe(us_var,Dim)->get_phi();
 
-        const std::vector<std::vector<libMesh::RealGradient> > & solid_dphi =
-          solid_context.get_element_fe(us_var,Dim)->get_dphi();
 
-        const std::vector<std::vector<libMesh::Real> > & lambda_phi =
-          solid_context.get_element_fe(lx_var,Dim)->get_phi();
-
-        const std::vector<std::vector<libMesh::RealGradient> > & lambda_dphi =
-          solid_context.get_element_fe(lx_var,Dim)->get_dphi();
-
-        const std::vector<std::vector<libMesh::Real> > & solid_press_phi =
-          solid_context.get_element_fe(ps_var,Dim)->get_phi();
-
-        const std::vector<libMesh::Real> & solid_JxW =
-          solid_context.get_element_fe(us_var,Dim)->get_JxW();
-
-        const std::vector<libMesh::Point> & solid_qpoints =
-          solid_context.get_element_fe(us_var,Dim)->get_xyz();
 
         // We need to grab the fluid elements that are overlapping with this solid elem.
         // Then, for that fluid element, extract the indices of the *solid* quadrature points
@@ -223,12 +136,6 @@ namespace GRINS
 
         int n_solid_dofs = solid_context.get_dof_indices(this->_disp_vars.u()).size();
         int n_lambda_dofs = solid_context.get_dof_indices(this->_lambda_var.u()).size();
-        int n_solid_press_dofs = solid_context.get_dof_indices(this->_solid_press_var.p()).size();
-
-        libMesh::Real delta_rho = this->_rho_solid - this->_rho_fluid;
-
-        libMesh::Real dt = solid_context.get_deltat_value();
-        libMesh::Real dt2 = dt*dt;
 
         IncompressibleHyperelasticityWeakForm<MooneyRivlin> weak_form;
 
@@ -427,9 +334,6 @@ namespace GRINS
 
     libMesh::Real delta_rho = this->_rho_solid - this->_rho_fluid;
 
-    libMesh::Real dt = solid_context.get_deltat_value();
-    libMesh::Real dt2 = dt*dt;
-
     const std::vector<std::vector<libMesh::Real> > & solid_phi =
           solid_context.get_element_fe(us_var,Dim)->get_phi();
 
@@ -448,13 +352,6 @@ namespace GRINS
     const std::vector<std::vector<libMesh::Real> > & fluid_phi =
               fluid_context.get_element_fe(uf_var,Dim)->get_phi();
 
-    /*
-    const std::vector<std::vector<libMesh::RealGradient> > & fluid_dphi =
-      fluid_context.get_element_fe(uf_var,Dim)->get_dphi();
-
-    const std::vector<std::vector<libMesh::RealGradient> > & lambda_dphi =
-      solid_context.get_element_fe(lx_var,Dim)->get_dphi();
-    */
 
     // Compute quantities from the solid context
     libMesh::Real udot, vdot, wdot;
@@ -560,8 +457,6 @@ namespace GRINS
 
 
 
-    const libMesh::Tensor & S = stress_law.get_pk2_stress();
-
     libMesh::Number J = stress_law.get_J();
 
     const libMesh::Tensor & Cinv = stress_law.get_C_inverse();
@@ -607,22 +502,6 @@ namespace GRINS
     libMesh::TensorValue<libMesh::Real> gradV_times_F( gradV*F_fluid );
 
     libMesh::Real jac = solid_JxW[qp];
-
-
-    /*
-     std::cout << "qp = " << qp << std::endl;
-
-     std::cout << "lambda = " << lambda_x << ", " << lambda_y << std::endl;
-     std::cout << "solid_press = " << solid_press << std::endl;
-     std::cout << "V = " << Vx << ", " << Vy << std::endl;
-     std::cout << "F = " << F << std::endl;
-     std::cout << "F_fluid = " << F_fluid << std::endl;
-     std::cout << "P = " << P << std::endl;
-     std::cout << "FCinv = " << FCinv << std::endl;
-     std::cout << "grad_lam = " << grad_lam << std::endl;
-     std::cout << "Fdot = " << Fdot << std::endl;
-     std::cout << "Uddot = " << Uddot << std::endl;
-    */
 
     //============================================
     // Fluid residual terms
@@ -1007,11 +886,8 @@ namespace GRINS
       solid_context.get_element_fe(us_var,Dim)->get_xyz();
 
     // Extract fluid shape functions
-    const std::vector<std::vector<libMesh::Real> > & fluid_phi =
-      fluid_context.get_element_fe(uf_var,Dim)->get_phi();
-
-    const std::vector<std::vector<libMesh::RealGradient> > & fluid_dphi =
-      fluid_context.get_element_fe(uf_var,Dim)->get_dphi();
+    fluid_context.get_element_fe(uf_var,Dim)->get_phi();
+    fluid_context.get_element_fe(uf_var,Dim)->get_dphi();
 
     const libMesh::Elem & fluid_elem = fluid_context.get_elem();
 
