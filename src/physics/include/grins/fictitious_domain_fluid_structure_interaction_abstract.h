@@ -169,6 +169,7 @@ namespace GRINS
     void prepare_jacobians(unsigned int n_fluid_dofs,
                            unsigned int n_solid_dofs,
                            unsigned int n_lambda_dofs,
+                           unsigned int n_fluid_press_dofs,
                            libMesh::DenseMatrix<libMesh::Number> & Kf_s,
                            libMesh::DenseSubMatrix<libMesh::Number> & Kuf_us,
                            libMesh::DenseSubMatrix<libMesh::Number> & Kuf_vs,
@@ -183,7 +184,10 @@ namespace GRINS
                            libMesh::DenseSubMatrix<libMesh::Number> & Kuf_ulm,
                            libMesh::DenseSubMatrix<libMesh::Number> & Kuf_vlm,
                            libMesh::DenseSubMatrix<libMesh::Number> & Kvf_ulm,
-                           libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vlm) const;
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vlm,
+                           libMesh::DenseMatrix<libMesh::Number> & Ks_pf,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kus_pf,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kvs_pf ) const;
 
     //! Appropriately size, reposition coupled Jacobians for 3D case
     /*!
@@ -195,6 +199,7 @@ namespace GRINS
     void prepare_jacobians(unsigned int n_fluid_dofs,
                            unsigned int n_solid_dofs,
                            unsigned int n_lambda_dofs,
+                           unsigned int n_fluid_press_dofs,
                            libMesh::DenseMatrix<libMesh::Number> & Kf_s,
                            libMesh::DenseSubMatrix<libMesh::Number> & Kuf_us,
                            libMesh::DenseSubMatrix<libMesh::Number> & Kuf_vs,
@@ -224,7 +229,11 @@ namespace GRINS
                            libMesh::DenseSubMatrix<libMesh::Number> & Kvf_wlm,
                            libMesh::DenseSubMatrix<libMesh::Number> & Kwf_ulm,
                            libMesh::DenseSubMatrix<libMesh::Number> & Kwf_vlm,
-                           libMesh::DenseSubMatrix<libMesh::Number> & Kwf_wlm) const;
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kwf_wlm,
+                           libMesh::DenseMatrix<libMesh::Number> & Ks_pf,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kus_pf,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kvs_pf,
+                           libMesh::DenseSubMatrix<libMesh::Number> & Kws_pf) const;
 
     void assemble_coupled_residuals( MultiphysicsSystem & system, AssemblyContext & fluid_context );
 
