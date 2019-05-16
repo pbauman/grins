@@ -223,22 +223,23 @@ namespace GRINS
                            libMesh::DenseSubMatrix<libMesh::Number> & Kwf_vlm,
                            libMesh::DenseSubMatrix<libMesh::Number> & Kwf_wlm) const;
 
+    void assemble_coupled_residuals( MultiphysicsSystem & system, AssemblyContext & fluid_context );
+
     //! Assemble local coupling terms into the global residual and Jacobian
     /*!
      *  Only handle the solid-fluid coupling terms. All the terms native/within
      *  the solid context will still be handled by FEMSystem.
      */
     template<unsigned int Dim>
-    void assemble_coupled_terms( bool compute_jacobian,
-                                 MultiphysicsSystem & system,
-                                 const AssemblyContext & solid_context,
-                                 AssemblyContext & fluid_context,
-                                 unsigned int n_fluid_dofs,
-                                 unsigned int n_solid_dofs,
-                                 unsigned int n_lambda_dofs,
-                                 libMesh::DenseMatrix<libMesh::Number> & Kf_s,
-                                 libMesh::DenseMatrix<libMesh::Number> & Klm_f,
-                                 libMesh::DenseMatrix<libMesh::Number> & Kf_lm );
+    void assemble_coupled_jacobians( MultiphysicsSystem & system,
+                                     const AssemblyContext & solid_context,
+                                     AssemblyContext & fluid_context,
+                                     unsigned int n_fluid_dofs,
+                                     unsigned int n_solid_dofs,
+                                     unsigned int n_lambda_dofs,
+                                     libMesh::DenseMatrix<libMesh::Number> & Kf_s,
+                                     libMesh::DenseMatrix<libMesh::Number> & Klm_f,
+                                     libMesh::DenseMatrix<libMesh::Number> & Kf_lm );
 
     void get_prev_time_elem_solution( AssemblyContext & solid_context,
                                       libMesh::DenseVector<libMesh::Number> & prev_time_solution ) const;

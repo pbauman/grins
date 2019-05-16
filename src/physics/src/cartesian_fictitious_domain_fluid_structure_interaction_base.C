@@ -105,19 +105,7 @@ namespace GRINS
         MultiphysicsSystem & system = solid_context.get_multiphysics_system();
 
         // Solid residual and Jacobian data structures
-        libMesh::DenseSubVector<libMesh::Number> & Fus = solid_context.get_elem_residual(us_var);
-        libMesh::DenseSubVector<libMesh::Number> & Fvs = solid_context.get_elem_residual(vs_var);
-        libMesh::DenseSubVector<libMesh::Number> * Fws = nullptr;
-        if(Dim==3)
-          Fws = &solid_context.get_elem_residual(ws_var);
 
-        libMesh::DenseSubVector<libMesh::Number> & Fulm = solid_context.get_elem_residual(lx_var);
-        libMesh::DenseSubVector<libMesh::Number> & Fvlm = solid_context.get_elem_residual(ly_var);
-        libMesh::DenseSubVector<libMesh::Number> * Fwlm = nullptr;
-        if(Dim==3)
-          Fwlm = &solid_context.get_elem_residual(lz_var);
-
-        libMesh::DenseSubVector<libMesh::Number> & Fps = solid_context.get_elem_residual(ps_var);
 
         libMesh::DenseSubMatrix<libMesh::Number> & Kus_us = solid_context.get_elem_jacobian(us_var,us_var);
         libMesh::DenseSubMatrix<libMesh::Number> & Kus_vs = solid_context.get_elem_jacobian(us_var,vs_var);
@@ -288,480 +276,25 @@ namespace GRINS
               }
 
 
-            // Fluid residual data structures
-            libMesh::DenseSubVector<libMesh::Number> & Fuf = fluid_context.get_elem_residual(uf_var);
-            libMesh::DenseSubVector<libMesh::Number> & Fvf = fluid_context.get_elem_residual(vf_var);
-            libMesh::DenseSubVector<libMesh::Number> * Fwf = nullptr;
-            if(Dim==3)
-              Fwf = &fluid_context.get_elem_residual(wf_var);
+            this->compute_ibm_residuals(system,solid_context,fluid_context,qp_indices);
 
-            // Extract fluid shape functions
-            const std::vector<std::vector<libMesh::Real> > & fluid_phi =
-              fluid_context.get_element_fe(uf_var,Dim)->get_phi();
+            this->assemble_coupled_residuals(system,fluid_context);
 
-            const std::vector<std::vector<libMesh::RealGradient> > & fluid_dphi =
-              fluid_context.get_element_fe(uf_var,Dim)->get_dphi();
-
-            // Loop over this set of quadrature points
-            for( const auto & qp : qp_indices )
+            if ( compute_jacobian )
               {
-                // Compute quantities from the solid context
-                libMesh::Real udot, vdot, wdot;
-                solid_context.interior_rate(us_var, qp, udot);
-                solid_context.interior_rate(vs_var, qp, vdot);
-                if(Dim==3)
-                  solid_context.interior_rate(ws_var, qp, wdot);
-
-                libMesh::Gradient Uddot;
-                this->compute_displacement_accel<Dim>(solid_context,qp,Uddot);
-
-                libMesh::Gradient grad_u, grad_v, grad_w;
-                solid_context.interior_gradient(us_var, qp, grad_u);
-                solid_context.interior_gradient(vs_var, qp, grad_v);
-                if(Dim==3)
-                  solid_context.interior_gradient(ws_var, qp, grad_w);
-
-                libMesh::Gradient grad_udot, grad_vdot, grad_wdot;
-                solid_context.interior_rate_gradient(us_var, qp, grad_udot);
-                solid_context.interior_rate_gradient(vs_var, qp, grad_vdot);
-                if(Dim==3)
-                  solid_context.interior_rate_gradient(ws_var, qp, grad_wdot);
-
-                libMesh::TensorValue<libMesh::Real> Fdot( grad_udot(0), grad_udot(1), 0,
-                                                          grad_vdot(0), grad_vdot(1), 0,
-                                                          0, 0, 0 );
-                if(Dim==3)
-                  {
-                    Fdot(0,2) = grad_udot(2);
-                    Fdot(1,2) = grad_vdot(2);
-                    Fdot(2,0) = grad_wdot(0);
-                    Fdot(2,1) = grad_wdot(1);
-                    Fdot(2,2) = grad_wdot(2);
-                  }
-
-                libMesh::Real solid_press;
-                solid_context.interior_value(ps_var, qp, solid_press);
-
-                libMesh::Real lambda_x, lambda_y, lambda_z;
-                solid_context.interior_value(lx_var, qp, lambda_x);
-                solid_context.interior_value(ly_var, qp, lambda_y);
-                if(Dim==3)
-                  solid_context.interior_value(lz_var, qp, lambda_z);
-
-                libMesh::Gradient grad_lambda_x, grad_lambda_y, grad_lambda_z;
-                solid_context.interior_gradient(lx_var, qp, grad_lambda_x);
-                solid_context.interior_gradient(ly_var, qp, grad_lambda_y);
-                if(Dim==3)
-                  solid_context.interior_gradient(lz_var, qp, grad_lambda_z);
-
-
-
-                const libMesh::Point & x_qp = solid_qpoints[qp];
-
-                // Compute displacement. This will be U_{n+1} or U_n depending
-                // on the compile-time value of UseOldDisplacement
-                libMesh::Gradient U;
-                this->compute_displaced_point<Dim,UseOldDisplacement>(system,solid_context,qp,U);
-
-                // Reinit fluid context for current solid quadrature point
-                this->reinit_fluid_context<Dim>(x_qp, U, fluid_elem, fluid_context);
-
-
-
-                // Compute quantities from the fluid context
-                // The qp is always "0" since there should be only one point
-                // in this prepared fluid context
-                libMesh::Real Vx, Vy, Vz;
-                fluid_context.interior_value(uf_var, 0, Vx);
-                fluid_context.interior_value(vf_var, 0, Vy);
-                if(Dim==3)
-                  fluid_context.interior_value(wf_var, 0, Vz);
-
-                libMesh::Gradient grad_Vx, grad_Vy, grad_Vz;
-                fluid_context.interior_gradient(uf_var, 0, grad_Vx);
-                fluid_context.interior_gradient(vf_var, 0, grad_Vy);
-                if(Dim==3)
-                  fluid_context.interior_gradient(wf_var, 0, grad_Vz);
-
-                // Setup the deformation gradients
-                // F is the usual deformation gradient and F_fluid
-                // is the one we'll used in the derivatives of
-                // the fluid-shape-function-evaluated-at-deformed-solid-qps
-                // quantities. For semi-implicit algorithms, F_fluid will
-                // be the deformation gradient at U_n while for fully implicit
-                // algorithms F_fluid = F
-                libMesh::Tensor F, F_fluid;
-                if(Dim==2)
-                  F = this->form_def_gradient(grad_u,grad_v);
-                else if(Dim==3)
-                  F = this->form_def_gradient(grad_u,grad_v,grad_w);
-
-                F_fluid = this->form_fluid_def_gradient(solid_context,F,qp);
-
-                // Let's cache this since we will use it repeatedly
-                libMesh::Tensor FfluidT(F_fluid.transpose());
-
-                // Builds all our hyperelastic quantities
-                CartesianHyperlasticity<MooneyRivlin>
-                  stress_law(F, (*(this->_strain_energy)));
-
-                libMesh::Tensor P(stress_law.pk1_stress());
-                const libMesh::Tensor & S = stress_law.get_pk2_stress();
-
-                libMesh::Number J = stress_law.get_J();
-
-                const libMesh::Tensor & Cinv = stress_law.get_C_inverse();
-
-                libMesh::Tensor FCinv(F*Cinv);
-
-                libMesh::Tensor grad_lam( grad_lambda_x(0), grad_lambda_x(1), 0,
-                                          grad_lambda_y(0), grad_lambda_y(1), 0,
-                                          0, 0, 0);
-                if(Dim==3)
-                  {
-                    grad_lam(0,2) = grad_lambda_x(2);
-                    grad_lam(1,2) = grad_lambda_y(2);
-                    grad_lam(2,0) = grad_lambda_z(0);
-                    grad_lam(2,1) = grad_lambda_z(1);
-                    grad_lam(2,2) = grad_lambda_z(2);
-                  }
-
-                libMesh::Tensor gradV( grad_Vx(0),  grad_Vx(1), 0,
-                                       grad_Vy(0), grad_Vy(1), 0,
-                                       0, 0, 0);
-                if(Dim==3)
-                  {
-                    gradV(0,2) = grad_Vx(2);
-                    gradV(1,2) = grad_Vy(2);
-                    gradV(0,2) = grad_Vz(0);
-                    gradV(1,2) = grad_Vz(1);
-                    gradV(2,2) = grad_Vz(2);
-                  }
-
-                libMesh::TensorValue<libMesh::Real> gradV_times_F( gradV*F_fluid );
-
-                libMesh::Real jac = solid_JxW[qp];
-
-                //============================================
-                // Fluid residual terms
-                //============================================
-                for (int i=0; i != n_fluid_dofs; i++)
-                  {
-                    libmesh_assert_equal_to( fluid_phi[i].size(), 1 );
-
-                    libMesh::Real phiJ = fluid_phi[i][0]*jac;
-
-                    libMesh::Gradient FT_times_dphiJ ( FfluidT*fluid_dphi[i][0]*jac );
-
-                    if(Dim==2)
-                      {
-                        // L2 Norm
-                        Fuf(i) -= lambda_x*phiJ;
-                        Fvf(i) -= lambda_y*phiJ;
-
-                        // H1 Term
-                        libMesh::Gradient fluid_term = grad_lam*FT_times_dphiJ;
-
-                        Fuf(i) -= fluid_term(0);
-                        Fvf(i) -= fluid_term(1);
-                      }
-                    if(Dim==3)
-                      {
-                        // L2 Norm
-                        Fuf(i) -= lambda_x*phiJ;
-                        Fvf(i) -= lambda_y*phiJ;
-                        (*Fwf)(i) -= lambda_z*phiJ;
-
-                        // H1 Term
-                        libMesh::Gradient fluid_term = grad_lam*FT_times_dphiJ;
-                        Fuf(i) -= fluid_term(0)*jac;
-                        Fvf(i) -= fluid_term(1)*jac;
-                        (*Fwf)(i) -= fluid_term(2)*jac;
-                      }
-
-                    if( compute_jacobian )
-                      {
-                        // Lambda deriviatives
-                        for( int j = 0; j < n_lambda_dofs; j++ )
-                          {
-                            const libMesh::Real l2_value =
-                              lambda_phi[j][qp]*phiJ*solid_context.get_elem_solution_derivative();
-
-
-                            const libMesh::Real h1_value =
-                              lambda_dphi[j][qp]*FT_times_dphiJ*solid_context.get_elem_solution_derivative();
-
-                            if(Dim==2)
-                              {
-                                Kuf_ulm(i,j) -= (l2_value+h1_value);
-                                Kvf_vlm(i,j) -= (l2_value+h1_value);
-                              }
-                            if(Dim==3)
-                              {
-                                Kuf_ulm(i,j) -= (l2_value+h1_value);
-                                Kvf_vlm(i,j) -= (l2_value+h1_value);
-                                (*Kwf_wlm)(i,j) -= (l2_value+h1_value);
-                              }
-                          } // lambda dof loop
-                      } // compute jacobian
-                  }
-
-                //============================================
-                // Solid residual terms
-                //============================================
-                for (int i=0; i != n_solid_dofs; i++)
-                  {
-                    libMesh::Real phiJ = solid_phi[i][qp]*jac;
-                    libMesh::RealGradient dphiJ(solid_dphi[i][qp]*solid_JxW[qp]);
-
-                    if(Dim==2)
-                      {
-                        weak_form.evaluate_internal_stress_residual
-                          (P,dphiJ,Fus(i),Fvs(i));
-                        weak_form.evaluate_pressure_stress_residual
-                          (J,solid_press,FCinv,dphiJ,Fus(i),Fvs(i));
-
-                        // Acceleration term
-                        Fus(i) += delta_rho*Uddot(0)*phiJ;
-                        Fvs(i) += delta_rho*Uddot(1)*phiJ;
-
-                        //L2 Norm
-                        Fus(i) -= lambda_x*phiJ;
-                        Fvs(i) -= lambda_y*phiJ;
-
-                        //H1 Norm
-                        for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
-                          {
-                            Fus(i) -= grad_lambda_x(alpha)*dphiJ(alpha);
-                            Fvs(i) -= grad_lambda_y(alpha)*dphiJ(alpha);
-                          }
-                      }
-                    else if(Dim==3)
-                      {
-                        weak_form.evaluate_internal_stress_residual
-                          (P,dphiJ,Fus(i),Fvs(i),(*Fws)(i));
-                        weak_form.evaluate_pressure_stress_residual
-                          (J,solid_press,FCinv,dphiJ,Fus(i),Fvs(i),(*Fws)(i));
-
-                        // Acceleration term
-                        Fus(i) += delta_rho*Uddot(0)*phiJ;
-                        Fvs(i) += delta_rho*Uddot(1)*phiJ;
-                        (*Fws)(i) += delta_rho*Uddot(2)*phiJ;
-
-                        //L2 Norm
-                        Fus(i) -= lambda_x*phiJ;
-                        Fvs(i) -= lambda_y*phiJ;
-                        (*Fws)(i) -= lambda_z*phiJ;
-
-                        //H1 Norm
-                        for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
-                          {
-                            Fus(i) -= grad_lambda_x(alpha)*dphiJ(alpha);
-                            Fvs(i) -= grad_lambda_y(alpha)*dphiJ(alpha);
-                            (*Fws)(i) -= grad_lambda_z(alpha)*dphiJ(alpha);
-                          }
-                      }
-
-                    if( compute_jacobian )
-                      {
-                        // Solid derivatives
-                        for( int j = 0; j != n_solid_dofs; j++ )
-                          {
-                            libMesh::Real accel_value = delta_rho*phiJ*solid_phi[j][qp]/dt2;
-
-                            if(Dim==2)
-                              {
-                                weak_form.evaluate_internal_stress_jacobian
-                                  (S,F,dphiJ,solid_dphi[j][qp],stress_law,
-                                   Kus_us(i,j),Kus_vs(i,j),
-                                   Kvs_us(i,j),Kvs_vs(i,j));
-
-                                weak_form.evaluate_pressure_stress_displacement_jacobian
-                                  (J,solid_press,F,Cinv,FCinv,dphiJ,solid_dphi[j][qp],
-                                   Kus_us(i,j),Kus_vs(i,j),Kvs_us(i,j),Kvs_vs(i,j) );
-
-                                // Acceleration term
-                                Kus_us(i,j) += accel_value;
-                                Kvs_vs(i,j) += accel_value;
-                              }
-                            else if(Dim==3)
-                              {
-                                weak_form.evaluate_internal_stress_jacobian
-                                  (S,F,dphiJ,solid_dphi[j][qp],stress_law,
-                                   Kus_us(i,j), Kus_vs(i,j), (*Kus_ws)(i,j),
-                                   Kvs_us(i,j), Kvs_vs(i,j), (*Kvs_ws)(i,j),
-                                   (*Kws_us)(i,j), (*Kws_vs)(i,j), (*Kws_ws)(i,j));
-
-                                weak_form.evaluate_pressure_stress_displacement_jacobian
-                                  (J,solid_press,F,Cinv,FCinv,dphiJ,solid_dphi[j][qp],
-                                   Kus_us(i,j), Kus_vs(i,j), (*Kus_ws)(i,j),
-                                   Kvs_us(i,j), Kvs_vs(i,j), (*Kvs_ws)(i,j),
-                                   (*Kws_us)(i,j), (*Kws_vs)(i,j), (*Kws_ws)(i,j) );
-
-                                // Acceleration term
-                                Kus_us(i,j) += accel_value;
-                                Kvs_vs(i,j) += accel_value;
-                                (*Kws_ws)(i,j) += accel_value;
-                              }
-                          } // end displacement dof loop
-
-                        // Solid pressure derivatives
-                        for( int j = 0; j != n_solid_press_dofs; j++ )
-                          {
-                            if(Dim==2)
-                              weak_form.evaluate_pressure_stress_pressure_jacobian
-                                ( J,FCinv,solid_press_phi[j][qp],dphiJ,
-                                  Kus_ps(i,j),Kvs_ps(i,j) );
-
-                            else if(Dim==3)
-                              weak_form.evaluate_pressure_stress_pressure_jacobian
-                                ( J,FCinv,solid_press_phi[j][qp],dphiJ,
-                                  Kus_ps(i,j),Kvs_ps(i,j),(*Kws_ps)(i,j) );
-
-                          } // end pressure dof loop
-
-                        // lambda derivatives
-                        for( int j = 0; j < n_lambda_dofs; j++ )
-                          {
-                            const libMesh::Real l2_value =
-                              lambda_phi[j][qp]*phiJ*solid_context.get_elem_solution_derivative();
-
-                            const libMesh::Real h1_value =
-                              (lambda_dphi[j][qp]*dphiJ)*solid_context.get_elem_solution_derivative();
-
-                            if(Dim==2)
-                              {
-                                Kus_ulm(i,j) -= (l2_value+h1_value);
-                                Kvs_vlm(i,j) -= (l2_value+h1_value);
-                              }
-                            if(Dim==3)
-                              {
-                                Kus_ulm(i,j) -= (l2_value+h1_value);
-                                Kvs_vlm(i,j) -= (l2_value+h1_value);
-                                (*Kws_wlm)(i,j) -= (l2_value+h1_value);
-                              }
-                          }
-
-                      } // compute jacobian
-
-                  } // end displacement dof loop
-
-                //============================================
-                // Lambda residual terms
-                //============================================
-                for( int i = 0; i < n_lambda_dofs; i++ )
-                  {
-                    libMesh::Real phiJ = lambda_phi[i][qp]*jac;
-                    if(Dim==2)
-                      {
-                        //L2 Norm
-                        Fulm(i) += (Vx - udot)*phiJ;
-                        Fvlm(i) += (Vy - vdot)*phiJ;
-
-                        // H1 term
-                        libMesh::Gradient fluid_term = (gradV_times_F-Fdot)*lambda_dphi[i][qp];
-                        Fulm(i) += fluid_term(0)*jac;
-                        Fvlm(i) += fluid_term(1)*jac;
-                      }
-                    if(Dim==3)
-                      {
-                        //L2 Norm
-                        Fulm(i) += (Vx - udot)*phiJ;
-                        Fvlm(i) += (Vy - vdot)*phiJ;
-                        (*Fwlm)(i) += (Vz - wdot)*phiJ;
-
-                        // H1 term
-                        libMesh::Gradient fluid_term = (gradV_times_F-Fdot)*lambda_dphi[i][qp];
-                        Fulm(i) += fluid_term(0)*jac;
-                        Fvlm(i) += fluid_term(1)*jac;
-                        (*Fwlm)(i) += fluid_term(2)*jac;
-                      }
-
-                    if(compute_jacobian)
-                      {
-                        // Solid derivatives
-                        for( int j = 0; j != n_solid_dofs; j++ )
-                          {
-                            const libMesh::Real l2_value =
-                              solid_phi[j][qp]*phiJ*solid_context.get_elem_solution_rate_derivative();
-
-                            const libMesh::Real h1_value =
-                              (solid_dphi[j][qp]*lambda_dphi[i][qp])*jac*solid_context.get_elem_solution_rate_derivative();
-
-                            if(Dim==2)
-                              {
-                                Kulm_us(i,j) -= (l2_value+h1_value);
-                                Kvlm_vs(i,j) -= (l2_value+h1_value);
-                              }
-                            if(Dim==3)
-                              {
-                                Kulm_us(i,j) -= (l2_value+h1_value);
-                                Kvlm_vs(i,j) -= (l2_value+h1_value);
-                                (*Kwlm_ws)(i,j) -= (l2_value+h1_value);
-                              }
-                          } // end solid dof loop
-
-                        libMesh::Gradient FFluid_times_dphiJ( (F_fluid*lambda_dphi[i][qp])*jac );
-
-                        // Fluid derivatives
-                        for (int j=0; j != n_fluid_dofs; j++)
-                          {
-                            libMesh::Real l2_value =
-                              fluid_phi[j][0]*phiJ*solid_context.get_elem_solution_derivative();
-
-                            const libMesh::Real h1_value =
-                              (fluid_dphi[j][0]*FFluid_times_dphiJ)*solid_context.get_elem_solution_derivative();
-
-                            if(Dim==2)
-                              {
-                                Kulm_uf(i,j) += l2_value+h1_value;
-                                Kvlm_vf(i,j) += l2_value+h1_value;
-                              }
-                            if(Dim==3)
-                              {
-                                Kulm_uf(i,j) += l2_value+h1_value;
-                                Kvlm_vf(i,j) += l2_value+h1_value;
-                                (*Kwlm_wf)(i,j) += l2_value+h1_value;
-                              }
-                          } // end fluid dof loop
-
-                      } // compute jacobian
-                  } // End lambda dof loop
-
-                //============================================
-                // Solid pressure residual terms
-                //============================================
-                for( int i = 0; i < n_solid_press_dofs; i++ )
-                  {
-                    libMesh::Real phiJ = solid_press_phi[i][qp]*jac;
-                    weak_form.evaluate_pressure_constraint_residual(J,phiJ,Fps(i));
-
-                    if( compute_jacobian )
-                      {
-                        for( int j = 0; j != n_solid_dofs; j++ )
-                          {
-                            if(Dim==2)
-                              weak_form.evaluate_pressure_constraint_jacobian
-                                ( J, FCinv, solid_dphi[j][qp], phiJ,
-                                  Kps_us(i,j), Kps_vs(i,j) );
-
-                            else if(Dim==3)
-                              weak_form.evaluate_pressure_constraint_jacobian
-                                ( J, FCinv, solid_dphi[j][qp], phiJ,
-                                  Kps_us(i,j), Kps_vs(i,j), (*Kps_ws)(i,j) );
-                          }
-                      } // compute Jacobian
-
-                  } // end solid pressure dof loop
-
-              } // end qp loop
-
-            // This will assemble the coupled terms that went into the fluid residual
-            // in the fluid context and the coupled Jacobians into the global data system
-            // residual and Jacobian
-            this->assemble_coupled_terms<Dim>( compute_jacobian, system, solid_context, fluid_context,
-                                               n_fluid_dofs, n_solid_dofs, n_lambda_dofs,
-                                               Kf_s, Klm_f, Kf_lm );
+                 this->compute_numerical_jacobians( system,solid_context,fluid_context,
+                                                    qp_indices,
+                                                    Kuf_ulm,Kuf_vlm,Kvf_ulm,Kvf_vlm,
+                                                    Kulm_uf,Kulm_vf,Kvlm_uf,Kvlm_vf,
+                                                    Kuf_us,Kuf_vs,Kvf_us,Kvf_vs);
+
+                 // This will assemble the coupled terms that went into the fluid residual
+                 // in the fluid context and the coupled Jacobians into the global data system
+                 // residual and Jacobian
+                 this->assemble_coupled_jacobians<Dim>( system, solid_context, fluid_context,
+                                                        n_fluid_dofs, n_solid_dofs, n_lambda_dofs,
+                                                        Kf_s, Klm_f, Kf_lm );
+              }
 
           } // loop over fluid elems
 
@@ -851,6 +384,1098 @@ namespace GRINS
     else
       return F;
   }
+
+  template<unsigned int Dim, bool UseOldDisplacement>
+  void CartesianFictitiousDomainFluidStructureInteractionBase<Dim,UseOldDisplacement>::compute_residuals
+  (AssemblyContext & solid_context,const AssemblyContext & fluid_context,unsigned int qp,
+   IncompressibleHyperelasticityWeakForm<MooneyRivlin> & weak_form,
+   libMesh::DenseSubVector<libMesh::Number> & Fuf,
+   libMesh::DenseSubVector<libMesh::Number> & Fvf,
+   libMesh::DenseSubVector<libMesh::Number> & Fus,
+   libMesh::DenseSubVector<libMesh::Number> & Fvs,
+   libMesh::DenseSubVector<libMesh::Number> & Fulm,
+   libMesh::DenseSubVector<libMesh::Number> & Fvlm,
+   libMesh::DenseSubVector<libMesh::Number> & Fps)
+  {
+
+
+    // Variable indices
+    unsigned int us_var = this->_disp_vars.u();
+    unsigned int vs_var = this->_disp_vars.v();
+    unsigned int ws_var = libMesh::invalid_uint;
+    if(Dim==3)
+      ws_var = this->_disp_vars.w();
+
+    unsigned int ps_var = this->_solid_press_var.p();
+
+    unsigned int uf_var = this->_flow_vars.u();
+    unsigned int vf_var = this->_flow_vars.v();
+    unsigned int wf_var = libMesh::invalid_uint;
+    if(Dim==3)
+      wf_var = this->_flow_vars.w();
+
+    unsigned int lx_var = this->_lambda_var.u();
+    unsigned int ly_var = this->_lambda_var.v();
+    unsigned int lz_var = libMesh::invalid_uint;
+    if(Dim==3)
+      lz_var = this->_lambda_var.w();
+
+    int n_solid_dofs = solid_context.get_dof_indices(this->_disp_vars.u()).size();
+    int n_lambda_dofs = solid_context.get_dof_indices(this->_lambda_var.u()).size();
+    int n_solid_press_dofs = solid_context.get_dof_indices(this->_solid_press_var.p()).size();
+    int n_fluid_dofs = fluid_context.get_dof_indices(this->_flow_vars.u()).size();
+
+    libMesh::Real delta_rho = this->_rho_solid - this->_rho_fluid;
+
+    libMesh::Real dt = solid_context.get_deltat_value();
+    libMesh::Real dt2 = dt*dt;
+
+    const std::vector<std::vector<libMesh::Real> > & solid_phi =
+          solid_context.get_element_fe(us_var,Dim)->get_phi();
+
+    const std::vector<std::vector<libMesh::RealGradient> > & solid_dphi =
+      solid_context.get_element_fe(us_var,Dim)->get_dphi();
+
+    const std::vector<std::vector<libMesh::Real> > & lambda_phi =
+          solid_context.get_element_fe(lx_var,Dim)->get_phi();
+
+    const std::vector<std::vector<libMesh::Real> > & solid_press_phi =
+          solid_context.get_element_fe(ps_var,Dim)->get_phi();
+
+    const std::vector<libMesh::Real> & solid_JxW =
+      solid_context.get_element_fe(us_var,Dim)->get_JxW();
+
+    const std::vector<std::vector<libMesh::Real> > & fluid_phi =
+              fluid_context.get_element_fe(uf_var,Dim)->get_phi();
+
+    /*
+    const std::vector<std::vector<libMesh::RealGradient> > & fluid_dphi =
+      fluid_context.get_element_fe(uf_var,Dim)->get_dphi();
+
+    const std::vector<std::vector<libMesh::RealGradient> > & lambda_dphi =
+      solid_context.get_element_fe(lx_var,Dim)->get_dphi();
+    */
+
+    // Compute quantities from the solid context
+    libMesh::Real udot, vdot, wdot;
+    solid_context.interior_rate(us_var, qp, udot);
+    solid_context.interior_rate(vs_var, qp, vdot);
+    if(Dim==3)
+      solid_context.interior_rate(ws_var, qp, wdot);
+
+    libMesh::Gradient Uddot;
+    this->compute_displacement_accel<Dim>(solid_context,qp,Uddot);
+
+
+
+    libMesh::Gradient grad_u, grad_v, grad_w;
+    solid_context.interior_gradient(us_var, qp, grad_u);
+    solid_context.interior_gradient(vs_var, qp, grad_v);
+    if(Dim==3)
+      solid_context.interior_gradient(ws_var, qp, grad_w);
+
+    libMesh::Gradient grad_udot, grad_vdot, grad_wdot;
+    solid_context.interior_rate_gradient(us_var, qp, grad_udot);
+    solid_context.interior_rate_gradient(vs_var, qp, grad_vdot);
+    if(Dim==3)
+      solid_context.interior_rate_gradient(ws_var, qp, grad_wdot);
+
+    libMesh::TensorValue<libMesh::Real> Fdot( grad_udot(0), grad_udot(1), 0,
+                                              grad_vdot(0), grad_vdot(1), 0,
+                                              0, 0, 0 );
+    if(Dim==3)
+      {
+        Fdot(0,2) = grad_udot(2);
+        Fdot(1,2) = grad_vdot(2);
+        Fdot(2,0) = grad_wdot(0);
+        Fdot(2,1) = grad_wdot(1);
+        Fdot(2,2) = grad_wdot(2);
+      }
+
+
+
+    libMesh::Real solid_press;
+    solid_context.interior_value(ps_var, qp, solid_press);
+
+
+
+    libMesh::Real lambda_x, lambda_y, lambda_z;
+    solid_context.interior_value(lx_var, qp, lambda_x);
+    solid_context.interior_value(ly_var, qp, lambda_y);
+    if(Dim==3)
+      solid_context.interior_value(lz_var, qp, lambda_z);
+
+
+
+
+    libMesh::Gradient grad_lambda_x, grad_lambda_y, grad_lambda_z;
+    solid_context.interior_gradient(lx_var, qp, grad_lambda_x);
+    solid_context.interior_gradient(ly_var, qp, grad_lambda_y);
+    if(Dim==3)
+      solid_context.interior_gradient(lz_var, qp, grad_lambda_z);
+
+
+
+
+    // Compute quantities from the fluid context
+    // The qp is always "0" since there should be only one point
+    // in this prepared fluid context
+    libMesh::Real Vx, Vy, Vz;
+    fluid_context.interior_value(uf_var, 0, Vx);
+    fluid_context.interior_value(vf_var, 0, Vy);
+    if(Dim==3)
+      fluid_context.interior_value(wf_var, 0, Vz);
+
+
+
+    libMesh::Gradient grad_Vx, grad_Vy, grad_Vz;
+    fluid_context.interior_gradient(uf_var, 0, grad_Vx);
+    fluid_context.interior_gradient(vf_var, 0, grad_Vy);
+    if(Dim==3)
+      fluid_context.interior_gradient(wf_var, 0, grad_Vz);
+
+    // Setup the deformation gradients
+    // F is the usual deformation gradient and F_fluid
+    // is the one we'll used in the derivatives of
+    // the fluid-shape-function-evaluated-at-deformed-solid-qps
+    // quantities. For semi-implicit algorithms, F_fluid will
+    // be the deformation gradient at U_n while for fully implicit
+    // algorithms F_fluid = F
+    libMesh::Tensor F, F_fluid;
+    if(Dim==2)
+      F = this->form_def_gradient(grad_u,grad_v);
+    else if(Dim==3)
+      F = this->form_def_gradient(grad_u,grad_v,grad_w);
+
+    F_fluid = this->form_fluid_def_gradient(solid_context,F,qp);
+
+
+
+
+    // Builds all our hyperelastic quantities
+    CartesianHyperlasticity<MooneyRivlin>
+      stress_law(F, (*(this->_strain_energy)));
+
+    //libMesh::Tensor P(stress_law.pk1_stress());
+
+
+
+    const libMesh::Tensor & S = stress_law.get_pk2_stress();
+
+    libMesh::Number J = stress_law.get_J();
+
+    const libMesh::Tensor & Cinv = stress_law.get_C_inverse();
+
+    libMesh::Tensor FCinv(F*Cinv);
+
+
+    libMesh::TensorValue<libMesh::Real> C(F.transpose()*F);
+    libMesh::Number I1 = C.tr();
+    libMesh::Real J23 = std::pow(J,-2/3);
+    libMesh::Real mus = 5;
+    libMesh::Tensor  P( mus*J23*(F-(1/3)*I1*FCinv) );
+
+
+    libMesh::Tensor grad_lam( grad_lambda_x(0), grad_lambda_x(1), 0,
+                              grad_lambda_y(0), grad_lambda_y(1), 0,
+                              0, 0, 0);
+
+
+    if(Dim==3)
+      {
+        grad_lam(0,2) = grad_lambda_x(2);
+        grad_lam(1,2) = grad_lambda_y(2);
+        grad_lam(2,0) = grad_lambda_z(0);
+        grad_lam(2,1) = grad_lambda_z(1);
+        grad_lam(2,2) = grad_lambda_z(2);
+      }
+
+    libMesh::Tensor grad_lam_timesFT( grad_lam*(F_fluid.transpose()) );
+
+    libMesh::Tensor gradV( grad_Vx(0),  grad_Vx(1), 0,
+                           grad_Vy(0), grad_Vy(1), 0,
+                           0, 0, 0);
+    if(Dim==3)
+      {
+        gradV(0,2) = grad_Vx(2);
+        gradV(1,2) = grad_Vy(2);
+        gradV(0,2) = grad_Vz(0);
+        gradV(1,2) = grad_Vz(1);
+        gradV(2,2) = grad_Vz(2);
+      }
+
+    libMesh::TensorValue<libMesh::Real> gradV_times_F( gradV*F_fluid );
+
+    libMesh::Real jac = solid_JxW[qp];
+
+
+    /*
+     std::cout << "qp = " << qp << std::endl;
+
+     std::cout << "lambda = " << lambda_x << ", " << lambda_y << std::endl;
+     std::cout << "solid_press = " << solid_press << std::endl;
+     std::cout << "V = " << Vx << ", " << Vy << std::endl;
+     std::cout << "F = " << F << std::endl;
+     std::cout << "F_fluid = " << F_fluid << std::endl;
+     std::cout << "P = " << P << std::endl;
+     std::cout << "FCinv = " << FCinv << std::endl;
+     std::cout << "grad_lam = " << grad_lam << std::endl;
+     std::cout << "Fdot = " << Fdot << std::endl;
+     std::cout << "Uddot = " << Uddot << std::endl;
+    */
+
+    //============================================
+    // Fluid residual terms
+    //============================================
+    for (int i=0; i != n_fluid_dofs; i++)
+      {
+        libmesh_assert_equal_to( fluid_phi[i].size(), 1 );
+
+        libMesh::Real phiJ = fluid_phi[i][0]*jac;
+
+        if(Dim==2)
+          {
+            // L2 Norm
+            Fuf(i) -= lambda_x*phiJ;
+            Fvf(i) -= lambda_y*phiJ;
+
+            // H1 Term
+            /*
+            libMesh::Gradient fluid_term = grad_lam_timesFT*fluid_dphi[i][0];
+            Fuf(i) -= fluid_term(0)*jac;
+            Fvf(i) -= fluid_term(1)*jac;
+            */
+          }
+
+        if(Dim==3)
+          {
+            // L2 Norm
+            Fuf(i) -= lambda_x*phiJ;
+            Fvf(i) -= lambda_y*phiJ;
+            //(*Fwf)(i) -= lambda_z*phiJ;
+
+            // H1 Term
+            /*
+              libMesh::Gradient fluid_term = grad_lam_timesFT*fluid_dphi[i][0];
+              Fuf(i) -= fluid_term(0)*jac;
+              Fvf(i) -= fluid_term(1)*jac;
+              (*Fwf)(i) -= fluid_term(2)*jac;
+            */
+          }
+        /*
+          if( compute_jacobian )
+          {
+          // Lambda deriviatives
+          for( int j = 0; j < n_lambda_dofs; j++ )
+          {
+          const libMesh::Real l2_value =
+          lambda_phi[j][qp]*phiJ*solid_context.get_elem_solution_derivative();
+
+          if(Dim==2)
+          {
+          Kuf_ulm(i,j) -= l2_value;
+          Kvf_vlm(i,j) -= l2_value;
+          }
+          if(Dim==3)
+          {
+          Kuf_ulm(i,j) -= l2_value;
+          Kvf_vlm(i,j) -= l2_value;
+          (*Kwf_wlm)(i,j) -= l2_value;
+          }
+          } // lambda dof loop
+          } // compute jacobian
+        */
+
+      }
+
+    //============================================
+    // Solid residual terms
+    //============================================
+    for (int i=0; i != n_solid_dofs; i++)
+      {
+        libMesh::Real phiJ = solid_phi[i][qp]*jac;
+        libMesh::RealGradient dphiJ(solid_dphi[i][qp]*jac);
+
+        if(Dim==2)
+          {
+
+            //weak_form.evaluate_internal_stress_residual
+            //  (P,dphiJ,Fus(i),Fvs(i));
+            for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
+              {
+                Fus(i) += P(0,alpha)*solid_dphi[i][qp](alpha)*jac;
+                Fvs(i) += P(1,alpha)*solid_dphi[i][qp](alpha)*jac;
+              }
+
+            weak_form.evaluate_pressure_stress_residual
+              (J,solid_press,FCinv,dphiJ,Fus(i),Fvs(i));
+
+            // Acceleration term
+            Fus(i) += delta_rho*Uddot(0)*phiJ;
+            Fvs(i) += delta_rho*Uddot(1)*phiJ;
+
+            //L2 Norm
+            Fus(i) -= lambda_x*phiJ;
+            Fvs(i) -= lambda_y*phiJ;
+
+            //H1 Norm
+            /*
+            for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
+              {
+                Fus(i) += grad_lambda_x(alpha)*dphiJ(alpha);
+                Fvs(i) += grad_lambda_y(alpha)*dphiJ(alpha);
+              }
+            */
+
+          }
+        else if(Dim==3)
+          {
+            /*
+            weak_form.evaluate_internal_stress_residual
+              (P,dphiJ,Fus(i),Fvs(i),(*Fws)(i));
+            weak_form.evaluate_pressure_stress_residual
+              (J,solid_press,FCinv,dphiJ,Fus(i),Fvs(i),(*Fws)(i));
+            */
+            // Acceleration term
+            Fus(i) += delta_rho*Uddot(0)*phiJ;
+            Fvs(i) += delta_rho*Uddot(1)*phiJ;
+            //(*Fws)(i) += delta_rho*Uddot(2)*phiJ;
+
+            //L2 Norm
+            Fus(i) -= lambda_x*phiJ;
+            Fvs(i) -= lambda_y*phiJ;
+            //(*Fws)(i) -= lambda_z*phiJ;
+
+            //H1 Norm
+            /*
+              for( unsigned int alpha = 0; alpha < this->_disp_vars.dim(); alpha++ )
+              {
+              Fus(i) -= grad_lambda_x(alpha)*dphiJ(alpha);
+              Fvs(i) -= grad_lambda_y(alpha)*dphiJ(alpha);
+              (*Fws)(i) -= grad_lambda_z(alpha)*dphiJ(alpha);
+              }
+            */
+          }
+
+        /*
+          if( compute_jacobian )
+          {
+          // Solid derivatives
+          for( int j = 0; j != n_solid_dofs; j++ )
+          {
+          libMesh::Real accel_value = delta_rho*phiJ*solid_phi[j][qp]/dt2;
+
+          if(Dim==2)
+          {
+          weak_form.evaluate_internal_stress_jacobian
+          (S,F,dphiJ,solid_dphi[j][qp],stress_law,
+          Kus_us(i,j),Kus_vs(i,j),
+          Kvs_us(i,j),Kvs_vs(i,j));
+
+          weak_form.evaluate_pressure_stress_displacement_jacobian
+          (J,solid_press,F,Cinv,FCinv,dphiJ,solid_dphi[j][qp],
+          Kus_us(i,j),Kus_vs(i,j),Kvs_us(i,j),Kvs_vs(i,j) );
+
+          // Acceleration term
+          Kus_us(i,j) += accel_value;
+          Kvs_vs(i,j) += accel_value;
+          }
+          else if(Dim==3)
+          {
+          weak_form.evaluate_internal_stress_jacobian
+          (S,F,dphiJ,solid_dphi[j][qp],stress_law,
+          Kus_us(i,j), Kus_vs(i,j), (*Kus_ws)(i,j),
+          Kvs_us(i,j), Kvs_vs(i,j), (*Kvs_ws)(i,j),
+          (*Kws_us)(i,j), (*Kws_vs)(i,j), (*Kws_ws)(i,j));
+
+          weak_form.evaluate_pressure_stress_displacement_jacobian
+          (J,solid_press,F,Cinv,FCinv,dphiJ,solid_dphi[j][qp],
+          Kus_us(i,j), Kus_vs(i,j), (*Kus_ws)(i,j),
+          Kvs_us(i,j), Kvs_vs(i,j), (*Kvs_ws)(i,j),
+          (*Kws_us)(i,j), (*Kws_vs)(i,j), (*Kws_ws)(i,j) );
+
+          // Acceleration term
+          Kus_us(i,j) += accel_value;
+          Kvs_vs(i,j) += accel_value;
+          (*Kws_ws)(i,j) += accel_value;
+          }
+          } // end displacement dof loop
+
+          // Solid pressure derivatives
+          for( int j = 0; j != n_solid_press_dofs; j++ )
+          {
+          if(Dim==2)
+          weak_form.evaluate_pressure_stress_pressure_jacobian
+          ( J,FCinv,solid_press_phi[j][qp],dphiJ,
+          Kus_ps(i,j),Kvs_ps(i,j) );
+
+          else if(Dim==3)
+          weak_form.evaluate_pressure_stress_pressure_jacobian
+          ( J,FCinv,solid_press_phi[j][qp],dphiJ,
+          Kus_ps(i,j),Kvs_ps(i,j),(*Kws_ps)(i,j) );
+
+          } // end pressure dof loop
+
+          // lambda derivatives
+          for( int j = 0; j < n_lambda_dofs; j++ )
+          {
+          const libMesh::Real l2_value =
+          lambda_phi[j][qp]*phiJ*solid_context.get_elem_solution_derivative();
+
+          if(Dim==2)
+          {
+          Kus_ulm(i,j) -= l2_value;
+          Kvs_vlm(i,j) -= l2_value;
+          }
+          if(Dim==3)
+          {
+          Kus_ulm(i,j) -= l2_value;
+          Kvs_vlm(i,j) -= l2_value;
+          (*Kws_wlm)(i,j) -= l2_value;
+          }
+          }
+
+          } // compute jacobian
+        */
+
+      } // end displacement dof loop
+
+    //============================================
+    // Lambda residual terms
+    //============================================
+    for( int i = 0; i < n_lambda_dofs; i++ )
+      {
+        libMesh::Real phiJ = lambda_phi[i][qp]*jac;
+        if(Dim==2)
+          {
+            //L2 Norm
+            Fulm(i) += (Vx - udot)*phiJ;
+            Fvlm(i) += (Vy - vdot)*phiJ;
+
+            // H1 term
+            /*
+            libMesh::Gradient fluid_term = (gradV_times_F-Fdot)*lambda_dphi[i][qp];
+            Fulm(i) += fluid_term(0)*jac;
+            Fvlm(i) += fluid_term(1)*jac;
+            */
+          }
+        if(Dim==3)
+          {
+            //L2 Norm
+            Fulm(i) += (Vx - udot)*phiJ;
+            Fvlm(i) += (Vy - vdot)*phiJ;
+            //(*Fwlm)(i) += (Vz - wdot)*phiJ;
+
+            // H1 term
+            /*
+            libMesh::Gradient fluid_term = (gradV_times_F-Fdot)*lambda_dphi[i][qp];
+            Fulm(i) += fluid_term(0)*jac;
+            Fvlm(i) += fluid_term(1)*jac;
+            (*Fwlm)(i) += fluid_term(2)*jac;
+            */
+
+          }
+
+        /*
+          if(compute_jacobian)
+          {
+          // Solid derivatives
+          for( int j = 0; j != n_solid_dofs; j++ )
+          {
+          const libMesh::Real l2_value =
+          solid_phi[j][qp]*phiJ*solid_context.get_elem_solution_rate_derivative();
+
+          if(Dim==2)
+          {
+          Kulm_us(i,j) -= l2_value;
+          Kvlm_vs(i,j) -= l2_value;
+          }
+          if(Dim==3)
+          {
+          Kulm_us(i,j) -= l2_value;
+          Kvlm_vs(i,j) -= l2_value;
+          (*Kwlm_ws)(i,j) -= l2_value;
+          }
+          } // end solid dof loop
+
+          // Fluid derivatives
+          for (int j=0; j != n_fluid_dofs; j++)
+          {
+          libMesh::Real l2_value =
+          fluid_phi[j][0]*phiJ*solid_context.get_elem_solution_derivative();
+
+          if(Dim==2)
+          {
+          Kulm_uf(i,j) += l2_value;
+          Kvlm_vf(i,j) += l2_value;
+          }
+          if(Dim==3)
+          {
+          Kulm_uf(i,j) += l2_value;
+          Kvlm_vf(i,j) += l2_value;
+          (*Kwlm_wf)(i,j) += l2_value;
+          }
+          } // end fluid dof loop
+
+          } // compute jacobian
+        */
+
+      } // End lambda dof loop
+
+    //============================================
+    // Solid pressure residual terms
+    //============================================
+    for( int i = 0; i < n_solid_press_dofs; i++ )
+      {
+        libMesh::Real phiJ = solid_press_phi[i][qp]*jac;
+        weak_form.evaluate_pressure_constraint_residual(J,phiJ,Fps(i));
+
+        /*
+          if( compute_jacobian )
+          {
+          for( int j = 0; j != n_solid_dofs; j++ )
+          {
+          if(Dim==2)
+          weak_form.evaluate_pressure_constraint_jacobian
+          ( J, FCinv, solid_dphi[j][qp], phiJ,
+          Kps_us(i,j), Kps_vs(i,j) );
+
+          else if(Dim==3)
+          weak_form.evaluate_pressure_constraint_jacobian
+          ( J, FCinv, solid_dphi[j][qp], phiJ,
+          Kps_us(i,j), Kps_vs(i,j), (*Kps_ws)(i,j) );
+          }
+          } // compute Jacobian
+        */
+
+      } // end solid pressure dof loop
+
+  }
+
+
+  template<unsigned int Dim, bool UseOldDisplacement>
+  void CartesianFictitiousDomainFluidStructureInteractionBase<Dim,UseOldDisplacement>::compute_ibm_residuals
+  (MultiphysicsSystem & system,
+   AssemblyContext & solid_context,
+   AssemblyContext & fluid_context,
+   const std::vector<unsigned int> & qp_indices)
+  {
+    // Variable indices
+    unsigned int us_var = this->_disp_vars.u();
+    unsigned int vs_var = this->_disp_vars.v();
+    unsigned int ws_var = libMesh::invalid_uint;
+    if(Dim==3)
+      ws_var = this->_disp_vars.w();
+
+    unsigned int ps_var = this->_solid_press_var.p();
+
+    unsigned int uf_var = this->_flow_vars.u();
+    unsigned int vf_var = this->_flow_vars.v();
+    unsigned int wf_var = libMesh::invalid_uint;
+    if(Dim==3)
+      wf_var = this->_flow_vars.w();
+
+    unsigned int lx_var = this->_lambda_var.u();
+    unsigned int ly_var = this->_lambda_var.v();
+    unsigned int lz_var = libMesh::invalid_uint;
+    if(Dim==3)
+      lz_var = this->_lambda_var.w();
+
+    libMesh::DenseSubVector<libMesh::Number> & Fus = solid_context.get_elem_residual(us_var);
+    libMesh::DenseSubVector<libMesh::Number> & Fvs = solid_context.get_elem_residual(vs_var);
+    libMesh::DenseSubVector<libMesh::Number> * Fws = nullptr;
+    if(Dim==3)
+      Fws = &solid_context.get_elem_residual(ws_var);
+
+    libMesh::DenseSubVector<libMesh::Number> & Fulm = solid_context.get_elem_residual(lx_var);
+    libMesh::DenseSubVector<libMesh::Number> & Fvlm = solid_context.get_elem_residual(ly_var);
+    libMesh::DenseSubVector<libMesh::Number> * Fwlm = nullptr;
+    if(Dim==3)
+      Fwlm = &solid_context.get_elem_residual(lz_var);
+
+    libMesh::DenseSubVector<libMesh::Number> & Fps = solid_context.get_elem_residual(ps_var);
+
+    // Fluid residual data structures
+    libMesh::DenseSubVector<libMesh::Number> & Fuf = fluid_context.get_elem_residual(uf_var);
+    libMesh::DenseSubVector<libMesh::Number> & Fvf = fluid_context.get_elem_residual(vf_var);
+    libMesh::DenseSubVector<libMesh::Number> * Fwf = nullptr;
+    if(Dim==3)
+      Fwf = &fluid_context.get_elem_residual(wf_var);
+
+
+    const std::vector<libMesh::Point> & solid_qpoints =
+      solid_context.get_element_fe(us_var,Dim)->get_xyz();
+
+    // Extract fluid shape functions
+    const std::vector<std::vector<libMesh::Real> > & fluid_phi =
+      fluid_context.get_element_fe(uf_var,Dim)->get_phi();
+
+    const std::vector<std::vector<libMesh::RealGradient> > & fluid_dphi =
+      fluid_context.get_element_fe(uf_var,Dim)->get_dphi();
+
+    const libMesh::Elem & fluid_elem = fluid_context.get_elem();
+
+    IncompressibleHyperelasticityWeakForm<MooneyRivlin> weak_form;
+
+    /*
+    std::cout << "Solid Element:" << std::endl;
+    solid_context.get_elem().print_info();
+
+    std::cout << "Fluid Element:" << std::endl;
+    fluid_context.get_elem().print_info();
+    */
+
+    // Loop over this set of quadrature points
+    for( const auto & qp : qp_indices )
+      {
+        const libMesh::Point & x_qp = solid_qpoints[qp];
+
+        // Compute displacement. This will be U_{n+1} or U_n depending
+        // on the compile-time value of UseOldDisplacement
+        libMesh::Gradient U;
+        this->compute_displaced_point<Dim,UseOldDisplacement>(system,solid_context,qp,U);
+
+        // Reinit fluid context for current solid quadrature point
+        this->reinit_fluid_context<Dim>(x_qp, U, &fluid_elem, fluid_context);
+
+        this->compute_residuals(solid_context,fluid_context,qp,weak_form,
+                                Fuf,Fvf,Fus,Fvs,Fulm,Fvlm,Fps);
+
+      } // end qp loop
+  }
+
+  template<unsigned int Dim, bool UseOldDisplacement>
+  void CartesianFictitiousDomainFluidStructureInteractionBase<Dim,UseOldDisplacement>::compute_numerical_jacobians
+  (MultiphysicsSystem & system,
+   AssemblyContext & solid_context,
+   AssemblyContext & fluid_context,
+   const std::vector<unsigned int> & quad_points,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kuf_ulm,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kuf_vlm,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kvf_ulm,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vlm,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kulm_uf,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kulm_vf,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_uf,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_vf,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kuf_us,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kuf_vs,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kvf_us,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vs)
+  {
+    // Cache original residuals
+    libMesh::DenseVector<libMesh::Number> original_solid_residual(solid_context.get_elem_residual());
+    libMesh::DenseVector<libMesh::Number> original_fluid_residual(fluid_context.get_elem_residual());
+
+    // Create space for storing residuals with backward-perturbed solutions
+    libMesh::DenseVector<libMesh::Number> backwards_solid_residual(solid_context.get_elem_residual());
+    libMesh::DenseVector<libMesh::Number> backwards_fluid_residual(fluid_context.get_elem_residual());
+
+    libMesh::Real delta = 1.0e-8;
+
+    // Compute lambdax derivs
+    {
+      libMesh::DenseSubVector<libMesh::Number> & lambda_xcoeff =
+        solid_context.get_elem_solution(this->_lambda_var.u());
+
+      libMesh::DenseSubMatrix<libMesh::Number> & Kus_ulm =
+        solid_context.get_elem_jacobian(this->_disp_vars.u(),this->_lambda_var.u());
+
+      libMesh::DenseSubMatrix<libMesh::Number> & Kvs_ulm =
+        solid_context.get_elem_jacobian(this->_disp_vars.v(),this->_lambda_var.u());
+
+      this->compute_lambda_derivs(system,quad_points,solid_context,fluid_context,delta,
+                                  backwards_solid_residual,backwards_fluid_residual,
+                                  lambda_xcoeff,
+                                  Kuf_ulm,Kvf_ulm,Kus_ulm,Kvs_ulm);
+    }
+
+    // Compute lambday derivs
+
+    {
+      libMesh::DenseSubVector<libMesh::Number> & lambda_ycoeff =
+        solid_context.get_elem_solution(this->_lambda_var.v());
+
+      libMesh::DenseSubMatrix<libMesh::Number> & Kus_vlm =
+        solid_context.get_elem_jacobian(this->_disp_vars.u(),this->_lambda_var.v());
+
+      libMesh::DenseSubMatrix<libMesh::Number> & Kvs_vlm =
+        solid_context.get_elem_jacobian(this->_disp_vars.v(),this->_lambda_var.v());
+
+      this->compute_lambda_derivs(system,quad_points,solid_context,fluid_context,delta,
+                                  backwards_solid_residual,backwards_fluid_residual,
+                                  lambda_ycoeff,
+                                  Kuf_vlm,Kvf_vlm,Kus_vlm,Kvs_vlm);
+    }
+
+
+    // Compute fluidx derivs
+    {
+      libMesh::DenseSubVector<libMesh::Number> & fluid_ucoeff =
+        fluid_context.get_elem_solution(this->_flow_vars.u());
+
+      this->compute_fluid_derivs(system,quad_points,solid_context,fluid_context,delta,
+                                 backwards_solid_residual,backwards_fluid_residual,
+                                 fluid_ucoeff,
+                                 Kulm_uf,Kvlm_uf);
+    }
+
+    // Compute fluidy derivs
+    {
+      libMesh::DenseSubVector<libMesh::Number> & fluid_vcoeff =
+        fluid_context.get_elem_solution(this->_flow_vars.v());
+
+      this->compute_fluid_derivs(system,quad_points,solid_context,fluid_context,delta,
+                                 backwards_solid_residual,backwards_fluid_residual,
+                                 fluid_vcoeff,
+                                 Kulm_vf,Kvlm_vf);
+    }
+
+    // Compute solidx derivs
+    {
+      libMesh::DenseSubVector<libMesh::Number> & u_coeffs =
+        solid_context.get_elem_solution(this->_disp_vars.u());
+
+      libMesh::DenseSubMatrix<libMesh::Number> & Kus_us =
+        solid_context.get_elem_jacobian(this->_disp_vars.u(),this->_disp_vars.u());
+
+      libMesh::DenseSubMatrix<libMesh::Number> & Kvs_us =
+        solid_context.get_elem_jacobian(this->_disp_vars.v(),this->_disp_vars.u());
+
+      libMesh::DenseSubMatrix<libMesh::Number> & Kulm_us =
+        solid_context.get_elem_jacobian(this->_lambda_var.u(),this->_disp_vars.u());
+
+      libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_us =
+        solid_context.get_elem_jacobian(this->_lambda_var.v(),this->_disp_vars.u());
+
+      libMesh::DenseSubMatrix<libMesh::Number> & Kp_us =
+        solid_context.get_elem_jacobian(this->_solid_press_var.p(),this->_disp_vars.u());
+
+      this->compute_solid_derivs(system,quad_points,solid_context,fluid_context,delta,
+                                 backwards_solid_residual,backwards_fluid_residual,
+                                 u_coeffs,
+                                 Kuf_us,Kvf_us,Kus_us,Kvs_us,Kulm_us,Kvlm_us,Kp_us);
+    }
+
+
+    // Compute solidy derivs
+    {
+      libMesh::DenseSubVector<libMesh::Number> & v_coeffs =
+        solid_context.get_elem_solution(this->_disp_vars.v());
+
+      libMesh::DenseSubMatrix<libMesh::Number> & Kus_vs =
+        solid_context.get_elem_jacobian(this->_disp_vars.u(),this->_disp_vars.v());
+
+      libMesh::DenseSubMatrix<libMesh::Number> & Kvs_vs =
+        solid_context.get_elem_jacobian(this->_disp_vars.v(),this->_disp_vars.v());
+
+      libMesh::DenseSubMatrix<libMesh::Number> & Kulm_vs =
+        solid_context.get_elem_jacobian(this->_lambda_var.u(),this->_disp_vars.v());
+
+      libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_vs =
+        solid_context.get_elem_jacobian(this->_lambda_var.v(),this->_disp_vars.v());
+
+      libMesh::DenseSubMatrix<libMesh::Number> & Kp_vs =
+        solid_context.get_elem_jacobian(this->_solid_press_var.p(),this->_disp_vars.v());
+
+      this->compute_solid_derivs(system,quad_points,solid_context,fluid_context,delta,
+                                 backwards_solid_residual,backwards_fluid_residual,
+                                 v_coeffs,
+                                 Kuf_vs,Kvf_vs,Kus_vs,Kvs_vs,Kulm_vs,Kvlm_vs,Kp_vs);
+
+    }
+
+    // Compute p derivs
+    {
+      libMesh::DenseSubVector<libMesh::Number> & p_coeffs =
+        solid_context.get_elem_solution(this->_solid_press_var.p());
+
+      libMesh::DenseSubMatrix<libMesh::Number> & Kus_p =
+        solid_context.get_elem_jacobian(this->_disp_vars.u(),this->_solid_press_var.p());
+
+      libMesh::DenseSubMatrix<libMesh::Number> & Kvs_p =
+        solid_context.get_elem_jacobian(this->_disp_vars.v(),this->_solid_press_var.p());
+
+      this->compute_press_derivs(system,quad_points,solid_context,fluid_context,delta,
+                                 backwards_solid_residual,backwards_fluid_residual,
+                                 p_coeffs,Kus_p,Kvs_p);
+
+    }
+
+    // Restore original residuals
+    solid_context.get_elem_residual() = original_solid_residual;
+    fluid_context.get_elem_residual() = original_fluid_residual;
+  }
+
+
+  template<unsigned int Dim, bool UseOldDisplacement>
+  void CartesianFictitiousDomainFluidStructureInteractionBase<Dim,UseOldDisplacement>::finite_difference_residuals
+  (MultiphysicsSystem & system,
+   const std::vector<unsigned int> & quad_points,
+   AssemblyContext & solid_context,
+   AssemblyContext & fluid_context,
+   const libMesh::Real delta,
+   libMesh::Number & coeff,
+   libMesh::DenseVector<libMesh::Number> & backwards_solid_residual,
+   libMesh::DenseVector<libMesh::Number> & backwards_fluid_residual)
+  {
+    // Zero out then compute backward residuals
+    solid_context.get_elem_residual().zero();
+    fluid_context.get_elem_residual().zero();
+
+    coeff -= delta;
+    solid_context.recompute_elem_solution_rate(system);
+
+    this->compute_ibm_residuals(system,solid_context,fluid_context,quad_points);
+
+    backwards_solid_residual = solid_context.get_elem_residual();
+    backwards_fluid_residual = fluid_context.get_elem_residual();
+
+    // Zero out and compute forward residuals in place
+    solid_context.get_elem_residual().zero();
+    fluid_context.get_elem_residual().zero();
+
+    coeff += 2.0*delta;
+    solid_context.recompute_elem_solution_rate(system);
+
+    this->compute_ibm_residuals(system,solid_context,fluid_context,quad_points);
+
+    // Now store the finite difference residuals in place
+    solid_context.get_elem_residual().add( -1.0, backwards_solid_residual);
+    solid_context.get_elem_residual().scale( 1.0/(2.0*delta) );
+
+    fluid_context.get_elem_residual().add( -1.0, backwards_fluid_residual);
+    fluid_context.get_elem_residual().scale( 1.0/(2.0*delta) );
+
+    // Restore coeff
+    coeff -= delta;
+    solid_context.recompute_elem_solution_rate(system);
+  }
+
+  template<unsigned int Dim, bool UseOldDisplacement>
+  void CartesianFictitiousDomainFluidStructureInteractionBase<Dim,UseOldDisplacement>::compute_lambda_derivs
+  (MultiphysicsSystem & system,
+   const std::vector<unsigned int> & quad_points,
+   AssemblyContext & solid_context,
+   AssemblyContext & fluid_context,
+   const libMesh::Real delta,
+   libMesh::DenseVector<libMesh::Number> & backwards_solid_residual,
+   libMesh::DenseVector<libMesh::Number> & backwards_fluid_residual,
+   libMesh::DenseSubVector<libMesh::Number> & lambda_coeff,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kuf,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kvf,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kus,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kvs)
+  {
+    unsigned int n_solid_dofs = solid_context.get_dof_indices(this->_disp_vars.u()).size();
+    unsigned int n_fluid_dofs = fluid_context.get_dof_indices(this->_flow_vars.u()).size();
+    unsigned int n_lambda_dofs = solid_context.get_dof_indices(this->_lambda_var.u()).size();
+
+    libmesh_assert_equal_to(Kuf.m(),n_fluid_dofs);
+    libmesh_assert_equal_to(Kvf.m(),n_fluid_dofs);
+    libmesh_assert_equal_to(Kus.m(),n_solid_dofs);
+    libmesh_assert_equal_to(Kvs.m(),n_solid_dofs);
+
+    libmesh_assert_equal_to(Kuf.n(),n_lambda_dofs);
+    libmesh_assert_equal_to(Kvf.n(),n_lambda_dofs);
+    libmesh_assert_equal_to(Kus.n(),n_lambda_dofs);
+    libmesh_assert_equal_to(Kvs.n(),n_lambda_dofs);
+
+    for( unsigned int j = 0; j < n_lambda_dofs; j++ )
+      {
+        // Finite differenced residual is sitting in the solid and fluid context elem_residuals
+        // after this call
+        this->finite_difference_residuals(system,quad_points,solid_context,fluid_context,delta,lambda_coeff(j),
+                                          backwards_solid_residual,backwards_fluid_residual);
+
+        for (unsigned int i=0; i != n_solid_dofs; i++)
+          {
+            libMesh::DenseSubVector<libMesh::Number> & Fus = solid_context.get_elem_residual(this->_disp_vars.u());
+            libMesh::DenseSubVector<libMesh::Number> & Fvs = solid_context.get_elem_residual(this->_disp_vars.v());
+
+            Kus(i,j) += Fus(i);
+            Kvs(i,j) += Fvs(i);
+          }
+
+        for (unsigned int i=0; i != n_fluid_dofs; i++)
+          {
+            libMesh::DenseSubVector<libMesh::Number> & Fuf = fluid_context.get_elem_residual(this->_flow_vars.u());
+            libMesh::DenseSubVector<libMesh::Number> & Fvf = fluid_context.get_elem_residual(this->_flow_vars.v());
+
+            Kuf(i,j) += Fuf(i);
+            Kvf(i,j) += Fvf(i);
+          }
+      }
+  }
+
+  template<unsigned int Dim, bool UseOldDisplacement>
+  void CartesianFictitiousDomainFluidStructureInteractionBase<Dim,UseOldDisplacement>::compute_fluid_derivs
+  (MultiphysicsSystem & system,
+   const std::vector<unsigned int> & quad_points,
+   AssemblyContext & solid_context,
+   AssemblyContext & fluid_context,
+   const libMesh::Real delta,
+   libMesh::DenseVector<libMesh::Number> & backwards_solid_residual,
+   libMesh::DenseVector<libMesh::Number> & backwards_fluid_residual,
+   libMesh::DenseSubVector<libMesh::Number> & fluid_coeff,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kulm,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kvlm)
+  {
+    unsigned int n_fluid_dofs = fluid_context.get_dof_indices(this->_flow_vars.u()).size();
+    unsigned int n_lambda_dofs = solid_context.get_dof_indices(this->_lambda_var.u()).size();
+
+    libmesh_assert_equal_to(Kulm.m(),n_lambda_dofs);
+    libmesh_assert_equal_to(Kvlm.m(),n_lambda_dofs);
+
+    libmesh_assert_equal_to(Kulm.n(),n_fluid_dofs);
+    libmesh_assert_equal_to(Kvlm.n(),n_fluid_dofs);
+
+    for( unsigned int j = 0; j < n_fluid_dofs; j++ )
+      {
+        // Finite differenced residual is sitting in the solid and fluid context elem_residuals
+        // after this call
+        this->finite_difference_residuals(system,quad_points,solid_context,fluid_context,delta,fluid_coeff(j),
+                                          backwards_solid_residual,backwards_fluid_residual);
+
+        for (unsigned int i=0; i != n_lambda_dofs; i++)
+          {
+            libMesh::DenseSubVector<libMesh::Number> & Fulm =
+              solid_context.get_elem_residual(this->_lambda_var.u());
+
+            libMesh::DenseSubVector<libMesh::Number> & Fvlm =
+              solid_context.get_elem_residual(this->_lambda_var.v());
+
+            Kulm(i,j) += Fulm(i);
+            Kvlm(i,j) += Fvlm(i);
+          }
+      }
+  }
+
+  template<unsigned int Dim, bool UseOldDisplacement>
+  void CartesianFictitiousDomainFluidStructureInteractionBase<Dim,UseOldDisplacement>::compute_solid_derivs
+  (MultiphysicsSystem & system,
+   const std::vector<unsigned int> & quad_points,
+   AssemblyContext & solid_context,
+   AssemblyContext & fluid_context,
+   const libMesh::Real delta,
+   libMesh::DenseVector<libMesh::Number> & backwards_solid_residual,
+   libMesh::DenseVector<libMesh::Number> & backwards_fluid_residual,
+   libMesh::DenseSubVector<libMesh::Number> & solid_coeff,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kuf,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kvf,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kus,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kvs,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kulm,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kvlm,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kp)
+  {
+    unsigned int n_solid_dofs = solid_context.get_dof_indices(this->_disp_vars.u()).size();
+    unsigned int n_fluid_dofs = fluid_context.get_dof_indices(this->_flow_vars.u()).size();
+    unsigned int n_lambda_dofs = solid_context.get_dof_indices(this->_lambda_var.u()).size();
+    unsigned int n_press_dofs = solid_context.get_dof_indices(this->_solid_press_var.p()).size();
+
+    libmesh_assert_equal_to(Kuf.m(),n_fluid_dofs);
+    libmesh_assert_equal_to(Kvf.m(),n_fluid_dofs);
+    libmesh_assert_equal_to(Kus.m(),n_solid_dofs);
+    libmesh_assert_equal_to(Kvs.m(),n_solid_dofs);
+    libmesh_assert_equal_to(Kulm.m(),n_lambda_dofs);
+    libmesh_assert_equal_to(Kvlm.m(),n_lambda_dofs);
+    libmesh_assert_equal_to(Kp.m(),n_press_dofs);
+
+    libmesh_assert_equal_to(Kuf.n(),n_solid_dofs);
+    libmesh_assert_equal_to(Kvf.n(),n_solid_dofs);
+    libmesh_assert_equal_to(Kus.n(),n_solid_dofs);
+    libmesh_assert_equal_to(Kvs.n(),n_solid_dofs);
+    libmesh_assert_equal_to(Kulm.n(),n_solid_dofs);
+    libmesh_assert_equal_to(Kvlm.n(),n_solid_dofs);
+    libmesh_assert_equal_to(Kp.n(),n_solid_dofs);
+
+    for( unsigned int j = 0; j < n_solid_dofs; j++ )
+      {
+        // Finite differenced residual is sitting in the solid and fluid context elem_residuals
+        // after this call
+        this->finite_difference_residuals(system,quad_points,solid_context,fluid_context,delta,solid_coeff(j),
+                                          backwards_solid_residual,backwards_fluid_residual);
+
+        for (unsigned int i=0; i != n_fluid_dofs; i++)
+          {
+            libMesh::DenseSubVector<libMesh::Number> & Fuf = fluid_context.get_elem_residual(this->_flow_vars.u());
+            libMesh::DenseSubVector<libMesh::Number> & Fvf = fluid_context.get_elem_residual(this->_flow_vars.v());
+
+            Kuf(i,j) += Fuf(i);
+            Kvf(i,j) += Fvf(i);
+          }
+
+        for (unsigned int i=0; i != n_solid_dofs; i++)
+          {
+            libMesh::DenseSubVector<libMesh::Number> & Fus = solid_context.get_elem_residual(this->_disp_vars.u());
+            libMesh::DenseSubVector<libMesh::Number> & Fvs = solid_context.get_elem_residual(this->_disp_vars.v());
+
+            Kus(i,j) += Fus(i);
+            Kvs(i,j) += Fvs(i);
+          }
+
+        for (unsigned int i=0; i != n_lambda_dofs; i++)
+          {
+            libMesh::DenseSubVector<libMesh::Number> & Fulm =
+              solid_context.get_elem_residual(this->_lambda_var.u());
+
+            libMesh::DenseSubVector<libMesh::Number> & Fvlm =
+              solid_context.get_elem_residual(this->_lambda_var.v());
+
+            Kulm(i,j) += Fulm(i);
+            Kvlm(i,j) += Fvlm(i);
+          }
+
+	for (unsigned int i=0; i != n_press_dofs; i++)
+          {
+            libMesh::DenseSubVector<libMesh::Number> & Fp = solid_context.get_elem_residual(this->_solid_press_var.p());
+
+            Kp(i,j) += Fp(i);
+          }
+      }
+  }
+
+  template<unsigned int Dim, bool UseOldDisplacement>
+  void CartesianFictitiousDomainFluidStructureInteractionBase<Dim,UseOldDisplacement>::compute_press_derivs
+  (MultiphysicsSystem & system,
+   const std::vector<unsigned int> & quad_points,
+   AssemblyContext & solid_context,
+   AssemblyContext & fluid_context,
+   const libMesh::Real delta,
+   libMesh::DenseVector<libMesh::Number> & backwards_solid_residual,
+   libMesh::DenseVector<libMesh::Number> & backwards_fluid_residual,
+   libMesh::DenseSubVector<libMesh::Number> & press_coeff,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kus,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kvs)
+  {
+    unsigned int n_solid_dofs = solid_context.get_dof_indices(this->_disp_vars.u()).size();
+    unsigned int n_press_dofs = solid_context.get_dof_indices(this->_solid_press_var.p()).size();
+
+    libmesh_assert_equal_to(Kus.m(),n_solid_dofs);
+    libmesh_assert_equal_to(Kvs.m(),n_solid_dofs);
+
+    libmesh_assert_equal_to(Kus.n(),n_press_dofs);
+    libmesh_assert_equal_to(Kvs.n(),n_press_dofs);
+
+    for( unsigned int j = 0; j < n_press_dofs; j++ )
+      {
+        // Finite differenced residual is sitting in the solid and fluid context elem_residuals
+        // after this call
+        this->finite_difference_residuals(system,quad_points,solid_context,fluid_context,delta,press_coeff(j),
+                                          backwards_solid_residual,backwards_fluid_residual);
+
+        for (unsigned int i=0; i != n_solid_dofs; i++)
+          {
+            libMesh::DenseSubVector<libMesh::Number> & Fus = solid_context.get_elem_residual(this->_disp_vars.u());
+            libMesh::DenseSubVector<libMesh::Number> & Fvs = solid_context.get_elem_residual(this->_disp_vars.v());
+
+            Kus(i,j) += Fus(i);
+            Kvs(i,j) += Fvs(i);
+          }
+      }
+  }
+
 
   // Instantiate
   template class CartesianFictitiousDomainFluidStructureInteractionBase<2,false>;

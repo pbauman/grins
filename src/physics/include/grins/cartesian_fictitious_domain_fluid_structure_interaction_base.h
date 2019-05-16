@@ -29,6 +29,8 @@
 #include "grins/fictitious_domain_fluid_structure_interaction_abstract.h"
 #include "grins/hyperelastic_strain_energy.h"
 #include "grins/mooney_rivlin.h"
+#include "grins/cartesian_hyperelasticity.h"
+#include "grins/incompressible_hyperelasticity_weak_form.h"
 
 namespace GRINS
 {
@@ -71,6 +73,101 @@ namespace GRINS
     libMesh::Tensor form_fluid_def_gradient(AssemblyContext & solid_context,
                                             const libMesh::Tensor & F,
                                             const unsigned int qp) const;
+
+
+
+    void compute_ibm_residuals(MultiphysicsSystem & system,
+                               AssemblyContext & solid_context,
+                               AssemblyContext & fluid_context,
+                               const std::vector<unsigned int> & qp_indices);
+
+
+    void compute_residuals(AssemblyContext & solid_context,const AssemblyContext & fluid_context,unsigned int qp,
+                           IncompressibleHyperelasticityWeakForm<MooneyRivlin> & weak_form,
+                           libMesh::DenseSubVector<libMesh::Number> & Fuf,
+                           libMesh::DenseSubVector<libMesh::Number> & Fvf,
+                           libMesh::DenseSubVector<libMesh::Number> & Fus,
+                           libMesh::DenseSubVector<libMesh::Number> & Fvs,
+                           libMesh::DenseSubVector<libMesh::Number> & Fulm,
+                           libMesh::DenseSubVector<libMesh::Number> & Fvlm,
+                           libMesh::DenseSubVector<libMesh::Number> & Fps);
+
+    void compute_numerical_jacobians(MultiphysicsSystem & system,
+                                     AssemblyContext & solid_context,
+                                     AssemblyContext & fluid_context,
+                                     const std::vector<unsigned int> & quad_points,
+                                     libMesh::DenseSubMatrix<libMesh::Number> & Kuf_ulm,
+                                     libMesh::DenseSubMatrix<libMesh::Number> & Kuf_vlm,
+                                     libMesh::DenseSubMatrix<libMesh::Number> & Kvf_ulm,
+                                     libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vlm,
+                                     libMesh::DenseSubMatrix<libMesh::Number> & Kulm_uf,
+                                     libMesh::DenseSubMatrix<libMesh::Number> & Kulm_vf,
+                                     libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_uf,
+                                     libMesh::DenseSubMatrix<libMesh::Number> & Kvlm_vf,
+                                     libMesh::DenseSubMatrix<libMesh::Number> & Kuf_us,
+                                     libMesh::DenseSubMatrix<libMesh::Number> & Kuf_vs,
+                                     libMesh::DenseSubMatrix<libMesh::Number> & Kvf_us,
+                                     libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vs);
+
+    void finite_difference_residuals(MultiphysicsSystem & system,
+                                     const std::vector<unsigned int> & quad_points,
+                                     AssemblyContext & solid_context,
+                                     AssemblyContext & fluid_context,
+                                     const libMesh::Real delta,
+                                     libMesh::Number & coeff,
+                                     libMesh::DenseVector<libMesh::Number> & backwards_solid_residual,
+                                     libMesh::DenseVector<libMesh::Number> & backwards_fluid_residual);
+
+    void compute_lambda_derivs(MultiphysicsSystem & system,
+                               const std::vector<unsigned int> & quad_points,
+                               AssemblyContext & solid_context,
+                               AssemblyContext & fluid_context,
+                               const libMesh::Real delta,
+                               libMesh::DenseVector<libMesh::Number> & backwards_solid_residual,
+                               libMesh::DenseVector<libMesh::Number> & backwards_fluid_residual,
+                               libMesh::DenseSubVector<libMesh::Number> & lambda_coeff,
+                               libMesh::DenseSubMatrix<libMesh::Number> & Kuf,
+                               libMesh::DenseSubMatrix<libMesh::Number> & Kvf,
+                               libMesh::DenseSubMatrix<libMesh::Number> & Kus,
+                               libMesh::DenseSubMatrix<libMesh::Number> & Kvs);
+
+    void compute_fluid_derivs(MultiphysicsSystem & system,
+                              const std::vector<unsigned int> & quad_points,
+                              AssemblyContext & solid_context,
+                              AssemblyContext & fluid_context,
+                              const libMesh::Real delta,
+                              libMesh::DenseVector<libMesh::Number> & backwards_solid_residual,
+                              libMesh::DenseVector<libMesh::Number> & backwards_fluid_residual,
+                              libMesh::DenseSubVector<libMesh::Number> & fluid_coeff,
+                              libMesh::DenseSubMatrix<libMesh::Number> & Kulm,
+                              libMesh::DenseSubMatrix<libMesh::Number> & Kvlm);
+
+    void compute_solid_derivs(MultiphysicsSystem & system,
+                              const std::vector<unsigned int> & quad_points,
+                              AssemblyContext & solid_context,
+                              AssemblyContext & fluid_context,
+                              const libMesh::Real delta,
+                              libMesh::DenseVector<libMesh::Number> & backwards_solid_residual,
+                              libMesh::DenseVector<libMesh::Number> & backwards_fluid_residual,
+                              libMesh::DenseSubVector<libMesh::Number> & solid_coeff,
+                              libMesh::DenseSubMatrix<libMesh::Number> & Kuf,
+                              libMesh::DenseSubMatrix<libMesh::Number> & Kvf,
+                              libMesh::DenseSubMatrix<libMesh::Number> & Kus,
+                              libMesh::DenseSubMatrix<libMesh::Number> & Kvs,
+                              libMesh::DenseSubMatrix<libMesh::Number> & Kulm,
+                              libMesh::DenseSubMatrix<libMesh::Number> & Kvlm,
+                              libMesh::DenseSubMatrix<libMesh::Number> & Kp);
+
+    void compute_press_derivs(MultiphysicsSystem & system,
+			      const std::vector<unsigned int> & quad_points,
+			      AssemblyContext & solid_context,
+                              AssemblyContext & fluid_context,
+			      const libMesh::Real delta,
+			      libMesh::DenseVector<libMesh::Number> & backwards_solid_residual,
+			      libMesh::DenseVector<libMesh::Number> & backwards_fluid_residual,
+			      libMesh::DenseSubVector<libMesh::Number> & press_coeff,
+			      libMesh::DenseSubMatrix<libMesh::Number> & Kus,
+			      libMesh::DenseSubMatrix<libMesh::Number> & Kvs);
 
   };
 
