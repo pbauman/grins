@@ -73,6 +73,9 @@ namespace GRINS
     //! FE variable for the solid pressure
     PressureFEVariable & _solid_press_var;
 
+    //! FE variable for the solid pressure
+    PressureFEVariable & _fluid_press_var;
+
     //! The subdomain ids for the solid that is read from input
     std::set<libMesh::subdomain_id_type> _solid_subdomain_ids;
 
