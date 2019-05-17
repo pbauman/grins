@@ -552,30 +552,6 @@ namespace GRINS
               (*Fwf)(i) -= fluid_term(2)*jac;
             */
           }
-        /*
-          if( compute_jacobian )
-          {
-          // Lambda deriviatives
-          for( int j = 0; j < n_lambda_dofs; j++ )
-          {
-          const libMesh::Real l2_value =
-          lambda_phi[j][qp]*phiJ*solid_context.get_elem_solution_derivative();
-
-          if(Dim==2)
-          {
-          Kuf_ulm(i,j) -= l2_value;
-          Kvf_vlm(i,j) -= l2_value;
-          }
-          if(Dim==3)
-          {
-          Kuf_ulm(i,j) -= l2_value;
-          Kvf_vlm(i,j) -= l2_value;
-          (*Kwf_wlm)(i,j) -= l2_value;
-          }
-          } // lambda dof loop
-          } // compute jacobian
-        */
-
       }
 
     //============================================
@@ -647,87 +623,6 @@ namespace GRINS
             */
           }
 
-        /*
-          if( compute_jacobian )
-          {
-          // Solid derivatives
-          for( int j = 0; j != n_solid_dofs; j++ )
-          {
-          libMesh::Real accel_value = delta_rho*phiJ*solid_phi[j][qp]/dt2;
-
-          if(Dim==2)
-          {
-          weak_form.evaluate_internal_stress_jacobian
-          (S,F,dphiJ,solid_dphi[j][qp],stress_law,
-          Kus_us(i,j),Kus_vs(i,j),
-          Kvs_us(i,j),Kvs_vs(i,j));
-
-          weak_form.evaluate_pressure_stress_displacement_jacobian
-          (J,solid_press,F,Cinv,FCinv,dphiJ,solid_dphi[j][qp],
-          Kus_us(i,j),Kus_vs(i,j),Kvs_us(i,j),Kvs_vs(i,j) );
-
-          // Acceleration term
-          Kus_us(i,j) += accel_value;
-          Kvs_vs(i,j) += accel_value;
-          }
-          else if(Dim==3)
-          {
-          weak_form.evaluate_internal_stress_jacobian
-          (S,F,dphiJ,solid_dphi[j][qp],stress_law,
-          Kus_us(i,j), Kus_vs(i,j), (*Kus_ws)(i,j),
-          Kvs_us(i,j), Kvs_vs(i,j), (*Kvs_ws)(i,j),
-          (*Kws_us)(i,j), (*Kws_vs)(i,j), (*Kws_ws)(i,j));
-
-          weak_form.evaluate_pressure_stress_displacement_jacobian
-          (J,solid_press,F,Cinv,FCinv,dphiJ,solid_dphi[j][qp],
-          Kus_us(i,j), Kus_vs(i,j), (*Kus_ws)(i,j),
-          Kvs_us(i,j), Kvs_vs(i,j), (*Kvs_ws)(i,j),
-          (*Kws_us)(i,j), (*Kws_vs)(i,j), (*Kws_ws)(i,j) );
-
-          // Acceleration term
-          Kus_us(i,j) += accel_value;
-          Kvs_vs(i,j) += accel_value;
-          (*Kws_ws)(i,j) += accel_value;
-          }
-          } // end displacement dof loop
-
-          // Solid pressure derivatives
-          for( int j = 0; j != n_solid_press_dofs; j++ )
-          {
-          if(Dim==2)
-          weak_form.evaluate_pressure_stress_pressure_jacobian
-          ( J,FCinv,solid_press_phi[j][qp],dphiJ,
-          Kus_ps(i,j),Kvs_ps(i,j) );
-
-          else if(Dim==3)
-          weak_form.evaluate_pressure_stress_pressure_jacobian
-          ( J,FCinv,solid_press_phi[j][qp],dphiJ,
-          Kus_ps(i,j),Kvs_ps(i,j),(*Kws_ps)(i,j) );
-
-          } // end pressure dof loop
-
-          // lambda derivatives
-          for( int j = 0; j < n_lambda_dofs; j++ )
-          {
-          const libMesh::Real l2_value =
-          lambda_phi[j][qp]*phiJ*solid_context.get_elem_solution_derivative();
-
-          if(Dim==2)
-          {
-          Kus_ulm(i,j) -= l2_value;
-          Kvs_vlm(i,j) -= l2_value;
-          }
-          if(Dim==3)
-          {
-          Kus_ulm(i,j) -= l2_value;
-          Kvs_vlm(i,j) -= l2_value;
-          (*Kws_wlm)(i,j) -= l2_value;
-          }
-          }
-
-          } // compute jacobian
-        */
-
       } // end displacement dof loop
 
     //============================================
@@ -766,50 +661,6 @@ namespace GRINS
 
           }
 
-        /*
-          if(compute_jacobian)
-          {
-          // Solid derivatives
-          for( int j = 0; j != n_solid_dofs; j++ )
-          {
-          const libMesh::Real l2_value =
-          solid_phi[j][qp]*phiJ*solid_context.get_elem_solution_rate_derivative();
-
-          if(Dim==2)
-          {
-          Kulm_us(i,j) -= l2_value;
-          Kvlm_vs(i,j) -= l2_value;
-          }
-          if(Dim==3)
-          {
-          Kulm_us(i,j) -= l2_value;
-          Kvlm_vs(i,j) -= l2_value;
-          (*Kwlm_ws)(i,j) -= l2_value;
-          }
-          } // end solid dof loop
-
-          // Fluid derivatives
-          for (int j=0; j != n_fluid_dofs; j++)
-          {
-          libMesh::Real l2_value =
-          fluid_phi[j][0]*phiJ*solid_context.get_elem_solution_derivative();
-
-          if(Dim==2)
-          {
-          Kulm_uf(i,j) += l2_value;
-          Kvlm_vf(i,j) += l2_value;
-          }
-          if(Dim==3)
-          {
-          Kulm_uf(i,j) += l2_value;
-          Kvlm_vf(i,j) += l2_value;
-          (*Kwlm_wf)(i,j) += l2_value;
-          }
-          } // end fluid dof loop
-
-          } // compute jacobian
-        */
-
       } // End lambda dof loop
 
     //============================================
@@ -819,24 +670,6 @@ namespace GRINS
       {
         libMesh::Real phiJ = solid_press_phi[i][qp]*jac;
         weak_form.evaluate_pressure_constraint_residual(J,phiJ,Fps(i));
-
-        /*
-          if( compute_jacobian )
-          {
-          for( int j = 0; j != n_solid_dofs; j++ )
-          {
-          if(Dim==2)
-          weak_form.evaluate_pressure_constraint_jacobian
-          ( J, FCinv, solid_dphi[j][qp], phiJ,
-          Kps_us(i,j), Kps_vs(i,j) );
-
-          else if(Dim==3)
-          weak_form.evaluate_pressure_constraint_jacobian
-          ( J, FCinv, solid_dphi[j][qp], phiJ,
-          Kps_us(i,j), Kps_vs(i,j), (*Kps_ws)(i,j) );
-          }
-          } // compute Jacobian
-        */
 
       } // end solid pressure dof loop
 
