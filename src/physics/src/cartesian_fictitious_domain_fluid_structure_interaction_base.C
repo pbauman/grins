@@ -203,7 +203,8 @@ namespace GRINS
                                                     qp_indices,
                                                     Kuf_ulm,Kuf_vlm,Kvf_ulm,Kvf_vlm,
                                                     Kulm_uf,Kulm_vf,Kvlm_uf,Kvlm_vf,
-                                                    Kuf_us,Kuf_vs,Kvf_us,Kvf_vs);
+                                                    Kuf_us,Kuf_vs,Kvf_us,Kvf_vs,
+                                                    Kus_pf, Kvs_pf);
 
                  // This will assemble the coupled terms that went into the fluid residual
                  // in the fluid context and the coupled Jacobians into the global data system
@@ -332,6 +333,8 @@ namespace GRINS
     if(Dim==3)
       wf_var = this->_flow_vars.w();
 
+    unsigned int pf_var = this->_fluid_press_var.p();
+
     unsigned int lx_var = this->_lambda_var.u();
     unsigned int ly_var = this->_lambda_var.v();
     unsigned int lz_var = libMesh::invalid_uint;
@@ -441,6 +444,9 @@ namespace GRINS
     fluid_context.interior_gradient(vf_var, 0, grad_Vy);
     if(Dim==3)
       fluid_context.interior_gradient(wf_var, 0, grad_Vz);
+
+    libMesh::Number pfluid;
+    fluid_context.interior_value(pf_var,0,pfluid);
 
     // Setup the deformation gradients
     // F is the usual deformation gradient and F_fluid
@@ -562,6 +568,7 @@ namespace GRINS
         libMesh::Real phiJ = solid_phi[i][qp]*jac;
         libMesh::RealGradient dphiJ(solid_dphi[i][qp]*jac);
 
+        libMesh::Number deltap = solid_press - pfluid;
         if(Dim==2)
           {
 
@@ -574,7 +581,7 @@ namespace GRINS
               }
 
             weak_form.evaluate_pressure_stress_residual
-              (J,solid_press,FCinv,dphiJ,Fus(i),Fvs(i));
+              (J,deltap,FCinv,dphiJ,Fus(i),Fvs(i));
 
             // Acceleration term
             Fus(i) += delta_rho*Uddot(0)*phiJ;
@@ -785,7 +792,9 @@ namespace GRINS
    libMesh::DenseSubMatrix<libMesh::Number> & Kuf_us,
    libMesh::DenseSubMatrix<libMesh::Number> & Kuf_vs,
    libMesh::DenseSubMatrix<libMesh::Number> & Kvf_us,
-   libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vs)
+   libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vs,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kus_pf,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kvs_pf)
   {
     // Cache original residuals
     libMesh::DenseVector<libMesh::Number> original_solid_residual(solid_context.get_elem_residual());
@@ -909,7 +918,7 @@ namespace GRINS
 
     }
 
-    // Compute p derivs
+    // Compute solid pressure derivs
     {
       libMesh::DenseSubVector<libMesh::Number> & p_coeffs =
         solid_context.get_elem_solution(this->_solid_press_var.p());
@@ -923,6 +932,17 @@ namespace GRINS
       this->compute_press_derivs(system,quad_points,solid_context,fluid_context,delta,
                                  backwards_solid_residual,backwards_fluid_residual,
                                  p_coeffs,Kus_p,Kvs_p);
+
+    }
+
+    // Compute fluid pressure derivs
+    {
+      libMesh::DenseSubVector<libMesh::Number> & p_coeffs =
+        fluid_context.get_elem_solution(this->_fluid_press_var.p());
+
+      this->compute_fluid_press_derivs(system,quad_points,solid_context,fluid_context,delta,
+                                       backwards_solid_residual,backwards_fluid_residual,
+                                       p_coeffs,Kus_pf,Kvs_pf);
 
     }
 
@@ -1175,6 +1195,46 @@ namespace GRINS
   {
     unsigned int n_solid_dofs = solid_context.get_dof_indices(this->_disp_vars.u()).size();
     unsigned int n_press_dofs = solid_context.get_dof_indices(this->_solid_press_var.p()).size();
+
+    libmesh_assert_equal_to(Kus.m(),n_solid_dofs);
+    libmesh_assert_equal_to(Kvs.m(),n_solid_dofs);
+
+    libmesh_assert_equal_to(Kus.n(),n_press_dofs);
+    libmesh_assert_equal_to(Kvs.n(),n_press_dofs);
+
+    for( unsigned int j = 0; j < n_press_dofs; j++ )
+      {
+        // Finite differenced residual is sitting in the solid and fluid context elem_residuals
+        // after this call
+        this->finite_difference_residuals(system,quad_points,solid_context,fluid_context,delta,press_coeff(j),
+                                          backwards_solid_residual,backwards_fluid_residual);
+
+        for (unsigned int i=0; i != n_solid_dofs; i++)
+          {
+            libMesh::DenseSubVector<libMesh::Number> & Fus = solid_context.get_elem_residual(this->_disp_vars.u());
+            libMesh::DenseSubVector<libMesh::Number> & Fvs = solid_context.get_elem_residual(this->_disp_vars.v());
+
+            Kus(i,j) += Fus(i);
+            Kvs(i,j) += Fvs(i);
+          }
+      }
+  }
+
+  template<unsigned int Dim, bool UseOldDisplacement>
+  void CartesianFictitiousDomainFluidStructureInteractionBase<Dim,UseOldDisplacement>::compute_fluid_press_derivs
+  (MultiphysicsSystem & system,
+   const std::vector<unsigned int> & quad_points,
+   AssemblyContext & solid_context,
+   AssemblyContext & fluid_context,
+   const libMesh::Real delta,
+   libMesh::DenseVector<libMesh::Number> & backwards_solid_residual,
+   libMesh::DenseVector<libMesh::Number> & backwards_fluid_residual,
+   libMesh::DenseSubVector<libMesh::Number> & press_coeff,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kus,
+   libMesh::DenseSubMatrix<libMesh::Number> & Kvs)
+  {
+    unsigned int n_solid_dofs = solid_context.get_dof_indices(this->_disp_vars.u()).size();
+    unsigned int n_press_dofs = fluid_context.get_dof_indices(this->_fluid_press_var.p()).size();
 
     libmesh_assert_equal_to(Kus.m(),n_solid_dofs);
     libmesh_assert_equal_to(Kvs.m(),n_solid_dofs);

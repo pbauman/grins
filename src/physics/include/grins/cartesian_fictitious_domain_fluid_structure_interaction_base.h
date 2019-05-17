@@ -107,7 +107,9 @@ namespace GRINS
                                      libMesh::DenseSubMatrix<libMesh::Number> & Kuf_us,
                                      libMesh::DenseSubMatrix<libMesh::Number> & Kuf_vs,
                                      libMesh::DenseSubMatrix<libMesh::Number> & Kvf_us,
-                                     libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vs);
+                                     libMesh::DenseSubMatrix<libMesh::Number> & Kvf_vs,
+                                     libMesh::DenseSubMatrix<libMesh::Number> & Kus_pf,
+                                     libMesh::DenseSubMatrix<libMesh::Number> & Kvs_pf);
 
     void finite_difference_residuals(MultiphysicsSystem & system,
                                      const std::vector<unsigned int> & quad_points,
@@ -168,6 +170,17 @@ namespace GRINS
 			      libMesh::DenseSubVector<libMesh::Number> & press_coeff,
 			      libMesh::DenseSubMatrix<libMesh::Number> & Kus,
 			      libMesh::DenseSubMatrix<libMesh::Number> & Kvs);
+
+    void compute_fluid_press_derivs(MultiphysicsSystem & system,
+                                    const std::vector<unsigned int> & quad_points,
+                                    AssemblyContext & solid_context,
+                                    AssemblyContext & fluid_context,
+                                    const libMesh::Real delta,
+                                    libMesh::DenseVector<libMesh::Number> & backwards_solid_residual,
+                                    libMesh::DenseVector<libMesh::Number> & backwards_fluid_residual,
+                                    libMesh::DenseSubVector<libMesh::Number> & press_coeff,
+                                    libMesh::DenseSubMatrix<libMesh::Number> & Kus,
+                                    libMesh::DenseSubMatrix<libMesh::Number> & Kvs);
 
   };
 
