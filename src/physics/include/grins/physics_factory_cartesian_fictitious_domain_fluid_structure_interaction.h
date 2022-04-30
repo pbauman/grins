@@ -72,9 +72,9 @@ namespace GRINS
     int dim = disp_var.dim();
 
     if(dim==2)
-      new_physics.reset( new DerivedPhysics<2>(physics_name,input) );
+      new_physics = std::make_unique<DerivedPhysics<2>>(physics_name,input);
     else if(dim==3)
-      new_physics.reset( new DerivedPhysics<3>(physics_name,input) );
+      new_physics = std::make_unique<DerivedPhysics<3>>(physics_name,input);
     else
       libmesh_error_msg("ERROR: Cartesian Fictitious Domain FSI is only valid for dimensions 2 or 3!\n");
 
