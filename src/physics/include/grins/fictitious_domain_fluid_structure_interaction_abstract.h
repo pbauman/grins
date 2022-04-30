@@ -33,6 +33,7 @@
 #include "grins/overlapping_fluid_solid_map.h"
 #include "grins/overlapping_fluid_solid_coupling_functor.h"
 #include "libmesh/coupling_matrix.h"
+#include "libmesh/numeric_vector.h"
 
 namespace GRINS
 {
