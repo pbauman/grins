@@ -131,10 +131,21 @@ namespace GRINS
     void add_previous_time_step_parallel_vector_to_system( MultiphysicsSystem & system ) const;
 
     //! Rebuild and localize the ghosted vector from the parallel vector
+    template<typename T>
     void reinit_single_ghosted_vector
     ( MultiphysicsSystem & system,
       const libMesh::NumericVector<libMesh::Number> & parallel_vector,
-      std::unique_ptr<libMesh::NumericVector<libMesh::Number>> & ghosted_vector ) const;
+      T & ghosted_vector ) const
+    {
+      const libMesh::DofMap & dof_map = system.get_dof_map();
+
+      ghosted_vector = libMesh::NumericVector<libMesh::Number>::build(system.comm());
+      ghosted_vector->init(system.n_dofs(), system.n_local_dofs(),
+                           dof_map.get_send_list(), false,
+                           libMesh::GHOSTED);
+
+      parallel_vector.localize( *ghosted_vector,dof_map.get_send_list());
+    }
 
     //! Reinit all relevant ghosted vectors
     void reinit_all_ghosted_vectors( MultiphysicsSystem & system );
